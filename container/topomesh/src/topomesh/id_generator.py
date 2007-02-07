@@ -1,7 +1,7 @@
 # -*- python -*-
 # -*- coding: latin-1 -*-
 #
-#       IdGenerator : graph package
+#       IdGenerator : topomesh package
 #
 #       Copyright or © or Copr. 2006 INRIA - CIRAD - INRA  
 #

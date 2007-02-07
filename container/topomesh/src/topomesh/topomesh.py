@@ -22,38 +22,36 @@ for a topomesh interface
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
-from interface import topomesh
+from interface.topomesh import InvalidCell,InvalidPoint,InvalidLink,\
+				ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh
 from id_generator import IdGenerator
 
-class InvalidCell (Exception) :
+class StrInvalidCell (InvalidCell) :
 	"""
 	exception raised when a wrong cell id is provided
 	"""
 	def __init__ (self, cid) :
-		Exception.__init__(self,"cell %d does not exist" % cid)
+		InvalidCell.__init__(self,"cell %d does not exist" % cid)
 
-class InvalidPoint (Exception) :
+class StrInvalidPoint (InvalidPoint) :
 	"""
 	exception raised when a wrong point id is provided
 	"""
 	def __init__ (self, pid) :
-		Exception.__init__(self,"point %d does not exist" % pid)
+		InvalidPoint.__init__(self,"point %d does not exist" % pid)
 
-class InvalidLink (Exception) :
+class StrInvalidLink (InvalidLink) :
 	"""
 	exception raised when a link between a cell and a point does not exist
 	"""
 	def __init__ (self, cid, pid) :
-		Exception.__init__(self,"cell %d and point %d are not linked" % (cid,pid))
+		InvalidLink.__init__(self,"cell %d and point %d are not linked" % (cid,pid))
 
-class TopoMesh (object) :
+class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	"""
-	interface definition of a topological mesh
-	a mesh links elements of two separate sets E1 (cells) and E2 (points)
-	it thus define an implicit neighborhood between elements
-	of the same set as two elements of E1 (resp E2) that share
-	the same element of E2 (resp E1)
+	implementation of a topological mesh
 	"""
+	__doc__+=ITopoMesh.__doc__
 	def __init__ (self) :
 		"""
 		constructor of an empty mesh
@@ -69,24 +67,16 @@ class TopoMesh (object) :
 	#
 	########################################################################
 	def is_valid (self) :
-		"""
-		test wether the mesh fulfill all mesh properties
-		"""
 		return True
+	is_valid.__doc__=ITopoMesh.is_valid.__doc__
 	
 	def has_point (self, pid) :
-		"""
-		return true if the point
-		specified by its id is in mesh
-		"""
 		return pid in self._points
+	has_point.__doc__=ITopoMesh.has_point.__doc__
 	
 	def has_cell (self, cid) :
-		"""
-		return true if the cell
-		specified by its id is in mesh
-		"""
 		return cid in self._cells
+	has_cell.__doc__=ITopoMesh.has_cell.__doc__
 	
 	########################################################################
 	#
@@ -94,50 +84,40 @@ class TopoMesh (object) :
 	#
 	########################################################################
 	def cells (self, pid=None) :
-		"""
-		iterator on cells linked to a given point
-		or all cells if pid is None
-		"""
 		if pid is None :
 			return self._cells.iterkeys()
 		if not self.has_point(pid) :
-			raise InvalidPoint(pid)
+			raise StrInvalidPoint(pid)
 		return iter(self._points[pid])
+	cells.__doc__=ICellListMesh.cells.__doc__
 	
 	def nb_cells (self, pid=None) :
-		"""
-		number of cells around a point
-		or total number of cell if pid is None
-		"""
 		if pid is None :
 			return len(self._cells)
 		if not self.has_point(pid) :
-			raise InvalidPoint(pid)
+			raise StrInvalidPoint(pid)
 		return len(self._points[pid])
+	nb_cells.__doc__=ICellListMesh.nb_cells.__doc__
 	
 	def cell_neighbors (self, cid) :
-		"""
-		iterator on all implicit neighbors of a cell
-		"""
 		if not self.has_cell(cid) :
-			raise InvalidCell(cid)
+			raise StrInvalidCell(cid)
 		neighbors_list=[]
 		for pid in self._cells[cid] :
 			neighbors_list.extend(self._points[pid])
 		neighbors=set(neighbors_list)
 		neighbors.remove(cid)
 		return iter(neighbors)
+	cell_neighbors.__doc__=ICellListMesh.cell_neighbors.__doc__
 	
 	def nb_cell_neighbors (self, cid) :
-		"""
-		nb of implicit neighbors of a cell
-		"""
 		if not self.has_cell(cid) :
-			raise InvalidCell(cid)
+			raise StrInvalidCell(cid)
 		s=set()
 		for pid in self._cells[cid] :
 			s.union(self._points[pid])
 		return len(s)-1
+	nb_cell_neighbors.__doc__=ICellListMesh.nb_cell_neighbors.__doc__
 	
 	#########################################################################
 	#
@@ -145,50 +125,40 @@ class TopoMesh (object) :
 	#
 	#########################################################################
 	def points (self, cid=None) :
-		"""
-		iterator on point around a given cell
-		or all points if cid is None
-		"""
 		if cid is None :
 			return self._points.iterkeys()
 		if not self.has_cell(cid) :
-			raise InvalidCell(cid)
+			raise StrInvalidCell(cid)
 		return iter(self._cells[cid])
+	points.__doc__=IPointListMesh.points.__doc__
 	
 	def nb_points (self, cid=None) :
-		"""
-		number of cells around a point
-		or total number of points if cid is None
-		"""
 		if cid is None :
 			return len(self._points)
 		if not self.has_cell(cid) :
-			raise InvalidCell(cid)
+			raise StrInvalidCell(cid)
 		return len(self._cells[cid])
+	nb_points.__doc__=IPointListMesh.nb_points.__doc__
 	
 	def point_neighbors (self, pid) :
-		"""
-		iterator on all implicit neighbors of a point
-		"""
 		if not self.has_point(pid) :
-			raise InvalidPoint(pid)
+			raise StrInvalidPoint(pid)
 		neighbors_list=[]
 		for cid in self._points[pid] :
 			neighbors_list.extend(self._cells[cid])
 		neighbors=set(neighbors_list)
 		neighbors.remove(pid)
 		return iter(neighbors)
+	point_neighbors.__doc__=IPointListMesh.point_neighbors.__doc__
 	
 	def nb_point_neighbors (self, pid) :
-		"""
-		number of implicit neighbors of a point
-		"""
 		if not self.has_point(pid) :
-			raise InvalidPoint(pid)
+			raise StrInvalidPoint(pid)
 		s=set()
 		for cid in self._points[pid] :
 			s.union(self._cells[cid])
 		return len(s)-1
+	nb_point_neighbors.__doc__=IPointListMesh.nb_point_neighbors.__doc__
 	
 	########################################################################
 	#
@@ -196,71 +166,52 @@ class TopoMesh (object) :
 	#
 	########################################################################
 	def add_cell (self, cid=None) :
-		"""
-		add a new cell connected to nothing
-		if cid is None, create a free id
-		return used cid
-		"""
 		cid=self._cid_generator.get_id(cid)
 		self._cells[cid]=set()
 		return cid
+	add_cell.__doc__=IMutableMesh.add_cell.__doc__
 	
 	def add_point (self, pid=None) :
-		"""
-		add a new point connected to nothing
-		if pid is None, create a free id
-		return used pid
-		"""
 		pid=self._pid_generator.get_id(pid)
 		self._points[pid]=set()
 		return pid
+	add_point.__doc__=IMutableMesh.add_point.__doc__
 	
 	def add_link (self, cid, pid) :
-		"""
-		add a link between a cell and a point
-		cell and point must already exist in the mesh
-		"""
 		if not self.has_cell(cid) :
-			raise InvalidCell(cid)
+			raise StrInvalidCell(cid)
 		if not self.has_point(pid) :
-			raise InvalidPoint(pid)
+			raise StrInvalidPoint(pid)
 		self._cells[cid].add(pid)
 		self._points[pid].add(cid)
+	add_link.__doc__=IMutableMesh.add_link.__doc__
 	
 	def remove_cell (self, cid) :
-		"""
-		remove a cell and all the references to attached points
-		do not remove attached points
-		"""
 		if not self.has_cell(cid) :
-			raise InvalidCell(cid)
+			raise StrInvalidCell(cid)
 		for pid in self._cells[cid] :
 			self._points[pid].remove(cid)
 		del self._cells[cid]
+	remove_cell.__doc__=IMutableMesh.remove_cell.__doc__
 	
 	def remove_point (self, pid) :
-		"""
-		remove a point and all the references to attached cells
-		do not remove attached cells
-		"""
 		if not self.has_point(pid) :
-			raise InvalidPoint(pid)
+			raise StrInvalidPoint(pid)
 		for cid in self._points[pid] :
 			self._cells[cid].remove(pid)
 		del self._points[pid]
+	remove_point.__doc__=IMutableMesh.remove_point.__doc__
 	
 	def remove_link (self, cid, pid) :
-		"""
-		remove a link between a cell and a point
-		"""
 		if not self.has_cell(cid) :
-			raise InvalidCell(cid)
+			raise StrInvalidCell(cid)
 		if not self.has_point(pid) :
-			raise InvalidPoint(pid)
+			raise StrInvalidPoint(pid)
 		try :
 			cell_set.remove(pid)
 			point_set.remove(cid)
 		except KeyError :
-			raise InvalidLink(cid,pid)
+			raise StrInvalidLink(cid,pid)
+	remove_link.__doc__=IMutableMesh.remove_link.__doc__
 
 
