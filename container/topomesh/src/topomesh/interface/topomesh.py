@@ -15,34 +15,33 @@
 #
 
 __doc__="""
-This module provide a grid interface
+This module provide a topological mesh interface
 """
 
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
-class InvalidCell (Exception) :
+class TopoMeshError (Exception) :
+	"""
+	base class for all exception in a topomesh
+	"""
+
+class InvalidCell (TopoMeshError,KeyError) :
 	"""
 	exception raised when a wrong cell id is provided
 	"""
-	def __init__ (self, cid) :
-		raise RuntimeError()
 
-class InvalidPoint (Exception) :
+class InvalidPoint (TopoMeshError,KeyError) :
 	"""
 	exception raised when a wrong point id is provided
 	"""
-	def __init__ (self, pid) :
-		raise RuntimeError()
 
-class InvalidLink (Exception) :
+class InvalidLink (TopoMeshError) :
 	"""
 	exception raised when a link between a cell and a point does not exist
 	"""
-	def __init__ (self, cid, pid) :
-		raise RuntimeError()
 
-class TopoMesh (object) :
+class ITopoMesh (object) :
 	"""
 	interface definition of a topological mesh
 	a mesh links elements of two separate sets E1 (cells) and E2 (points)
@@ -50,111 +49,97 @@ class TopoMesh (object) :
 	of the same set as two elements of E1 (resp E2) that share
 	the same element of E2 (resp E1)
 	"""
-	def __init__ (self) :
-		"""
-		constructor of an empty mesh
-		"""
-		raise RuntimeError()
-	
-	########################################################################
-	#
-	#		Mesh concept
-	#
-	########################################################################
 	def is_valid (self) :
 		"""
 		test wether the mesh fulfill all mesh properties
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def has_point (self, pid) :
 		"""
 		return true if the point
 		specified by its id is in mesh
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def has_cell (self, cid) :
 		"""
 		return true if the cell
 		specified by its id is in mesh
 		"""
-		raise RuntimeError()
-	
-	########################################################################
-	#
-	#		Cell list concept
-	#
-	########################################################################
+		raise NotImplementedError
+
+class ICellListMesh (object) :
+	"""
+	mesh view as a collection of cells
+	"""
 	def cells (self, pid=None) :
 		"""
 		iterator on cells linked to a given point
 		or all cells if pid is None
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def nb_cells (self, pid=None) :
 		"""
 		number of cells around a point
 		or total number of cell if pid is None
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def cell_neighbors (self, cid) :
 		"""
 		iterator on all implicit neighbors of a cell
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def nb_cell_neighbors (self, cid) :
 		"""
 		nb of implicit neighbors of a cell
 		"""
-		raise RuntimeError()
-	
-	#########################################################################
-	#
-	#		Point list concept
-	#
-	#########################################################################
+		raise NotImplementedError
+
+class IPointListMesh (object) :
+	"""
+	mesh view as a collection of points
+	"""
 	def points (self, cid=None) :
 		"""
 		iterator on point around a given cell
 		or all points if cid is None
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def nb_points (self, cid=None) :
 		"""
 		number of cells around a point
 		or total number of points if cid is None
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def point_neighbors (self, pid) :
 		"""
 		iterator on all implicit neighbors of a point
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def nb_point_neighbors (self, pid) :
 		"""
 		number of implicit neighbors of a point
 		"""
-		raise RuntimeError()
-	
-	########################################################################
-	#
-	#		Mutable mesh concept
-	#
-	########################################################################
+		raise NotImplementedError
+
+class IMutableMesh (object) :
+	"""
+	interface for editing methods on mesh
+	"""
 	def add_cell (self, cid=None) :
 		"""
 		add a new cell connected to nothing
 		if cid is None, create a free id
 		return used cid
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def add_point (self, pid=None) :
 		"""
@@ -162,32 +147,32 @@ class TopoMesh (object) :
 		if pid is None, create a free id
 		return used pid
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def add_link (self, cid, pid) :
 		"""
 		add a link between a cell and a point
 		cell and point must already exist in the mesh
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def remove_cell (self, cid) :
 		"""
 		remove a cell and all the references to attached points
 		do not remove attached points
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def remove_point (self, pid) :
 		"""
 		remove a point and all the references to attached cells
 		do not remove attached cells
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def remove_link (self, cid, pid) :
 		"""
 		remove a link between a cell and a point
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 

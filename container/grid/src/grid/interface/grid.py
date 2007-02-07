@@ -21,32 +21,19 @@ This module provide a grid interface
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
-class Grid (object) :
+class IGrid (object) :
 	"""
 	interface definition of simple N dimensional grids
 	with finite number of case per dimension
 	"""
 	
-	def __init__ (self, shape) :
-		"""
-		constructor of a finite grid
-		:param shape: number of case in each dimension
-		:type shape: iter of int
-		"""
-		raise RuntimeError()
-	
-	# ##########################################################
-	#
-	#		Grid concept
-	#
-	# ##########################################################
 	def dim (self) :
 		"""
 		dmension of the grid
 		number of coordinates
 		:rtype: int
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def shape (self) :
 		"""
@@ -55,20 +42,20 @@ class Grid (object) :
 		
 		:rtype: iter of int
 		"""
-		raise RuntimeError()
-	
-	# ##########################################################
-	#
-	#		Case list concept
-	#
-	# ##########################################################
+		raise NotImplementedError
+
+class ICaseListGrid (object) :
+	"""
+	grid is seen as a collection of cases
+	regularly positionned in space
+	"""
 	def __len__ (self) :
 		"""
 		number of cases in the grid
 		
 		:rtype: int
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def __iter__ (self) :
 		"""
@@ -76,7 +63,7 @@ class Grid (object) :
 		
 		:rtype: iter of int
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def index (self, coord ) :
 		"""
@@ -87,7 +74,7 @@ class Grid (object) :
 		:type coord: tuple of int
 		:rtype: int
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 	def coordinates (self, ind) :
 		"""
@@ -98,7 +85,7 @@ class Grid (object) :
 		:type ind: int
 		:rtype: tuple of int
 		"""
-		raise RuntimeError()
+		raise NotImplementedError
 	
 
 
