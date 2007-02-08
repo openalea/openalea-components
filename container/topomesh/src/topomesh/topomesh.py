@@ -208,8 +208,8 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 		if not self.has_point(pid) :
 			raise StrInvalidPoint(pid)
 		try :
-			cell_set.remove(pid)
-			point_set.remove(cid)
+			self._cells[cid].remove(pid)
+			self._points[pid].remove(cid)
 		except KeyError :
 			raise StrInvalidLink(cid,pid)
 	remove_link.__doc__=IMutableMesh.remove_link.__doc__
