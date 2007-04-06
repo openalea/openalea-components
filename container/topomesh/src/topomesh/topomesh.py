@@ -187,7 +187,9 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	add_link.__doc__=IMutableMesh.add_link.__doc__
 	
 	def remove_cell (self, cid) :
-		if not self.has_cell(cid) :
+		try :
+			self._cid_generator.release_id(cid)
+		except KeyError :
 			raise StrInvalidCell(cid)
 		for pid in self._cells[cid] :
 			self._points[pid].remove(cid)
@@ -195,7 +197,9 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	remove_cell.__doc__=IMutableMesh.remove_cell.__doc__
 	
 	def remove_point (self, pid) :
-		if not self.has_point(pid) :
+		try :
+			self._pid_generator.release_id(pid)
+		except KeyError :
 			raise StrInvalidPoint(pid)
 		for cid in self._points[pid] :
 			self._cells[cid].remove(pid)
