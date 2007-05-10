@@ -102,7 +102,7 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	def cell_neighbors (self, cid) :
 		if not self.has_cell(cid) :
 			raise StrInvalidCell(cid)
-		neighbors_list=[]
+		neighbors_list=[cid]
 		for pid in self._cells[cid] :
 			neighbors_list.extend(self._points[pid])
 		neighbors=set(neighbors_list)
@@ -113,7 +113,7 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	def nb_cell_neighbors (self, cid) :
 		if not self.has_cell(cid) :
 			raise StrInvalidCell(cid)
-		s=set()
+		s=set([cid])
 		for pid in self._cells[cid] :
 			s.union(self._points[pid])
 		return len(s)-1
@@ -143,7 +143,7 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	def point_neighbors (self, pid) :
 		if not self.has_point(pid) :
 			raise StrInvalidPoint(pid)
-		neighbors_list=[]
+		neighbors_list=[pid]
 		for cid in self._points[pid] :
 			neighbors_list.extend(self._cells[cid])
 		neighbors=set(neighbors_list)
@@ -154,7 +154,7 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	def nb_point_neighbors (self, pid) :
 		if not self.has_point(pid) :
 			raise StrInvalidPoint(pid)
-		s=set()
+		s=set([pid])
 		for cid in self._points[pid] :
 			s.union(self._cells[cid])
 		return len(s)-1
