@@ -27,7 +27,7 @@ from interface.graph import InvalidEdge,InvalidVertex,IGraph,\
 					IVertexListGraph,IEdgeListGraph,\
 					IMutableVertexGraph,IMutableEdgeGraph,\
 					IExtendGraph
-from id_generator import IdGenerator
+from openalea.container.utils.id_generator import IdGenerator
 
 class Graph (IGraph,\
 			IVertexListGraph,IEdgeListGraph,\

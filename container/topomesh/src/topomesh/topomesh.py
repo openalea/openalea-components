@@ -24,7 +24,7 @@ __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
 from interface.topomesh import InvalidCell,InvalidPoint,InvalidLink,\
 				ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh
-from id_generator import IdGenerator
+from openalea.container.id_generator import IdGenerator
 
 class StrInvalidCell (InvalidCell) :
 	"""
