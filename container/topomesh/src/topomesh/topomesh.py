@@ -113,10 +113,11 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	def nb_cell_neighbors (self, cid) :
 		if not self.has_cell(cid) :
 			raise StrInvalidCell(cid)
-		s=set([cid])
+		neighbors_list=[cid]
 		for pid in self._cells[cid] :
-			s.union(self._points[pid])
-		return len(s)-1
+			neighbors_list.extend(self._points[pid])
+		neighbors=set(neighbors_list)
+		return len(neighbors)-1
 	nb_cell_neighbors.__doc__=ICellListMesh.nb_cell_neighbors.__doc__
 	
 	#########################################################################
@@ -154,10 +155,11 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	def nb_point_neighbors (self, pid) :
 		if not self.has_point(pid) :
 			raise StrInvalidPoint(pid)
-		s=set([pid])
+		neighbors_list=[pid]
 		for cid in self._points[pid] :
-			s.union(self._cells[cid])
-		return len(s)-1
+			neighbors_list.extend(self._cells[cid])
+		neighbors=set(neighbors_list)
+		return len(neighbors)-1
 	nb_point_neighbors.__doc__=IPointListMesh.nb_point_neighbors.__doc__
 	
 	########################################################################
@@ -167,7 +169,7 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	########################################################################
 	def add_cell (self, cid=None) :
 		cid=self._cid_generator.get_id(cid)
-		self._cells[cid]=set()
+		self._cells[cid]=[]
 		return cid
 	add_cell.__doc__=IMutableMesh.add_cell.__doc__
 	
@@ -182,7 +184,7 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 			raise StrInvalidCell(cid)
 		if not self.has_point(pid) :
 			raise StrInvalidPoint(pid)
-		self._cells[cid].add(pid)
+		self._cells[cid].append(pid)
 		self._points[pid].add(cid)
 	add_link.__doc__=IMutableMesh.add_link.__doc__
 	
