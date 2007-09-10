@@ -150,7 +150,7 @@ class Graph (IGraph,\
 	# Edge List Graph Concept
 	#
 	# ##########################################################
-	def _edges (self, vid) :
+	def _iter_edges (self, vid) :
 		"""
 		internal function that perform 'edges' with vid not None
 		"""
@@ -163,7 +163,7 @@ class Graph (IGraph,\
 			return iter(self._edges)
 		if vid not in self :
 			raise InvalidVertex(vid)
-		return self._edges(vid)
+		return self._iter_edges(vid)
 	edges.__doc__=IEdgeListGraph.edges.__doc__
 	
 	def nb_edges(self, vid=None):
