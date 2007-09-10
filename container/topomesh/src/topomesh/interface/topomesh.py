@@ -26,9 +26,9 @@ class TopoMeshError (Exception) :
 	base class for all exception in a topomesh
 	"""
 
-class InvalidFace (TopoMeshError,KeyError) :
+class InvalidCell (TopoMeshError,KeyError) :
 	"""
-	exception raised when a wrong face id is provided
+	exception raised when a wrong cell id is provided
 	"""
 
 class InvalidPoint (TopoMeshError,KeyError) :
@@ -38,13 +38,13 @@ class InvalidPoint (TopoMeshError,KeyError) :
 
 class InvalidLink (TopoMeshError) :
 	"""
-	exception raised when a link between a face and a point does not exist
+	exception raised when a link between a cell and a point does not exist
 	"""
 
 class ITopoMesh (object) :
 	"""
 	interface definition of a topological mesh
-	a mesh links elements of two separate sets E1 (faces) and E2 (points)
+	a mesh links elements of two separate sets E1 (cells) and E2 (points)
 	it thus define an implicit neighborhood between elements
 	of the same set as two elements of E1 (resp E2) that share
 	the same element of E2 (resp E1)
@@ -62,40 +62,40 @@ class ITopoMesh (object) :
 		"""
 		raise NotImplementedError
 	
-	def has_face (self, cid) :
+	def has_cell (self, cid) :
 		"""
-		return true if the face
+		return true if the cell
 		specified by its id is in mesh
 		"""
 		raise NotImplementedError
 
-class IFaceListMesh (object) :
+class ICellListMesh (object) :
 	"""
-	mesh view as a collection of faces
+	mesh view as a collection of cells
 	"""
-	def faces (self, pid=None) :
+	def cells (self, pid=None) :
 		"""
-		iterator on faces linked to a given point
-		or all faces if pid is None
-		"""
-		raise NotImplementedError
-	
-	def nb_faces (self, pid=None) :
-		"""
-		number of faces around a point
-		or total number of faces if pid is None
+		iterator on cells linked to a given point
+		or all cells if pid is None
 		"""
 		raise NotImplementedError
 	
-	def face_neighbors (self, fid) :
+	def nb_cells (self, pid=None) :
 		"""
-		iterator on all implicit neighbors of a face
+		number of cells around a point
+		or total number of cell if pid is None
 		"""
 		raise NotImplementedError
 	
-	def nb_face_neighbors (self, fid) :
+	def cell_neighbors (self, cid) :
 		"""
-		nb of implicit neighbors of a face
+		iterator on all implicit neighbors of a cell
+		"""
+		raise NotImplementedError
+	
+	def nb_cell_neighbors (self, cid) :
+		"""
+		nb of implicit neighbors of a cell
 		"""
 		raise NotImplementedError
 
@@ -103,17 +103,17 @@ class IPointListMesh (object) :
 	"""
 	mesh view as a collection of points
 	"""
-	def points (self, fid=None) :
+	def points (self, cid=None) :
 		"""
-		iterator on point around a given face
-		or all points if fid is None
+		iterator on point around a given cell
+		or all points if cid is None
 		"""
 		raise NotImplementedError
 	
-	def nb_points (self, fid=None) :
+	def nb_points (self, cid=None) :
 		"""
-		number of faces around a point
-		or total number of points if fid is None
+		number of cells around a point
+		or total number of points if cid is None
 		"""
 		raise NotImplementedError
 	
@@ -133,11 +133,11 @@ class IMutableMesh (object) :
 	"""
 	interface for editing methods on mesh
 	"""
-	def add_face (self, fid=None) :
+	def add_cell (self, cid=None) :
 		"""
-		add a new face connected to nothing
-		if fid is None, create a free id
-		return used fid
+		add a new cell connected to nothing
+		if cid is None, create a free id
+		return used cid
 		"""
 		raise NotImplementedError
 	
@@ -149,16 +149,16 @@ class IMutableMesh (object) :
 		"""
 		raise NotImplementedError
 	
-	def add_link (self, fid, pid) :
+	def add_link (self, cid, pid) :
 		"""
-		add a link between a face and a point
-		face and point must already exist in the mesh
+		add a link between a cell and a point
+		cell and point must already exist in the mesh
 		"""
 		raise NotImplementedError
 	
-	def remove_face (self, fid) :
+	def remove_cell (self, cid) :
 		"""
-		remove a face and all the references to attached points
+		remove a cell and all the references to attached points
 		do not remove attached points
 		"""
 		raise NotImplementedError
@@ -170,9 +170,9 @@ class IMutableMesh (object) :
 		"""
 		raise NotImplementedError
 	
-	def remove_link (self, fid, pid) :
+	def remove_link (self, cid, pid) :
 		"""
-		remove a link between a face and a point
+		remove a link between a cell and a point
 		"""
 		raise NotImplementedError
 
