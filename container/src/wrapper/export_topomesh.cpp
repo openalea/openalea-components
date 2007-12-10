@@ -50,7 +50,36 @@ mesh_cell_point_range export_cell_points (Topomesh& m, int pid) {
 	return mesh_cell_point_range(m.points_begin(pid),m.points_end(pid));
 }
 
+int export_mesh_add_cell (Topomesh& mesh, PyObject* arg) {
+	if(arg==Py_None) {
+		return mesh.add_cell();
+	}
+	else {
+		return mesh.add_cell(extract<int>(arg));
+	}
+}
+
+int export_mesh_add_point (Topomesh& mesh, PyObject* arg) {
+	if(arg==Py_None) {
+		return mesh.add_point();
+	}
+	else {
+		return mesh.add_point(extract<int>(arg));
+	}
+}
+
+int export_mesh_add_link (Topomesh& mesh, int elm1, int elm2, PyObject* arg) {
+	if(arg==Py_None) {
+		return mesh.add_link(elm1,elm2);
+	}
+	else {
+		return mesh.add_link(elm1,elm2,extract<int>(arg));
+	}
+}
+
 void export_topomesh () {
+	export_custom_range<Topomesh::cell_iterator>("_PyTopomeshCellRange");
+
 	class_<Topomesh, bases<Relation> >("Topomesh", "topomesh")
 		//topomesh
 		.def("has_cell",&Topomesh::has_cell,"test wether a cell is inside the mesh")
@@ -74,13 +103,16 @@ void export_topomesh () {
 		.def("nb_points",(int (Topomesh::*) (int))& Topomesh::nb_points,"number of points in the mesh")
 		//mutable
 		.def("add_cell",(int (Topomesh::*) ())& Topomesh::add_cell,"add a new cell in the mesh")
-		.def("add_cell",(int (Topomesh::*) (int))& Topomesh::add_cell,"add a new cell in the mesh")
+		//.def("add_cell",(int (Topomesh::*) (int))& Topomesh::add_cell,"add a new cell in the mesh")
+		.def("add_cell",&export_mesh_add_cell,"add a new cell in the mesh")
 		.def("remove_cell",&Topomesh::remove_cell,"remove a cell from the mesh")
 		.def("add_point",(int (Topomesh::*) ())& Topomesh::add_point,"add a new point in the mesh")
-		.def("add_point",(int (Topomesh::*) (int))& Topomesh::add_point,"add a new point in the mesh")
+		//.def("add_point",(int (Topomesh::*) (int))& Topomesh::add_point,"add a new point in the mesh")
+		.def("add_point",&export_mesh_add_point,"add a new point in the mesh")
 		.def("remove_point",&Topomesh::remove_point,"remove a point from the mesh")
 		.def("add_link",(int (Topomesh::*) (int,int))& Topomesh::add_link,"add a new link between a cell and a point")
-		.def("add_link",(int (Topomesh::*) (int,int,int))& Topomesh::add_link,"add a new link between a cell and a point")
+		//.def("add_link",(int (Topomesh::*) (int,int,int))& Topomesh::add_link,"add a new link between a cell and a point")
+		.def("add_link",&export_mesh_add_link,"add a new link between a cell and a point")
 		.def("remove_link",&Topomesh::remove_link,"remove a link, do not remove corresponding cell and point")
 		.def("clear_links",&Topomesh::clear_links,"remove all links")
 		.def("clear",&Topomesh::clear,"remove all cells ,points and links from the mesh")
