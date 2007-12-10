@@ -256,6 +256,9 @@ class Graph (IGraph,\
 	
 	def clear_edges(self):
 		self._edges.clear()
+		for vid,(in_edges,out_edges) in self._vertices.iteritems() :
+			in_edges.clear()
+			out_edges.clear()
 		self._eid_generator=IdGenerator()
 	clear_edges.__doc__=IMutableEdgeGraph.clear_edges.__doc__
 	
