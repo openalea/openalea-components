@@ -19,15 +19,20 @@
 #include "container/grid.h"
 using namespace container;
 
+#include <boost/smart_ptr.hpp>
 #include <boost/python.hpp>
 #include "export_iterator.h"
 using namespace boost::python;
 
 typedef PyCustomRange<Grid::iterator> grid_index_range;
 
-void grid_constructor (const Grid& g, const object* shape) {
-	tuple shape_tup=tuple(shape);
-	int a=extract<int>(shape_tup[0]);
+static boost::shared_ptr<Grid> export_grid_constructor (const object& shape) {
+	tuple tup_shape=tuple(shape);
+	Grid::coord_list vec_shape(len(tup_shape));
+	for(int i=0;i<len(tup_shape);++i) {
+		vec_shape[i]=extract<int>(tup_shape[i]);
+	}
+	return boost::shared_ptr<Grid>(new Grid(vec_shape));
 }
 
 tuple grid_shape (const Grid& g) {
@@ -40,13 +45,21 @@ tuple grid_shape (const Grid& g) {
 	return tuple(l);
 }
 
+void export_grid_set_shape (Grid& g, tuple shape) {
+	Grid::coord_list vec_shape(len(shape));
+	for(int i=0;i<len(shape);++i) {
+		vec_shape[i]=extract<int>(shape[i]);
+	}
+	g.set_shape(vec_shape);
+}
+
 grid_index_range export_grid_iter (const Grid& grid) {
 	return grid_index_range(grid.begin(),grid.end());
 }
 
 int grid_index (const Grid& g, tuple coords) {
-	Grid::coord_list coords_vec(g.dim());
-	for(int i=0;i<g.dim();++i) {
+	Grid::coord_list coords_vec(len(coords));
+	for(int i=0;i<len(coords);++i) {
 		coords_vec[i]=extract<int>(coords[i]);
 	}
 	return g.index(coords_vec);
@@ -54,17 +67,22 @@ int grid_index (const Grid& g, tuple coords) {
 
 tuple grid_coordinates (const Grid& g, int index) {
 	Grid::coord_list coords=g.coordinates(index);
-	return make_tuple(coords[0],coords[1],coords[2]);
+	list ret;
+	for(Grid::coord_list::iterator it=coords.begin();it!=coords.end();++it) {
+		ret.append(*it);
+	}
+	return tuple(ret);
 }
 
 void export_grid () {
 	export_custom_range<Grid::iterator>("_PyGridIndexRange");
 
-	class_<Grid>("Grid", "regular grid in multi-dimensional space")
+	class_<Grid>("Grid", "multi dimensional regular grid")
 		//.def( init<const Grid::tuple&> ())
-		//.def("__init__",&grid_constructor)
+		.def("__init__",make_constructor(export_grid_constructor),"init")
 		.def("dim",&Grid::dim,"dimension of space")
 		.def("shape",&grid_shape,"number of cells in each dimension")
+		.def("set_shape",&export_grid_set_shape,"set a new shape for this grid")
 		.def("size",&Grid::size,"total number of cells in the grid")
 		.def("__len__",&Grid::size,"total number of cells in the grid")
 		.def("__iter__",&export_grid_iter,"iterate on all cells indexes")

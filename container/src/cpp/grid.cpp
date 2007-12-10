@@ -20,20 +20,13 @@
 #include "container/grid.h"
 
 namespace container {
-	Grid::Grid () {
-		for(int i=0;i<3;++i) {
-			max_coords.push_back(5);
-		}
-		for(int i=0;i<max_coords.size();++i) {
-			offset_values.push_back(1);
-		}
-		for(int i=0;i<(max_coords.size()-1);++i) {
-			offset_values[i+1]=offset_values[i]*max_coords[i];
-		}
+	Grid::Grid (const Grid::coord_list& shape) {
+		set_shape(shape);
 	}
 
-	Grid::Grid (const Grid::coord_list& shape) {
-		
+	void Grid::set_shape (const Grid::coord_list& shape) {
+		max_coords.clear();
+		offset_values.clear();
 		for(Grid::coord_list::const_iterator it=shape.begin();it!=shape.end();++it) {
 			max_coords.push_back(*it);
 		}
