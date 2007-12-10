@@ -4,6 +4,7 @@ g=Graph()
 sid=g.add_vertex()
 tid=g.add_vertex(10)
 tid2=g.add_vertex()
+tid3=g.add_vertex(None)
 
 print "add vertex",sid
 print "add vertex",tid
@@ -11,8 +12,11 @@ print "add vertex",tid2
 
 eid=g.add_edge(sid,tid)
 eid2=g.add_edge(sid,tid2,34)
+eid3=g.add_edge(sid,tid3,None)
 print "add edge",eid,g.source(eid),g.target(eid)
 print "add edge",eid2,g.source(eid2),g.target(eid2)
+print "add edge",eid3,g.source(eid3),g.target(eid3)
+
 
 print "has_vertex",g.has_vertex(sid),sid in g,1000 in g
 print "has_edge",g.has_edge(eid),g.has_edge(1000)

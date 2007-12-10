@@ -60,6 +60,24 @@ graph_neighbor_range export_neighbors (Graph& g, int vid) {
 	return graph_neighbor_range(g.neighbors_begin(vid),g.neighbors_end(vid));
 }
 
+int export_graph_add_vertex (Graph& graph, PyObject* arg) {
+	if(arg==Py_None) {
+		return graph.add_vertex();
+	}
+	else {
+		return graph.add_vertex(extract<int>(arg));
+	}
+}
+
+int export_graph_add_edge (Graph& graph, int sid, int tid, PyObject* arg) {
+	if(arg==Py_None) {
+		return graph.add_edge(sid,tid);
+	}
+	else {
+		return graph.add_edge(sid,tid,extract<int>(arg));
+	}
+}
+
 void export_graph () {
 	export_custom_range<Graph::vertex_edge_iterator>("_PyGraphVertexEdgeRange");
 	export_custom_range<Graph::vertex_iterator>("_PyGraphVertexRange");
@@ -91,12 +109,15 @@ void export_graph () {
 		.def("nb_neighbors",&Graph::nb_neighbors,"number of neighbors of this vertex")
 		//mutable
 		.def("add_vertex",(int (Graph::*) ())& Graph::add_vertex,"add a new vertex in the graph")
-		.def("add_vertex",(int (Graph::*) (int))& Graph::add_vertex,"add a new vertex in the graph")
+		//.def("add_vertex",(int (Graph::*) (int))& Graph::add_vertex,"add a new vertex in the graph")
+		.def("add_vertex",&export_graph_add_vertex,"add a new vertex in the graph")
 		.def("remove_vertex",&Graph::remove_vertex,"remove a vertex from the graph")
 		.def("add_edge",(int (Graph::*) (int,int))& Graph::add_edge,"add a new edge between two vertices")
 		.def("add_link",(int (Graph::*) (int,int))& Graph::add_link,"add a new edge between two vertices")
-		.def("add_edge",(int (Graph::*) (int,int,int))& Graph::add_edge,"add a new edge between two vertices")
-		.def("add_link",(int (Graph::*) (int,int,int))& Graph::add_link,"add a new edge between two vertices")
+		//.def("add_edge",(int (Graph::*) (int,int,int))& Graph::add_edge,"add a new edge between two vertices")
+		.def("add_edge",&export_graph_add_edge,"add a new edge between two vertices")
+		//.def("add_link",(int (Graph::*) (int,int,int))& Graph::add_link,"add a new edge between two vertices")
+		.def("add_link",&export_graph_add_edge,"add a new edge between two vertices")
 		.def("remove_edge",&Graph::remove_edge,"remove an edge, do not remove corresponding vertices")
 		.def("remove_link",&Graph::remove_link,"remove an edge, do not remove corresponding vertices")
 		.def("clear_edges",&Graph::clear_edges,"remove all links")

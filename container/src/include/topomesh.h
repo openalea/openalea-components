@@ -115,7 +115,7 @@ namespace container {
 
 		point_link_iterator point_links_end (int pid) {
 		//iterator on all edges connected to a point
-			test_existing_cell(pid);
+			test_existing_point(pid);
 			return point_links.find(pid)->second.end();
 		}
 

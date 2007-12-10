@@ -91,8 +91,8 @@ namespace container {
 	}
 
 	void Topomesh::remove_link (int lid) {
-		cell_links.find(lid)->second.clear();
-		point_links.find(lid)->second.clear();
+		cell_links.find(cell(lid))->second.erase(lid);
+		point_links.find(point(lid))->second.erase(lid);
 		Relation::remove_link(lid);
 	}
 
