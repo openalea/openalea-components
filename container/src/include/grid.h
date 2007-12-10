@@ -90,7 +90,7 @@ namespace container {
 		coord_list max_coords;//number of elements in each dimension of the grid
 		coord_list offset_values;//internal offset for coordinates of cases
 	public:
-		Grid();//empty constructor used for python TODO remove
+		Grid() {}
 		Grid(const coord_list& shape);
 		//create a grid with shape[i] cases in the ieme dimension
 
@@ -100,6 +100,9 @@ namespace container {
 		//dimension of the space
 			return max_coords.size();
 		}
+
+		void set_shape (const coord_list& shape);
+		//set a new shape for the grid
 
 		const coord_list& shape () const {
 		//number of elements in each dimension

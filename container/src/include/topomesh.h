@@ -239,7 +239,7 @@ namespace container {
 		//try to add a cell to the mesh using the provided id
 		//if cid already used throw InvalidCell
 			try {
-				return cell_links.add(std::set<int>());
+				return cell_links.add(std::set<int>(),cid);
 			}
 			catch (IdMap< std::set<int> >::InvalidId) {
 				throw InvalidCell(cid);
@@ -260,7 +260,7 @@ namespace container {
 		//try to add a point to the mesh using the provided id
 		//if pid already used throw InvalidPoint
 			try {
-				return point_links.add(std::set<int>());
+				return point_links.add(std::set<int>(),pid);
 			}
 			catch (IdMap< std::set<int> >::InvalidId) {
 				throw InvalidPoint(pid);
