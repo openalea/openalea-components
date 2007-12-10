@@ -1,0 +1,13 @@
+Metadata-Version: 1.0
+Name: openalea.utils
+Version: 0.0.1
+Summary: utils for container
+Home-page: http://openalea.gforge.inria.fr
+Author: Jerome Chopard
+Author-email: jerome.chopard@sophia.inria.fr
+License: Cecill-C
+Description: 
+        contains set of container data structures
+	like graph,grid,topomesh
+        
+Platform: UNKNOWN
