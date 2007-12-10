@@ -23,8 +23,8 @@ __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
 from interface.topomesh import InvalidCell,InvalidPoint,InvalidLink,\
-				ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh
-from openalea.container.utils.id_generator import IdGenerator
+				ITopoMesh,ILinkMesh,ICellListMesh,IPointListMesh,IMutableMesh
+from openalea.container.utils import IdDict
 
 class StrInvalidCell (InvalidCell) :
 	"""
@@ -44,10 +44,10 @@ class StrInvalidLink (InvalidLink) :
 	"""
 	exception raised when a link between a cell and a point does not exist
 	"""
-	def __init__ (self, cid, pid) :
-		InvalidLink.__init__(self,"cell %d and point %d are not linked" % (cid,pid))
+	def __init__ (self, lid) :
+		InvalidLink.__init__(self,"link %d does not exist" % lid)
 
-class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
+class TopoMesh (ITopoMesh,ILinkMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	"""
 	implementation of a topological mesh
 	"""
@@ -56,10 +56,9 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 		"""
 		constructor of an empty mesh
 		"""
-		self._cells={}
-		self._points={}
-		self._cid_generator=IdGenerator()
-		self._pid_generator=IdGenerator()
+		self._cell_links=IdDict()
+		self._point_links=IdDict()
+		self._link_extremities=IdDict()
 	
 	########################################################################
 	#
@@ -71,52 +70,106 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	is_valid.__doc__=ITopoMesh.is_valid.__doc__
 	
 	def has_point (self, pid) :
-		return pid in self._points
+		return pid in self._point_links
 	has_point.__doc__=ITopoMesh.has_point.__doc__
 	
 	def has_cell (self, cid) :
-		return cid in self._cells
+		return cid in self._cell_links
 	has_cell.__doc__=ITopoMesh.has_cell.__doc__
 	
+	def has_link (self, lid) :
+		return lid in self._link_extremities
+	has_link.__doc__=ITopoMesh.has_link.__doc__
+	########################################################################
+	#
+	#		Link Mesh concept
+	#
+	########################################################################
+	def links (self) :
+		return self._link_extremities.iterkeys()
+	links.__doc__=ILinkMesh.links.__doc__
+	
+	def cell_links (self, cid) :
+		try :
+			return iter(self._cell_links[cid])
+		except KeyError :
+			raise StrInvalidCell(cid)
+	cell_links.__doc__=ILinkMesh.cell_links.__doc__
+	
+	def nb_cell_links (self, cid) :
+		try :
+			return len(self._cell_links[cid])
+		except KeyError :
+			raise StrInvalidCell(cid)
+	nb_cell_links.__doc__=ILinkMesh.nb_cell_links.__doc__
+	
+	def point_links (self, pid) :
+		try :
+			return iter(self._point_links[pid])
+		except KeyError :
+			raise StrInvalidPoint(pid)
+	point_links.__doc__=ILinkMesh.point_links.__doc__
+	
+	def nb_point_links (self, pid) :
+		try :
+			return len(self._point_links[pid])
+		except KeyError :
+			raise StrInvalidPoint(pid)
+	nb_point_links.__doc__=ILinkMesh.nb_point_links.__doc__
+	
+	def cell (self, lid) :
+		try :
+			return self._link_extremities[lid][0]
+		except KeyError :
+			raise StrInvalidLink(lid)
+	cell.__doc__=ILinkMesh.cell.__doc__
+	
+	def point (self, lid) :
+		try :
+			return self._link_extremities[lid][1]
+		except KeyError :
+			raise StrInvalidLink(lid)
+	point.__doc__=ILinkMesh.point.__doc__
 	########################################################################
 	#
 	#		Cell list concept
 	#
 	########################################################################
+	def _cells (self, pid) :
+		try :
+			for lid in self.point_links(pid) :
+				yield self.cell(lid)
+		except KeyError :
+			raise StrInvalidPoint(pid)
+	
 	def cells (self, pid=None) :
 		if pid is None :
-			return self._cells.iterkeys()
-		if not self.has_point(pid) :
-			raise StrInvalidPoint(pid)
-		return iter(self._points[pid])
+			return self._cell_links.iterkeys()
+		else :
+			return self._cells(pid)
 	cells.__doc__=ICellListMesh.cells.__doc__
 	
 	def nb_cells (self, pid=None) :
 		if pid is None :
-			return len(self._cells)
-		if not self.has_point(pid) :
+			return len(self._cell_links)
+		try :
+			return len(self._point_links[pid])
+		except KeyError :
 			raise StrInvalidPoint(pid)
-		return len(self._points[pid])
 	nb_cells.__doc__=ICellListMesh.nb_cells.__doc__
 	
 	def cell_neighbors (self, cid) :
-		if not self.has_cell(cid) :
-			raise StrInvalidCell(cid)
-		neighbors_list=[cid]
-		for pid in self._cells[cid] :
-			neighbors_list.extend(self._points[pid])
-		neighbors=set(neighbors_list)
+		neighbors=set()
+		for pid in self.points(cid) :
+			neighbors|=set(self.cells(pid))
 		neighbors.remove(cid)
 		return iter(neighbors)
 	cell_neighbors.__doc__=ICellListMesh.cell_neighbors.__doc__
 	
 	def nb_cell_neighbors (self, cid) :
-		if not self.has_cell(cid) :
-			raise StrInvalidCell(cid)
-		neighbors_list=[cid]
-		for pid in self._cells[cid] :
-			neighbors_list.extend(self._points[pid])
-		neighbors=set(neighbors_list)
+		neighbors=set()
+		for pid in self.points(cid) :
+			neighbors|=set(self.cells(pid))
 		return len(neighbors)-1
 	nb_cell_neighbors.__doc__=ICellListMesh.nb_cell_neighbors.__doc__
 	
@@ -125,40 +178,41 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	#		Point list concept
 	#
 	#########################################################################
+	def _points (self, cid) :
+		try :
+			for lid in self.cell_links(cid) :
+				yield self.point(lid)
+		except KeyError :
+			raise StrInvalidCell(cid)
+	
 	def points (self, cid=None) :
 		if cid is None :
-			return self._points.iterkeys()
-		if not self.has_cell(cid) :
-			raise StrInvalidCell(cid)
-		return iter(self._cells[cid])
+			return self._point_links.iterkeys()
+		else :
+			return self._points(cid)
 	points.__doc__=IPointListMesh.points.__doc__
 	
 	def nb_points (self, cid=None) :
 		if cid is None :
-			return len(self._points)
-		if not self.has_cell(cid) :
+			return len(self._point_links)
+		try :
+			return len(self._cells[cid])
+		except KeyError :
 			raise StrInvalidCell(cid)
-		return len(self._cells[cid])
 	nb_points.__doc__=IPointListMesh.nb_points.__doc__
 	
 	def point_neighbors (self, pid) :
-		if not self.has_point(pid) :
-			raise StrInvalidPoint(pid)
-		neighbors_list=[pid]
-		for cid in self._points[pid] :
-			neighbors_list.extend(self._cells[cid])
-		neighbors=set(neighbors_list)
+		neighbors=set()
+		for cid in self.cells(pid) :
+			neighbors|=set(self.points(cid))
 		neighbors.remove(pid)
 		return iter(neighbors)
 	point_neighbors.__doc__=IPointListMesh.point_neighbors.__doc__
 	
 	def nb_point_neighbors (self, pid) :
-		if not self.has_point(pid) :
-			raise StrInvalidPoint(pid)
-		neighbors_list=[pid]
-		for cid in self._points[pid] :
-			neighbors_list.extend(self._cells[cid])
-		neighbors=set(neighbors_list)
+		neighbors=set()
+		for cid in self.cells(pid) :
+			neighbors|=set(self.points(cid))
 		return len(neighbors)-1
 	nb_point_neighbors.__doc__=IPointListMesh.nb_point_neighbors.__doc__
 	
@@ -168,56 +222,42 @@ class TopoMesh (ITopoMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
 	#
 	########################################################################
 	def add_cell (self, cid=None) :
-		cid=self._cid_generator.get_id(cid)
-		self._cells[cid]=[]
-		return cid
+		return self._cell_links.add(set(),cid)
 	add_cell.__doc__=IMutableMesh.add_cell.__doc__
 	
-	def add_point (self, pid=None) :
-		pid=self._pid_generator.get_id(pid)
-		self._points[pid]=set()
-		return pid
-	add_point.__doc__=IMutableMesh.add_point.__doc__
-	
-	def add_link (self, cid, pid) :
-		if not self.has_cell(cid) :
-			raise StrInvalidCell(cid)
-		if not self.has_point(pid) :
-			raise StrInvalidPoint(pid)
-		self._cells[cid].append(pid)
-		self._points[pid].add(cid)
-	add_link.__doc__=IMutableMesh.add_link.__doc__
-	
 	def remove_cell (self, cid) :
-		try :
-			self._cid_generator.release_id(cid)
-		except KeyError :
-			raise StrInvalidCell(cid)
-		for pid in self._cells[cid] :
-			self._points[pid].remove(cid)
-		del self._cells[cid]
+		for lid in list(self.cell_links(cid)) :
+			self.remove_link(lid)
+		del self._cell_links[cid]
 	remove_cell.__doc__=IMutableMesh.remove_cell.__doc__
 	
+	def add_point (self, pid=None) :
+		return self._point_links.add(set(),pid)
+	add_point.__doc__=IMutableMesh.add_point.__doc__
+	
 	def remove_point (self, pid) :
-		try :
-			self._pid_generator.release_id(pid)
-		except KeyError :
-			raise StrInvalidPoint(pid)
-		for cid in self._points[pid] :
-			self._cells[cid].remove(pid)
-		del self._points[pid]
+		for lid in list(self.point_links(pid)) :
+			self.remove_link(lid)
+		del self._point_links[pid]
 	remove_point.__doc__=IMutableMesh.remove_point.__doc__
 	
-	def remove_link (self, cid, pid) :
+	def add_link (self, cid, pid, lid=None) :
 		if not self.has_cell(cid) :
 			raise StrInvalidCell(cid)
 		if not self.has_point(pid) :
 			raise StrInvalidPoint(pid)
-		try :
-			self._cells[cid].remove(pid)
-			self._points[pid].remove(cid)
-		except KeyError :
-			raise StrInvalidLink(cid,pid)
+		lid=self._link_extremities.add( (cid,pid),lid )
+		self._cell_links[cid].add(lid)
+		self._point_links[pid].add(lid)
+		return lid
+	add_link.__doc__=IMutableMesh.add_link.__doc__
+	
+	def remove_link (self, lid) :
+		cid=self.cell(lid)
+		self._cell_links[cid].remove(lid)
+		pid=self.point(lid)
+		self._point_links[pid].remove(lid)
+		del self._link_extremities[lid]
 	remove_link.__doc__=IMutableMesh.remove_link.__doc__
 
 

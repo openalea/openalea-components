@@ -36,7 +36,7 @@ class InvalidPoint (TopoMeshError,KeyError) :
 	exception raised when a wrong point id is provided
 	"""
 
-class InvalidLink (TopoMeshError) :
+class InvalidLink (TopoMeshError,KeyError) :
 	"""
 	exception raised when a link between a cell and a point does not exist
 	"""
@@ -66,6 +66,66 @@ class ITopoMesh (object) :
 		"""
 		return true if the cell
 		specified by its id is in mesh
+		"""
+		raise NotImplementedError
+	
+	def has_link (self, lid) :
+		"""
+		return True if the link
+		specified by its id is in the mesh
+		"""
+		raise NotImplementedError
+
+class ILinkMesh (object) :
+	"""
+	explicit links
+	"""
+	def links (self) :
+		"""
+		iterator on all links in the mesh
+		return : iter of lid
+		"""
+		raise NotImplementedError
+	
+	def cell_links (self, cid) :
+		"""
+		iterator on all links outside a given cell
+		return : iter of lid
+		"""
+		raise NotImplementedError
+	
+	def nb_cell_links (self, cid) :
+		"""
+		number of links attached to this cell
+		return : int
+		"""
+		raise NotImplementedError
+	
+	def point_links (self, pid) :
+		"""
+		iterator on all links inside a given point
+		return : iter of lid
+		"""
+		raise NotImplementedError
+	
+	def nb_point_links (self, cid) :
+		"""
+		number of links attached to this point
+		return : int
+		"""
+		raise NotImplementedError
+	
+	def cell (self, lid) :
+		"""
+		cell corresponding to the source of the link
+		return : cid
+		"""
+		raise NotImplementedError
+	
+	def point (self, lid) :
+		"""
+		point corresponding to the target of the link
+		return : pid
 		"""
 		raise NotImplementedError
 
@@ -141,21 +201,6 @@ class IMutableMesh (object) :
 		"""
 		raise NotImplementedError
 	
-	def add_point (self, pid=None) :
-		"""
-		add a new point connected to nothing
-		if pid is None, create a free id
-		return used pid
-		"""
-		raise NotImplementedError
-	
-	def add_link (self, cid, pid) :
-		"""
-		add a link between a cell and a point
-		cell and point must already exist in the mesh
-		"""
-		raise NotImplementedError
-	
 	def remove_cell (self, cid) :
 		"""
 		remove a cell and all the references to attached points
@@ -170,7 +215,23 @@ class IMutableMesh (object) :
 		"""
 		raise NotImplementedError
 	
-	def remove_link (self, cid, pid) :
+	def add_point (self, pid=None) :
+		"""
+		add a new point connected to nothing
+		if pid is None, create a free id
+		return used pid
+		"""
+		raise NotImplementedError
+	
+	def add_link (self, cid, pid, lid=None) :
+		"""
+		add a link between a cell and a point
+		cell and point must already exist in the mesh
+		return the link id used
+		"""
+		raise NotImplementedError
+	
+	def remove_link (self, lid) :
 		"""
 		remove a link between a cell and a point
 		"""
