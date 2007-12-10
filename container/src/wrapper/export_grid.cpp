@@ -45,10 +45,11 @@ tuple grid_shape (const Grid& g) {
 	return tuple(l);
 }
 
-void export_grid_set_shape (Grid& g, tuple shape) {
-	Grid::coord_list vec_shape(len(shape));
-	for(int i=0;i<len(shape);++i) {
-		vec_shape[i]=extract<int>(shape[i]);
+void export_grid_set_shape (Grid& g, const object& shape) {
+	tuple tup_shape=tuple(shape);
+	Grid::coord_list vec_shape(len(tup_shape));
+	for(int i=0;i<len(tup_shape);++i) {
+		vec_shape[i]=extract<int>(tup_shape[i]);
 	}
 	g.set_shape(vec_shape);
 }
@@ -57,10 +58,11 @@ grid_index_range export_grid_iter (const Grid& grid) {
 	return grid_index_range(grid.begin(),grid.end());
 }
 
-int grid_index (const Grid& g, tuple coords) {
-	Grid::coord_list coords_vec(len(coords));
-	for(int i=0;i<len(coords);++i) {
-		coords_vec[i]=extract<int>(coords[i]);
+int grid_index (const Grid& g, const object& coords) {
+	tuple tup_coords=tuple(coords);
+	Grid::coord_list coords_vec(len(tup_coords));
+	for(int i=0;i<len(tup_coords);++i) {
+		coords_vec[i]=extract<int>(tup_coords[i]);
 	}
 	return g.index(coords_vec);
 }
