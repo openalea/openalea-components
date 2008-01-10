@@ -16,31 +16,37 @@
  *                                                                       
  *-----------------------------------------------------------------------------*/
 
-#include "export_custom_map.h"
+#ifndef __CONTAINER_INT_RANGE_H__
+#define __CONTAINER_INT_RANGE_H__
+#include "container/int_iterator.h"
+using namespace container;
 
-void export_iterators();
-void export_id_generator ();
-void export_id_map ();
-void export_grid ();
-void export_relation ();
-void export_graph ();
-void export_topomesh ();
-void export_int_range ();
-void export_property_map ();
-
+#include <boost/python/errors.hpp>
 #include <boost/python.hpp>
 using namespace boost::python;
 
-BOOST_PYTHON_MODULE(_container) {
-	export_iterators();
-	export_id_generator();
-	export_id_map();
-	export_grid();
-	export_relation();
-	export_graph();
-	export_topomesh();
-	export_int_range();
-	export_custom_map<int,int>("Int");
-	export_custom_map<int,float>("IntFloat");
-	export_property_map();
-}
+class PyIntRange {
+private:
+	IntIterator* it_begin;
+	IntIterator* it_end;
+public:
+	PyIntRange(IntIterator* ref_begin, IntIterator* ref_end) : it_begin(ref_begin), it_end(ref_end) {
+	}
+	~PyIntRange() {}
+	const PyIntRange& iter () const {
+		return *this;
+	}
+	int next () {
+		if(it_begin->operator==(*it_end)) {
+			PyErr_SetString(PyExc_StopIteration,"done iterating");
+			throw error_already_set();
+		}
+		else {
+			int ret=**it_begin;
+			it_begin->operator++();
+			return ret;
+		}
+	}
+};
+#endif //__CONTAINER_INT_RANGE_H__
+

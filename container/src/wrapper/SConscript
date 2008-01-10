@@ -15,6 +15,8 @@ sources = ["export_id_generator.cpp",
 	   "export_graph.cpp",
 	   "export_topomesh.cpp",
 	   "export_iterators.cpp",
+	   "export_int_range.cpp",
+	   "export_property_map.cpp",
 	   "container_wrap.cpp"]
 target = "_container"
 lib1 = ["container"]

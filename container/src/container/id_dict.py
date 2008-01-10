@@ -49,7 +49,8 @@ class IdDict (dict) :
 		self._id_generator.release_id(key)
 	
 	def __setitem__ (self, key, val) :
-		self._id_generator.get_id(key)
+		if key not in self :
+			self._id_generator.get_id(key)
 		dict.__setitem__(self,key,val)
 	
 	def clear (self) :

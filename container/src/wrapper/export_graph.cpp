@@ -19,10 +19,13 @@
 #include "container/relation.h"
 #include "container/graph.h"
 #include "container/graph_iterators.h"
+#include "container/int_iterator.h"
 using namespace container;
 
+#include <boost/smart_ptr.hpp>
 #include <boost/python.hpp>
 #include "export_iterator.h"
+#include "int_range.h"
 using namespace boost::python;
 
 typedef PyCustomRange<Graph::in_edge_iterator> graph_local_edge_range;
@@ -35,10 +38,27 @@ graph_local_edge_range export_in_edges (Graph& g, int vid) {
 graph_local_edge_range export_out_edges (Graph& g, int vid) {
 	return graph_local_edge_range(g.out_edges_begin(vid),g.out_edges_end(vid));
 }
-graph_edge_range export_edges (Graph& g) {
+graph_edge_range export_graph_edges (Graph& g) {
 	return graph_edge_range(g.edges_begin(),g.edges_end());
 }
-graph_vertex_edge_range export_vertex_edges (Graph& g, int vid) {
+
+typedef IntCloneIterator<Graph::edge_iterator> int_edge_iterator;
+typedef IntCloneIterator<Graph::vertex_edge_iterator> int_vertex_edge_iterator;
+
+
+/*PyIntRange export_graph_vertex_edges (Graph& graph, PyObject* arg) {
+	if(arg==Py_None) {
+		return PyIntRange(int_edge_iterator(&graph.edges_begin()),
+				  int_edge_iterator(&graph.edges_end()));
+	}
+	else {
+		int vid=extract<int>(arg);
+		return PyIntRange(int_vertex_edge_iterator(&graph.edges_begin(vid)),
+				  int_vertex_edge_iterator(&graph.edges_end(vid)));
+	}
+}*/
+
+graph_vertex_edge_range export_graph_vertex_edges (Graph& g, int vid) {
 	return graph_vertex_edge_range(g.edges_begin(vid),g.edges_end(vid));
 }
 
@@ -60,6 +80,15 @@ graph_neighbor_range export_neighbors (Graph& g, int vid) {
 	return graph_neighbor_range(g.neighbors_begin(vid),g.neighbors_end(vid));
 }
 
+int export_graph_nb_edges (Graph& graph, PyObject* arg) {
+	if(arg==Py_None) {
+		return graph.nb_edges();
+	}
+	else {
+		return graph.nb_edges(extract<int>(arg));
+	}
+}
+
 int export_graph_add_vertex (Graph& graph, PyObject* arg) {
 	if(arg==Py_None) {
 		return graph.add_vertex();
@@ -78,10 +107,41 @@ int export_graph_add_edge (Graph& graph, int sid, int tid, PyObject* arg) {
 	}
 }
 
+class TotoA {
+public:
+	virtual void test () const {std::cout << "A" << std::endl;}
+};
+
+class TotoB : public TotoA {
+private:
+	int intern;
+public:
+	TotoB(int val) {
+		intern=val;
+	}
+	void test () const {std::cout << "B" << intern << std::endl;}
+};
+
+boost::shared_ptr<TotoA> export_test (Graph& graph, bool test) {
+	if(test) {
+		return boost::shared_ptr<TotoA>(new TotoA());
+	}
+	else {
+		return boost::shared_ptr<TotoA>(new TotoB(42));
+	}
+}
+
+void export_toto_test (const boost::shared_ptr<TotoA>& a) {
+	a->test();
+}
+
 void export_graph () {
 	export_custom_range<Graph::vertex_edge_iterator>("_PyGraphVertexEdgeRange");
 	export_custom_range<Graph::vertex_iterator>("_PyGraphVertexRange");
 	export_custom_range<Graph::neighbor_iterator>("_PyGraphNeighborRange");
+
+	class_<boost::shared_ptr<TotoA> >("_PySharedPtr")
+		.def("test",&export_toto_test);
 
 	class_<Graph, bases<Relation> >("Graph", "graph")
 		//graph concept
@@ -93,10 +153,10 @@ void export_graph () {
 		.def("nb_in_edges",&Graph::nb_in_edges,"number of in edges connected to a vertex")
 		.def("out_edges",&export_out_edges,"iterator on out edges connected to a vertex")
 		.def("nb_out_edges",&Graph::nb_out_edges,"number of out edges connected to a vertex")
-		.def("edges",&export_edges,"iterator on all edges")
+		.def("edges",&export_graph_edges,"iterator on all edges")
 		.def("nb_edges",(int (Graph::*) () const)& Graph::nb_edges,"total number of edges")
-		.def("edges",&export_vertex_edges,"iterator on all edges connected to a vertex")
-		.def("nb_edges",(int (Graph::*) (int) const)& Graph::nb_edges,"number of out edges connected to a vertex")
+		.def("edges",&export_graph_vertex_edges,"iterator on all edges connected to a vertex")
+		.def("nb_edges",&export_graph_nb_edges,"number of out edges connected to a vertex")
 		//vertex list
 		.def("vertices",&export_iter_vertices,"iterator on all vertices")
 		.def("nb_vertices",&Graph::nb_vertices,"number of vertices in the graph")
@@ -123,6 +183,7 @@ void export_graph () {
 		.def("clear_edges",&Graph::clear_edges,"remove all links")
 		.def("clear",&Graph::clear,"remove all vertices from the graph")
 		//debug
+		.def("test",&export_test)
 		.def("state",&Graph::state,"debug function");
 
 }
