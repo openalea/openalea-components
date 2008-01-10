@@ -16,31 +16,13 @@
  *                                                                       
  *-----------------------------------------------------------------------------*/
 
-#include "export_custom_map.h"
-
-void export_iterators();
-void export_id_generator ();
-void export_id_map ();
-void export_grid ();
-void export_relation ();
-void export_graph ();
-void export_topomesh ();
-void export_int_range ();
-void export_property_map ();
-
 #include <boost/python.hpp>
+#include "int_range.h"
 using namespace boost::python;
 
-BOOST_PYTHON_MODULE(_container) {
-	export_iterators();
-	export_id_generator();
-	export_id_map();
-	export_grid();
-	export_relation();
-	export_graph();
-	export_topomesh();
-	export_int_range();
-	export_custom_map<int,int>("Int");
-	export_custom_map<int,float>("IntFloat");
-	export_property_map();
+void export_int_range () {
+	class_<PyIntRange>("_PyIntRange",init<IntIterator*,IntIterator*>())
+		.def("next",&PyIntRange::next)
+		.def("__iter__",&PyIntRange::iter,return_internal_reference<1>());
 }
+

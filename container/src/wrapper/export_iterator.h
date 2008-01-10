@@ -23,6 +23,34 @@
 using namespace boost::python;
 
 template <typename T_iterator>
+class MapItemIterator {
+private:
+	typedef MapItemIterator<T_iterator> self;//for internal use
+public:
+	typedef tuple value_type;
+public:
+	T_iterator current_it;
+public:
+	MapItemIterator(T_iterator ref) : current_it(ref) {}
+	~MapItemIterator() {}
+	tuple operator* () const {
+		return make_tuple(current_it->first,current_it->second);
+	}
+	self& operator++ () {
+		current_it++;
+		return *this;
+	}
+	self operator++ (int) {
+		self ret=*this;
+		++current_it;
+		return ret;
+	}
+
+	bool operator== (const self& other) const {return current_it == other.current_it;}
+	bool operator!= (const self& other) const {return current_it != other.current_it;}
+};
+
+template <typename T_iterator>
 class PyCustomRange {
 private:
 	T_iterator it_begin;

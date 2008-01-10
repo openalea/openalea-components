@@ -19,7 +19,8 @@ sources = ["id_generator.cpp",
 	   "grid.cpp",
 	   "relation.cpp",
 	   "graph.cpp",
-	   "topomesh.cpp"]
+	   "topomesh.cpp",
+	   "property_map.cpp"]
 target = "container"
 
 # Add defines to export symbols on Windows

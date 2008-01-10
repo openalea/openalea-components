@@ -24,7 +24,7 @@ using namespace container;
 #include "export_iterator.h"
 using namespace boost::python;
 
-template <typename D>
+/*template <typename D>
 class MapItemIterator {
 private:
 	typedef MapItemIterator<D> self;//for internal use
@@ -55,11 +55,13 @@ public:
 	bool operator!= (const MapItemIterator<D>& other) const {return current_it != other.current_it;}
 	//debug
 	void state () const;
-};
+};*/
+
+#define ItemIt MapItemIterator<typename IdMap<D>::const_iterator>
 
 template <typename D>
-PyCustomRange<MapItemIterator<D> > export_iteritems (const IdMap<D>& m) {
-	return PyCustomRange<MapItemIterator<D> >(MapItemIterator<D>(m.begin()),MapItemIterator<D>(m.end()));
+PyCustomRange< ItemIt > export_iteritems (const IdMap<D>& m) {
+	return PyCustomRange< ItemIt >(ItemIt(m.begin()),ItemIt(m.end()));
 }
 
 template <typename D>
@@ -126,7 +128,7 @@ void export_id_map (char* name) {
 	std::string item_it_name("_PyMapItem");
 	item_it_name+=name;
 	item_it_name+="Range";
-	export_custom_range<MapItemIterator<D> >(item_it_name.data());
+	export_custom_range< ItemIt >(item_it_name.data());
 
 	std::string class_name("IdMap");
 	class_name+=name;
