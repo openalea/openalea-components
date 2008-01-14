@@ -167,91 +167,75 @@ class SVGPath (SVGElement) :
 			self._commands.append(pth_cmd)
 	
 	def to_string (self) :
-		raise NotImplementedError
-		ref_point=Vector3()
 		path_txt=""
 		for command in self.commands() :
 			typ=command.type()
 			if typ=='M' :
 				pos,=command.parameters()
-				x,y,z=svgscene.svg_pos(*pos)
+				x,y=self.svg_pos(*pos)
 				path_txt+="M %f %f" % (x,y)
-				ref_point=pos
 			elif typ=='m' :
 				vec,=command.parameters()
-				dx,dy,dz=svgscene.svg_vector(*vec)
-				path_txt+="m %f %f" % (x,y)
-				ref_point=ref_point+vec
+				dx,dy=self.svg_vec(*vec)
+				path_txt+="m %f %f" % (dx,dy)
 			elif typ in ('Z','z') :
 				path_txt+="%s" % typ
 			elif typ=='L' :
 				pos,=command.parameters()
-				x,y,z=svgscene.svg_pos(*pos)
+				x,y=self.svg_pos(*pos)
 				path_txt+="L %f %f" % (x,y)
-				ref_point=pos
 			elif typ=='l' :
 				vec,=command.parameters()
-				dx,dy,dz=svgscene.svg_vector(*vec)
+				dx,dy=self.svg_vec(*vec)
 				path_txt+="l %f %f" % (dx,dy)
-				ref_point=ref_point+vec
 			elif typ in ('H','h') :
 				vec,=command.parameters()
-				dx,dy,dz=svgscene.svg_vector(*vec)
+				dx,dy=self.svg_vec(*vec)
 				path_txt+="%s %f" % (typ,dx)
-				ref_point=ref_point+vec
 			elif typ in ('V','v') :
 				vec,=command.parameters()
-				dx,dy,dz=svgscene.svg_vector(*vec)
+				dx,dy=self.svg_vec(*vec)
 				path_txt+="%s %f" % (typ,dy)
-				ref_point=ref_point+vec
 			elif typ=='C' :
 				v1,v2,pos=command.parameters()
-				x1,y1,z1=svgscene.svg_pos(*v1)
-				x2,y2,z2=svgscene.svg_pos(*v2)
-				x,y,z=svgscene.svg_pos(*pos)
+				x1,y1=self.svg_pos(*v1)
+				x2,y2=self.svg_pos(*v2)
+				x,y=self.svg_pos(*pos)
 				path_txt+="C %f %f %f %f %f %f" % (x1,y1,x2,y2,x,y)
-				ref_point=pos
 			elif typ=='c' :
 				v1,v2,vec=command.parameters()
-				x1,y1,z1=svgscene.svg_vector(*v1)
-				x2,y2,z2=svgscene.svg_vector(*v2)
-				dx,dy,dz=svgscene.svg_vector(*vec)
+				x1,y1=self.svg_vec(*v1)
+				x2,y2=self.svg_vec(*v2)
+				dx,dy=self.svg_vec(*vec)
 				path_txt+="c %f %f %f %f %f %f" % (x1,y1,x2,y2,dx,dy)
-				ref_point=ref_point+vec
 			elif typ=='S' :
 				v2,pos=command.parameters()
-				x2,y2,z2=svgscene.svg_pos(*v2)
-				x,y,z=svgscene.svg_pos(*pos)
+				x2,y2=self.svg_pos(*v2)
+				x,y=self.svg_pos(*pos)
 				path_txt+="S %f %f %f %f" % (x2,y2,x,y)
-				ref_point=pos
 			elif typ=='s' :
 				v2,vec=command.parameters()
-				x2,y2,z2=svgscene.svg_vector(*v2)
-				dx,dy,dz=svgscene.svg_vector(*vec)
+				x2,y2=self.svg_vec(*v2)
+				dx,dy=self.svg_vec(*vec)
 				path_txt+="s %f %f %f %f" % (x2,y2,dx,dy)
-				ref_point=ref_point+vec
 			elif typ=='Q' :
 				v1,pos=command.parameters()
-				x1,y1,z1=svgscene.svg_pos(*v1)
-				x,y,z=svgscene.svg_pos(*pos)
+				x1,y1=self.svg_pos(*v1)
+				x,y=self.svg_pos(*pos)
 				path_txt+="Q %f %f %f %f" % (x1,y1,x,y)
-				ref_point=pos
 			elif typ=='q' :
 				v1,vec=command.parameters()
-				x1,y1,z1=svgscene.svg_vector(*v1)
-				dx,dy,dz=svgscene.svg_vector(*vec)
+				x1,y1=self.svg_vec(*v1)
+				dx,dy=self.svg_vec(*vec)
 				path_txt+="q %f %f %f %f" % (x1,y1,dx,dy)
-				ref_point=ref_point+vec
 			elif typ=='T' :
 				pos,=command.parameters()
-				x,y,z=svgscene.svg_pos(*pos)
+				x,y=self.svg_pos(*pos)
 				path_txt+="T %f %f" % (x,y)
-				ref_point=pos
 			elif typ=='t' :
 				vec,=command.parameters()
-				dx,dy,dz=svgscene.svg_vector(*vec)
+				dx,dy=self.svg_vec(*vec)
 				path_txt+="t %f %f" % (dx,dy)
-				ref_point=ref_point+vec
 			else :
 				raise NotImplementedError("path command type not recognized : % s" % typ)
 		return path_txt
@@ -267,7 +251,7 @@ class SVGPath (SVGElement) :
 	
 	def save (self, svgnode) :
 		SVGElement.save(self,svgnode)
-		self.set_node_type("path")
+		self.set_node_type(svgnode,"path")
 		path_txt=self.to_string()
 		svgnode.setAttribute("d",path_txt)
 	
