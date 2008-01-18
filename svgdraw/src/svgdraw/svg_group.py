@@ -1,5 +1,5 @@
 from openalea.plantgl.scenegraph import Shape,Polyline,Color3
-from openalea.plantgl.math import Vector3,Matrix3,Matrix4,translation,scaling,norm
+from openalea.plantgl.math import Vector3,Matrix3,Matrix4,scaling,norm
 from svg_element import SVGElement
 
 class SVGGroup (SVGElement) :
@@ -29,12 +29,18 @@ class SVGGroup (SVGElement) :
 	def __getitem__ (self, ind) :
 		return self._elms[ind]
 	
+	def update_size (self, svggroupe) :
+		if norm(svggroupe.size())<1e-6 :
+			svggroupe.set_size(*self.size())
+		for elm in svggroupe.elements() :
+			if isinstance(elm,SVGGroup) :
+				self.update_size(elm)
+
 	def append( self, svgelm) :
 		self._elms.append(svgelm)
 		svgelm._parent_elm=self
 		if isinstance(svgelm,SVGGroup) :
-			if norm(svgelm.size())<1e-6 :
-				svgelm.set_size(*self.size())
+			self.update_size(svgelm)
 	
 	def get_id (self, svgid) :
 		for elm in self.elements() :
@@ -115,11 +121,11 @@ class SVGGroup (SVGElement) :
 	
 	def real_transformation (self, matrix) :
 		w,h,d=self.size()
-		return translation( (0,h,0) )*self.real_matrix(matrix)*translation( (0,-h,0) )
+		return Matrix4.translation( (0,h,0) )*self.real_matrix(matrix)*Matrix4.translation( (0,-h,0) )
 	
 	def svg_transformation (self, matrix) :
 		w,h,d=self.size()
-		return translation( (0,h,0) )*self.svg_matrix(matrix)*translation( (0,-h,0) )
+		return Matrix4.translation( (0,h,0) )*self.svg_matrix(matrix)*Matrix4.translation( (0,-h,0) )
 	
 	def load (self, svgnode) :
 		#modification atttributs de style

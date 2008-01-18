@@ -3,7 +3,7 @@ from os.path import join,dirname
 from math import sin,cos,acos,asin
 from openalea.plantgl.scenegraph import Material,Color3,\
 								Translated,Scaled,AxisRotated,Transformed
-from openalea.plantgl.math import Vector3,Matrix3,Matrix4,translation,eulerRotationZYX,scaling,norm
+from openalea.plantgl.math import Vector3,Matrix3,Matrix4,eulerRotationZYX,scaling,norm
 
 Ox=Vector3(1,0,0)
 Oy=Vector3(0,1,0)
@@ -167,7 +167,7 @@ class SVGElement (object) :
 		self._transform3D=matrix*self._transform3D
 	
 	def translate (self, vec) :
-		self._transform3D=translation(vec)*self._transform3D
+		self._transform3D=Matrix4.translation(vec)*self._transform3D
 	
 	def rotate (self, ZYXangles) :
 		self._transform3D=Matrix4(eulerRotationZYX(ZYXangles))*self._transform3D
@@ -182,7 +182,7 @@ class SVGElement (object) :
 		self._transform2D=matrix*self._transform2D
 	
 	def translate2D (self, vec) :
-		self._transform2D=translation(vec)*self._transform2D
+		self._transform2D=Matrix4.translation(vec)*self._transform2D
 	
 	def rotate2D (self, angle) :
 		self._transform2D=Matrix4(eulerRotationZYX((angle,0,0)))*self._transform2D
@@ -196,6 +196,9 @@ class SVGElement (object) :
 	##############################################
 	def attribute (self, key) :
 		return self._attributes[key]
+	
+	def attributes (self) :
+		return self._attributes
 	
 	def abs_path (self, filename) :
 		if self.parent() is None :

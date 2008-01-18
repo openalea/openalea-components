@@ -1,5 +1,5 @@
 from openalea.plantgl.scenegraph import Sphere,Box,FaceSet,QuadSet,Translated,Scaled,ImageTexture
-from openalea.plantgl.math import Vector3,Matrix4,eulerRotationZYX,translation,scaling
+from openalea.plantgl.math import Vector3,Matrix4,eulerRotationZYX,scaling
 from svg_element import SVGElement
 
 class SVGCenteredElement (SVGElement) :
@@ -38,7 +38,7 @@ class SVGBox (SVGCenteredElement) :
 		cy=float(self.get_default(svgnode,"y",0))+ry
 		cz=float(self.get_default(svgnode,"z",0))+rz
 		cx,cy=self.real_pos(cx,cy)
-		self._transform2D*=translation((cx,cy,cz))#l'ordre est important
+		self._transform2D*=Matrix4.translation((cx,cy,cz))#l'ordre est important
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	
 	def save (self, svgnode) :
@@ -46,7 +46,7 @@ class SVGBox (SVGCenteredElement) :
 		rx,ry,rz=self.radius()
 		cx,cy,cz=self.center()
 		self._transform2D*=Matrix4(scaling(tuple(inv(r) for r in (rx,ry,rz))))
-		self._transform2D*=translation( (-cx,-cy,-cz) )
+		self._transform2D*=Matrix4.translation( (-cx,-cy,-cz) )
 		SVGCenteredElement.save(self,svgnode)
 		self.set_node_type(svgnode,"rect")
 		svgnode.setAttribute("width","%f" % (2*rx))
@@ -56,7 +56,7 @@ class SVGBox (SVGCenteredElement) :
 		svgnode.setAttribute("x","%f" % (svgcx-rx))
 		svgnode.setAttribute("y","%f" % (svgcy-ry))
 		svgnode.setAttribute("z","%f" % (cz-rz))
-		self._transform2D*=translation((cx,cy,cz))
+		self._transform2D*=Matrix4.translation((cx,cy,cz))
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	##############################################
 	#
@@ -92,7 +92,7 @@ class SVGSphere (SVGCenteredElement) :
 		cy=float(self.get_default(svgnode,"sodipodi:cy",0))
 		cz=float(self.get_default(svgnode,"sodipodi:cz",0))
 		cx,cy=self.real_pos(cx,cy)
-		self._transform2D*=translation((cx,cy,cz))#l'ordre est important
+		self._transform2D*=Matrix4.translation((cx,cy,cz))#l'ordre est important
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	
 	def save (self, svgnode) :
@@ -100,7 +100,7 @@ class SVGSphere (SVGCenteredElement) :
 		rx,ry,rz=self.radius()
 		cx,cy,cz=self.center()
 		self._transform2D*=Matrix4(scaling(tuple(inv(r) for r in (rx,ry,rz))))
-		self._transform2D*=translation( (-cx,-cy,-cz) )
+		self._transform2D*=Matrix4.translation( (-cx,-cy,-cz) )
 		SVGCenteredElement.save(self,svgnode)
 		self.set_node_type(svgnode,"path")
 		svgnode.setAttribute("sodipodi:type","arc")
@@ -111,7 +111,7 @@ class SVGSphere (SVGCenteredElement) :
 		svgnode.setAttribute("sodipodi:cx","%f" % svgcx)
 		svgnode.setAttribute("sodipodi:cy","%f" % svgcy)
 		svgnode.setAttribute("sodipodi:cz","%f" % cz)
-		self._transform2D*=translation((cx,cy,cz))
+		self._transform2D*=Matrix4.translation((cx,cy,cz))
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	##############################################
 	#
@@ -133,6 +133,7 @@ class SVGImage (SVGElement) :
 	def __init__ (self, parent=None, svgid=None) :
 		SVGElement.__init__(self,parent,svgid)
 		self._filename=None
+		self._image=None
 	
 	def size (self) :
 		v=self._transform2D.getTransformationB()[0]
@@ -149,6 +150,12 @@ class SVGImage (SVGElement) :
 	
 	def absfilename (self) :
 		return self.abs_path(self.filename())
+	
+	def image (self) :
+		return self._image
+	
+	def set_image (self, image) :
+		self._image=image
 	##############################################
 	#
 	#		xml in out
@@ -163,7 +170,7 @@ class SVGImage (SVGElement) :
 		z=float(self.get_default(svgnode,"z",0))
 		self.set_filename(str(self.get_default(svgnode,"xlink:href","")))
 		x,y=self.real_pos(x,y+height)
-		self._transform2D*=translation((x,y,z))#l'ordre est important
+		self._transform2D*=Matrix4.translation((x,y,z))#l'ordre est important
 		self._transform2D*=Matrix4(scaling((width,height,1.)))
 	
 	def save (self, svgnode) :
@@ -171,7 +178,7 @@ class SVGImage (SVGElement) :
 		width,height=self.size()
 		x,y,z=self.pos()
 		self._transform2D*=Matrix4(scaling(tuple(inv(r) for r in (width,height,1.))))
-		self._transform2D*=translation( (-x,-y,-z) )
+		self._transform2D*=Matrix4.translation( (-x,-y,-z) )
 		SVGElement.save(self,svgnode)
 		self.set_node_type(svgnode,"image")
 		svgx,svgy=self.svg_pos(x,y)
@@ -181,7 +188,7 @@ class SVGImage (SVGElement) :
 		svgnode.setAttribute("width","%f" % width)
 		svgnode.setAttribute("height","%f" % height)
 		svgnode.setAttribute("xlink:href",self.filename())
-		self._transform2D*=translation((x,y,z))
+		self._transform2D*=Matrix4.translation((x,y,z))
 		self._transform2D*=Matrix4(scaling((width,height,1.)))
 	##############################################
 	#

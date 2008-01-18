@@ -1,4 +1,5 @@
 from openalea.plantgl.scenegraph import Color3
+from openalea.plantgl.math import Vector2,Vector3
 from svg_file import open_svg
 from svg_group import SVGGroup,SVGLayer
 from svg_primitive import SVGBox,SVGSphere,SVGImage

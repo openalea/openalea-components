@@ -1,5 +1,5 @@
 from os.path import join,normpath
-from openalea.plantgl.math import Vector3,Matrix4,eulerRotationZYX,translation,scaling
+from openalea.plantgl.math import Vector3,Matrix4,scaling
 from svg_group import SVGGroup,SVGLayer
 from svg_primitive import SVGImage
 
