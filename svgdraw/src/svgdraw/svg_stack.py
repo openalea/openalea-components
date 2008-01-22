@@ -2,12 +2,14 @@ from os.path import join,normpath
 from openalea.plantgl.math import Vector3,Matrix4,scaling
 from svg_group import SVGGroup,SVGLayer
 from svg_primitive import SVGImage
+from xml_element import XMLElement,ELEMENT_TYPE
 
-class SVGStackVariant (object) :
-	def __init__ (self, name=None, scale=1., rep=None) :
-		self._name=name
-		self._scale=scale
-		self._rep=rep
+class SVGStackVariant (XMLElement) :
+	def __init__ (self, parent=None) :
+		XMLElement.__init__(self,parent,ELEMENT_TYPE,"variant")
+		self._name=None
+		self._scale=1.
+		self._rep=None
 	
 	def scale (self) :
 		return self._scale
@@ -30,13 +32,28 @@ class SVGStackVariant (object) :
 		self._rep=str(rep)
 		if self._name is None :
 			self._name=str(rep)
+	
+	def load (self) :
+		if self.has_attribute("rep") :
+			self.set_rep(self.attribute("rep"))
+		if self.has_attribute("name") :
+			self.set_name(self.attribute("name"))
+		if self.has_attribute("scale") :
+			self._scale=float(self.attribute("scale"))
+	
+	def save (self) :
+		if self._name is not None :
+			self.set_attribute("name",self._name)
+		self.set_attribute("scale","%f" % self._scale)
+		if self._rep is not None :
+			self.set_attribute("rep",self._rep)
 
 class SVGStack (SVGLayer) :
 	"""
 	object used to manipulate a stack of images
 	"""
-	def __init__ (self, parent=None, svgid=None) :
-		SVGLayer.__init__(self,parent,svgid)
+	def __init__ (self, id=None, parent=None) :
+		SVGLayer.__init__(self,id,parent)
 		self.display=False
 		self._variants=[]
 		self._variant_used=None
@@ -47,12 +64,12 @@ class SVGStack (SVGLayer) :
 	
 	def add_image (self, image_name, width, height, masked=False) :
 		ind=len(self)
-		gr=SVGLayer(self,"gslice%.4d" % ind)
+		gr=SVGLayer("gslice%.4d" % ind)
 		self.append(gr)
 		gr.set_size(width,height)
 		gr.translate( (0,0,ind) )
 		gr.display=False
-		im=SVGImage(gr,"slice%.4d" % ind)
+		im=SVGImage("slice%.4d" % ind)
 		gr.append(im)
 		im.set_filename(image_name)
 		im.scale2D( (width,height,0) )
@@ -78,8 +95,12 @@ class SVGStack (SVGLayer) :
 		return len(self._variants)
 	
 	def add_variant (self, name, scale=1, rep=None) :
-		var=SVGStackVariant(name,scale,rep)
+		var=SVGStackVariant()
 		var.set_name(name)
+		var.set_scale(scale)
+		if rep is not None :
+			var.set_rep(rep)
+		self.add_child(var)
 		self._variants.append(var)
 		return len(self._variants)-1
 	
@@ -116,26 +137,23 @@ class SVGStack (SVGLayer) :
 	#		xml interface
 	#
 	##############################################
-	def load (self, svgnode) :
-		SVGLayer.load(self,svgnode)
+	def load (self) :
+		SVGLayer.load(self)
 		if self.nb_images()>0 :
 			w,h,d=self.size()
 			self.set_size(w,h,self.nb_images()-1)
-		dx=float(self.get_default(svgnode,"dx",1.))
-		dy=float(self.get_default(svgnode,"dy",1.))
-		dz=float(self.get_default(svgnode,"dz",1.))
+		dx=float(self.get_default("dx",1.))
+		dy=float(self.get_default("dy",1.))
+		dz=float(self.get_default("dz",1.))
 		self._transform3D*=Matrix4(scaling((dx,dy,dz)))
 		#variants
-		for node in svgnode.childNodes :
-			if node.nodeName=="variant" :
-				name=self.get_default(node,"name",None)
-				if name is not None :
-					name=str(name)
-				scale=float(self.get_default(node,"scale",1.))
-				rep=self.get_default(node,"rep",None)
-				if rep is not None :
-					rep=str(rep)
-				self.add_variant(name,scale,rep)
+		for i in xrange(self.nb_children()) :
+			if self.child(i).nodename()=="variant" :
+				variant=SVGStackVariant()
+				variant.from_node(self.child(i))
+				self.set_child(i,variant)
+				self._variants.append(variant)
+				variant.load()
 		#masked images
 		self._masked=[]
 		for im in self.images() :
@@ -146,17 +164,12 @@ class SVGStack (SVGLayer) :
 			else :
 				self._masked.append(False)
 	
-	def save (self, svgnode) :
-		var_mem=self._variant_used
+	def save (self) :
+		var_mem=self.variant_used()
 		self.use_variant(None)
 		#variants
-		for var in self._variants :
-			node=self.create_node(svgnode)
-			self.set_node_type(node,"variant")
-			svgnode.appendChild(node)
-			node.setAttribute("name",var.name())
-			node.setAttribute("scale",str(var.scale()))
-			node.setAttribute("rep",var.rep())
+		for var in self.variants() :
+			var.save()
 		#node
 		inv=lambda x : 1./x if abs(x)>1e-6 else 0.
 		dx,dy,dz=self.resolution()
@@ -166,17 +179,17 @@ class SVGStack (SVGLayer) :
 			im=self.image(i)
 			if self._masked[i] :
 				im.set_filename("%sX" % im.filename())
-		SVGLayer.save(self,svgnode)
-		svgnode.setAttribute("descr","stack")
-		svgnode.setAttribute("dx","%f" % dx)
-		svgnode.setAttribute("dy","%f" % dy)
-		svgnode.setAttribute("dz","%f" % dz)
+		SVGLayer.save(self)
+		self.set_attribute("descr","stack")
+		self.set_attribute("dx","%f" % dx)
+		self.set_attribute("dy","%f" % dy)
+		self.set_attribute("dz","%f" % dz)
 		self._transform3D*=Matrix4(scaling((dx,dy,dz)))
 		#masked
 		for i in xrange(len(self)) :
 			im=self.image(i)
 			if self._masked[i] :
-					im.set_filename(im.filename()[:-1])
+				im.set_filename(im.filename()[:-1])
 		#variant
 		self.use_variant(var_mem)
 	##############################################

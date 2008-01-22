@@ -3,8 +3,8 @@ from openalea.plantgl.math import Vector3,Matrix4,eulerRotationZYX,scaling
 from svg_element import SVGElement
 
 class SVGCenteredElement (SVGElement) :
-	def __init__ (self, parent=None, svgid=None) :
-		SVGElement.__init__(self,parent,svgid)
+	def __init__ (self, id=None, parent=None, nodename=None) :
+		SVGElement.__init__(self,id,parent,nodename)
 	
 	def radius (self) :
 		return self._transform2D.getTransformationB()[0]
@@ -21,41 +21,39 @@ class SVGBox (SVGCenteredElement) :
 	"""
 	a square or a box
 	"""
-	def __init__ (self, parent=None, svgid=None) :
-		SVGCenteredElement.__init__(self,parent,svgid)
-	
+	def __init__ (self, id=None, parent=None) :
+		SVGCenteredElement.__init__(self,id,parent,"svg:rect")
 	##############################################
 	#
 	#		xml in out
 	#
 	##############################################
-	def load (self, svgnode) :
-		SVGCenteredElement.load(self,svgnode)
-		rx=float(self.get_default(svgnode,"width",0))/2.
-		ry=float(self.get_default(svgnode,"height",0))/2.
-		rz=float(self.get_default(svgnode,"depth",0))/2.
-		cx=float(self.get_default(svgnode,"x",0))+rx
-		cy=float(self.get_default(svgnode,"y",0))+ry
-		cz=float(self.get_default(svgnode,"z",0))+rz
+	def load (self) :
+		SVGCenteredElement.load(self)
+		rx=float(self.get_default("width",0))/2.
+		ry=float(self.get_default("height",0))/2.
+		rz=float(self.get_default("depth",0))/2.
+		cx=float(self.get_default("x",0))+rx
+		cy=float(self.get_default("y",0))+ry
+		cz=float(self.get_default("z",0))+rz
 		cx,cy=self.real_pos(cx,cy)
 		self._transform2D*=Matrix4.translation((cx,cy,cz))#l'ordre est important
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	
-	def save (self, svgnode) :
+	def save (self) :
 		inv=lambda x : 1./x if abs(x)>1e-6 else 0.
 		rx,ry,rz=self.radius()
 		cx,cy,cz=self.center()
 		self._transform2D*=Matrix4(scaling(tuple(inv(r) for r in (rx,ry,rz))))
 		self._transform2D*=Matrix4.translation( (-cx,-cy,-cz) )
-		SVGCenteredElement.save(self,svgnode)
-		self.set_node_type(svgnode,"rect")
-		svgnode.setAttribute("width","%f" % (2*rx))
-		svgnode.setAttribute("height","%f" % (2*ry))
-		svgnode.setAttribute("depth","%f" % (2*rz))
+		self.set_attribute("width","%f" % (2*rx))
+		self.set_attribute("height","%f" % (2*ry))
+		self.set_attribute("depth","%f" % (2*rz))
 		svgcx,svgcy=self.svg_pos(cx,cy)
-		svgnode.setAttribute("x","%f" % (svgcx-rx))
-		svgnode.setAttribute("y","%f" % (svgcy-ry))
-		svgnode.setAttribute("z","%f" % (cz-rz))
+		self.set_attribute("x","%f" % (svgcx-rx))
+		self.set_attribute("y","%f" % (svgcy-ry))
+		self.set_attribute("z","%f" % (cz-rz))
+		SVGCenteredElement.save(self)
 		self._transform2D*=Matrix4.translation((cx,cy,cz))
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	##############################################
@@ -75,42 +73,40 @@ class SVGSphere (SVGCenteredElement) :
 	"""
 	a circle or sphere
 	"""
-	def __init__ (self, parent=None, svgid=None) :
-		SVGCenteredElement.__init__(self,parent,svgid)
-	
+	def __init__ (self, id=None, parent=None) :
+		SVGCenteredElement.__init__(self,id,parent,"svg:path")
+		self.set_attribute("sodipodi:type","arc")
 	##############################################
 	#
 	#		xml in out
 	#
 	##############################################
-	def load (self, svgnode) :
-		SVGCenteredElement.load(self,svgnode)
-		rx=float(self.get_default(svgnode,"sodipodi:rx",0))
-		ry=float(self.get_default(svgnode,"sodipodi:ry",0))
-		rz=float(self.get_default(svgnode,"sodipodi:rz",0))
-		cx=float(self.get_default(svgnode,"sodipodi:cx",0))
-		cy=float(self.get_default(svgnode,"sodipodi:cy",0))
-		cz=float(self.get_default(svgnode,"sodipodi:cz",0))
+	def load (self) :
+		SVGCenteredElement.load(self)
+		rx=float(self.get_default("sodipodi:rx",0))
+		ry=float(self.get_default("sodipodi:ry",0))
+		rz=float(self.get_default("sodipodi:rz",0))
+		cx=float(self.get_default("sodipodi:cx",0))
+		cy=float(self.get_default("sodipodi:cy",0))
+		cz=float(self.get_default("sodipodi:cz",0))
 		cx,cy=self.real_pos(cx,cy)
 		self._transform2D*=Matrix4.translation((cx,cy,cz))#l'ordre est important
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	
-	def save (self, svgnode) :
+	def save (self) :
 		inv=lambda x : 1./x if abs(x)>1e-6 else 0.
 		rx,ry,rz=self.radius()
 		cx,cy,cz=self.center()
 		self._transform2D*=Matrix4(scaling(tuple(inv(r) for r in (rx,ry,rz))))
 		self._transform2D*=Matrix4.translation( (-cx,-cy,-cz) )
-		SVGCenteredElement.save(self,svgnode)
-		self.set_node_type(svgnode,"path")
-		svgnode.setAttribute("sodipodi:type","arc")
-		svgnode.setAttribute("sodipodi:rx","%f" % rx)
-		svgnode.setAttribute("sodipodi:ry","%f" % ry)
-		svgnode.setAttribute("sodipodi:rz","%f" % rz)
+		self.set_attribute("sodipodi:rx","%f" % rx)
+		self.set_attribute("sodipodi:ry","%f" % ry)
+		self.set_attribute("sodipodi:rz","%f" % rz)
 		svgcx,svgcy=self.svg_pos(cx,cy)
-		svgnode.setAttribute("sodipodi:cx","%f" % svgcx)
-		svgnode.setAttribute("sodipodi:cy","%f" % svgcy)
-		svgnode.setAttribute("sodipodi:cz","%f" % cz)
+		self.set_attribute("sodipodi:cx","%f" % svgcx)
+		self.set_attribute("sodipodi:cy","%f" % svgcy)
+		self.set_attribute("sodipodi:cz","%f" % cz)
+		SVGCenteredElement.save(self)
 		self._transform2D*=Matrix4.translation((cx,cy,cz))
 		self._transform2D*=Matrix4(scaling((rx,ry,rz)))
 	##############################################
@@ -130,8 +126,8 @@ class SVGImage (SVGElement) :
 	"""
 	an image represented in pgl as a square with an image texture
 	"""
-	def __init__ (self, parent=None, svgid=None) :
-		SVGElement.__init__(self,parent,svgid)
+	def __init__ (self, id=None, parent=None) :
+		SVGElement.__init__(self,id,parent,"svg:image")
 		self._filename=None
 		self._image=None
 	
@@ -161,33 +157,32 @@ class SVGImage (SVGElement) :
 	#		xml in out
 	#
 	##############################################
-	def load (self, svgnode) :
-		SVGElement.load(self,svgnode)
-		width=float(self.get_default(svgnode,"width",0))
-		height=float(self.get_default(svgnode,"height",0))
-		x=float(self.get_default(svgnode,"x",0))
-		y=float(self.get_default(svgnode,"y",0))
-		z=float(self.get_default(svgnode,"z",0))
-		self.set_filename(str(self.get_default(svgnode,"xlink:href","")))
+	def load (self) :
+		SVGElement.load(self)
+		width=float(self.get_default("width",0))
+		height=float(self.get_default("height",0))
+		x=float(self.get_default("x",0))
+		y=float(self.get_default("y",0))
+		z=float(self.get_default("z",0))
+		self.set_filename(str(self.get_default("xlink:href","")))
 		x,y=self.real_pos(x,y+height)
 		self._transform2D*=Matrix4.translation((x,y,z))#l'ordre est important
 		self._transform2D*=Matrix4(scaling((width,height,1.)))
 	
-	def save (self, svgnode) :
+	def save (self) :
 		inv=lambda x : 1./x if abs(x)>1e-6 else 0.
 		width,height=self.size()
 		x,y,z=self.pos()
 		self._transform2D*=Matrix4(scaling(tuple(inv(r) for r in (width,height,1.))))
 		self._transform2D*=Matrix4.translation( (-x,-y,-z) )
-		SVGElement.save(self,svgnode)
-		self.set_node_type(svgnode,"image")
 		svgx,svgy=self.svg_pos(x,y)
-		svgnode.setAttribute("x","%f" % svgx)
-		svgnode.setAttribute("y","%f" % (svgy-height))
-		svgnode.setAttribute("z","%f" % z)
-		svgnode.setAttribute("width","%f" % width)
-		svgnode.setAttribute("height","%f" % height)
-		svgnode.setAttribute("xlink:href",self.filename())
+		self.set_attribute("x","%f" % svgx)
+		self.set_attribute("y","%f" % (svgy-height))
+		self.set_attribute("z","%f" % z)
+		self.set_attribute("width","%f" % width)
+		self.set_attribute("height","%f" % height)
+		self.set_attribute("xlink:href",self.filename())
+		SVGElement.save(self)
 		self._transform2D*=Matrix4.translation((x,y,z))
 		self._transform2D*=Matrix4(scaling((width,height,1.)))
 	##############################################

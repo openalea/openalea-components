@@ -1,9 +1,10 @@
 from xml.dom.minidom import parse,Document
+from xml_element import XMLElement
 from svg_scene import SVGScene
 
-class SVGFileReader (object) :
+class XMLFileReader (object) :
 	"""
-	base class to read an svg file
+	base class to read an xml file
 	"""
 	def __init__ (self, filename) :
 		self._filename=filename
@@ -13,44 +14,67 @@ class SVGFileReader (object) :
 	
 	def read (self) :
 		doc=parse(self._filename)
-		root=[node for node in doc.childNodes if node.nodeName=="svg"][0]
-		sc=SVGScene()
-		sc._svgfilename=self._filename
-		sc.load(root)
-		return sc
+		elm=XMLElement()
+		elm.load_xml(doc)
+		return elm
 
-class SVGFileWriter (object) :
+class XMLFileWriter (object) :
 	"""
-	base class to write an svg file
+	base class to write an xml file
 	"""
 	def __init__ (self, filename) :
 		self._filename=filename
-		doc=Document()
-		doc.appendChild(doc.createComment("created from python svgdraw module"))
-		root=doc.createElement("svg")
-		#TODO ajouter les xmnls
-		root.setAttribute("xmlns","http://www.w3.org/2000/svg")
-		root.setAttribute("xmlns:dc","http://purl.org/dc/elements/1.1/")
-		root.setAttribute("xmlns:cc","http://web.resource.org/cc/")
-		root.setAttribute("xmlns:rdf","http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-		root.setAttribute("xmlns:svg","http://www.w3.org/2000/svg")
-		root.setAttribute("xmlns:xlink","http://www.w3.org/1999/xlink")
-		root.setAttribute("xmlns:inkscape","http://www.inkscape.org/namespaces/inkscape")
-		root.setAttribute("xmlns:sodipodi","http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd")
-		doc.appendChild(root)
-		self._doc=doc
-		self._root=root
+		self._xml_doc=None
 	
 	def flush (self) :
 		f=open(self._filename,'w')
-		f.write(self._doc.toprettyxml())
+		if self._xml_doc is not None :
+			f.write(self._xml_doc.toprettyxml())
 		f.close()
 	
 	def close (self) :
 		self.flush()
 	
+	def write (self, doc_elm) :
+		self._xml_doc=doc_elm.save_xml()
+
+def open_xml (filename, mode='r') :
+	if mode=='r' :
+		return XMLFileReader(filename)
+	elif mode=='w' :
+		return XMLFileWriter(filename)
+	else :
+		raise UserWarning ("mode %s not recognized" % str(mode))
+
+class SVGFileReader (XMLFileReader) :
+	"""
+	base class to read an svg file
+	"""
+	def read (self) :
+		doc=XMLFileReader.read(self)
+		root=[node for node in doc.children() if node.nodename()=="svg:svg"][0]
+		sc=SVGScene()
+		sc._svgfilename=self._filename
+		sc.from_node(root)
+		sc.load()
+		return sc
+
+class SVGFileWriter (XMLFileWriter) :
+	"""
+	base class to write an svg file
+	"""
+	def __init__ (self, filename) :
+		XMLFileWriter.__init__(self,filename)
+		doc=XMLElement(None,Document.DOCUMENT_NODE,"#document")
+		comment=XMLElement(None,Document.COMMENT_NODE,"#comment")
+		comment.set_attribute("data","created from python svgdraw module")
+		doc.add_child(comment)
+		self._svg_doc=doc
+	
 	def write (self, svgscene) :
-		svgscene.save(self._root)
+		svgscene.save()
+		self._svg_doc.add_child(svgscene)
+		XMLFileWriter.write(self,self._svg_doc)
 
 def open_svg (filename, mode='r') :
 	if mode=='r' :

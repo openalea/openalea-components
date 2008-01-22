@@ -6,8 +6,8 @@ class SVGGroup (SVGElement) :
 	"""
 	container that group svg primitives
 	"""
-	def __init__ (self, parent=None, svgid=None) :
-		SVGElement.__init__(self,parent,svgid)
+	def __init__ (self, id=None, parent=None) :
+		SVGElement.__init__(self,id,parent,"svg:g")
 		self._size=Vector3()
 		self._elms=[]
 	
@@ -35,19 +35,24 @@ class SVGGroup (SVGElement) :
 		for elm in svggroupe.elements() :
 			if isinstance(elm,SVGGroup) :
 				self.update_size(elm)
-
-	def append( self, svgelm) :
+	
+	def append (self, svgelm) :
+		self.add_child(svgelm)
 		self._elms.append(svgelm)
-		svgelm._parent_elm=self
 		if isinstance(svgelm,SVGGroup) :
 			self.update_size(svgelm)
-	
-	def get_id (self, svgid) :
+	##################################################
+	#
+	#		elements access
+	#
+	##################################################
+	def get_node_by_id (self, svgid) :
 		for elm in self.elements() :
 			if elm.svgid()==svgid :
 				return elm
+		for elm in self.elements() :
 			if isinstance(elm,SVGGroup) :
-				finded=elm.get_id(svgid)
+				finded=elm.get_node_by_id(svgid)
 				if finded is not None :
 					return finded
 	
@@ -66,43 +71,33 @@ class SVGGroup (SVGElement) :
 	#		elements factory
 	#
 	##############################################
-	def create_node (self, svgnode) :
-		return svgnode.ownerDocument.createElement("created")
-	
-	def svg_element (self, svgnode) :
-		if svgnode.nodeName=="#text" :#text node do nothing
-			return None
-		elif svgnode.nodeName=="defs" :
-			return None
-		elif svgnode.nodeName=="sodipodi:namedview" :
-			return None
-		elif svgnode.nodeName=="metadata" :
-			return None
-		elif svgnode.nodeName=="use" :
-			return None
-		elif svgnode.nodeName=="path" :#soit un path soit un cercle soit un connecteur
-			svgtype=svgnode.getAttribute("sodipodi:type")
-			if svgtype=="" : #c'est un path ou un connecteur
-				if svgnode.getAttribute("inkscape:connector-type")=="" : #c'est un path
-					return SVGPath(self)
-				else : #c'est un connecteur
-					return SVGConnector(self)
-			elif svgtype=="arc" : #c'est un cercle
-				return SVGSphere(self)
-			else :
-				raise UserWarning("node not recognized")
-		elif svgnode.nodeName=="rect" :
-			return SVGBox(self)
-		elif svgnode.nodeName=="g" :#soit un groupe soit un layer
-			if svgnode.getAttribute("inkscape:groupmode")=="layer" : #soit un layer soit un stack
-				if svgnode.getAttribute("descr")=="stack" :
-					return SVGStack(self)
+	def svg_element (self, xmlelm) :
+		name=xmlelm.nodename()
+		if name[:4]=="svg:" :
+			name=name[4:]
+		if name=="path" :#soit un path soit un cercle soit un connecteur
+			if xmlelm.has_attribute("sodipodi:type") :#may be a circle
+				if xmlelm.attribute("sodipodi:type") == "arc" :#its a circle
+					return SVGSphere()
 				else :
-					return SVGLayer(self)
+					raise UserWarning("mode not recognized")
+			else : #c'est un path ou un connecteur
+				if xmlelm.has_attribute("inkscape:connector-type") :#it's a connector
+					return SVGConnector()
+				else : #it's a simple path
+					return SVGPath()
+		elif name=="rect" :
+			return SVGBox()
+		elif name=="g" :#soit un groupe soit un layer
+			if xmlelm.has_attribute("inkscape:groupmode") : #soit un layer soit un stack
+				if xmlelm.has_attribute("descr") and xmlelm.attribute("descr")=="stack" :
+					return SVGStack()
+				else :
+					return SVGLayer()
 			else :
-				return SVGGroup(self)
-		elif svgnode.nodeName=="image" :
-			return SVGImage(self)
+				return SVGGroup()
+		elif name=="image" :
+			return SVGImage()
 		else :
 			return None
 	##############################################
@@ -127,7 +122,7 @@ class SVGGroup (SVGElement) :
 		w,h,d=self.size()
 		return Matrix4.translation( (0,h,0) )*self.svg_matrix(matrix)*Matrix4.translation( (0,-h,0) )
 	
-	def load (self, svgnode) :
+	def load (self) :
 		#modification atttributs de style
 		if self.fill is None :
 			self.fill=Color3(255,255,255)
@@ -135,31 +130,31 @@ class SVGGroup (SVGElement) :
 			w,h,d=0,0,0
 		else :
 			w,h,d=self.parent().size()
-		width=float(self.get_default(svgnode,"width",w))
-		height=float(self.get_default(svgnode,"height",h))
-		depth=float(self.get_default(svgnode,"depth",d))
+		width=float(self.get_default("width",w))
+		height=float(self.get_default("height",h))
+		depth=float(self.get_default("depth",d))
 		self.set_size(width,height,depth)
-		#common attributes
-		SVGElement.load(self,svgnode)
-		#recherche des elements du groupe
-		for node in svgnode.childNodes :
-			svgelm=self.svg_element(node)
+		#element load after width and height to perform
+		#correct real transformations
+		SVGElement.load(self)
+		#svg elements load
+		for ind in xrange(self.nb_children()) :
+			svgelm=self.svg_element(self.child(ind))
 			if svgelm is not None :
-				svgelm.load(node)
-				self.append(svgelm)
+				svgelm.from_node(self.child(ind))
+				self.set_child(ind,svgelm)
+				self._elms.append(svgelm)
+				svgelm.load()
 	
-	def save (self, svgnode) :
-		SVGElement.save(self,svgnode)
-		self.set_node_type(svgnode,"g")
+	def save (self) :
+		svgnode=SVGElement.save(self)
 		w,h,d=self.size()
-		svgnode.setAttribute("width",str(w))
-		svgnode.setAttribute("height",str(h))
-		svgnode.setAttribute("depth",str(d))
+		self.set_attribute("width",str(w))
+		self.set_attribute("height",str(h))
+		self.set_attribute("depth",str(d))
 		#enregistrement des elements du groupe
 		for svgelm in self.elements() :
-			node=self.create_node(svgnode)
-			svgnode.appendChild(node)
-			svgelm.save(node)
+			svgelm.save()
 	##############################################
 	#
 	#		pgl interface
@@ -224,12 +219,12 @@ class SVGLayer (SVGGroup) :
 	"""
 	add a layer attribute to SVGGroup
 	"""
-	def __init__ (self, parent=None, svgid=None) :
-		SVGGroup.__init__(self,parent,svgid)
-		if svgid is None :
+	def __init__ (self, id=None, parent=None) :
+		SVGGroup.__init__(self,id,parent)
+		if id is None :
 			self._name="lay"
 		else :
-			self._name=svgid
+			self._name=id
 	
 	def name (self) :
 		return self._name
@@ -242,15 +237,16 @@ class SVGLayer (SVGGroup) :
 	#		xml in out
 	#
 	##############################################
-	def load (self, svgnode) :
-		SVGGroup.load(self,svgnode)
-		self.set_name(str(self.get_default(svgnode,"inkscape:label","lay")))
+	def load (self) :
+		SVGGroup.load(self)
+		self.set_name(self.get_default("inkscape:label","lay"))
 	
-	def save (self, svgnode) :
-		SVGGroup.save(self,svgnode)
-		svgnode.setAttribute("inkscape:label",str(self.name()))
-		svgnode.setAttribute("inkscape:groupmode","layer")
+	def save (self) :
+		self.set_attribute("inkscape:label",self.name())
+		self.set_attribute("inkscape:groupmode","layer")
+		SVGGroup.save(self)
 
+from xml_element import XMLElement
 from svg_primitive import SVGBox,SVGSphere,SVGImage
 from svg_path import SVGPath,SVGConnector
 from svg_stack import SVGStack

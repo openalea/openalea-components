@@ -4,6 +4,7 @@ from math import sin,cos,acos,asin
 from openalea.plantgl.scenegraph import Material,Color3,\
 								Translated,Scaled,AxisRotated,Transformed
 from openalea.plantgl.math import Vector3,Matrix3,Matrix4,eulerRotationZYX,scaling,norm
+from xml_element import XMLElement,SVG_ELEMENT_TYPE
 
 Ox=Vector3(1,0,0)
 Oy=Vector3(0,1,0)
@@ -26,16 +27,15 @@ matrix_re3D=re.compile("matrix\("+sep+digit+sep+digit+sep+digit+sep+digit
 translate_re3D=re.compile("translate\("+digit+sep+digit+"?"+sep+digit+"?\)")
 scale_re3D=re.compile("scale\("+digit+sep+digit+"?"+sep+digit+"?\)")
 
-class SVGElement (object) :
+class SVGElement (XMLElement) :
 	"""
 	base class for all styles associated with geometrical elements
 	store all attributes that cannot be stored in a plantgl scene
 	"""
 	type="style"
-	def __init__ (self, parent=None, svgid=None) :
-		self._parent_elm=parent
-		self._svgid=svgid
-		self._attributes={}
+	def __init__ (self, id=None, parent=None, nodename="svg") :
+		XMLElement.__init__(self,parent,SVG_ELEMENT_TYPE,nodename)
+		self._id=id
 		#graphic style
 		self.display=True
 		self.fill=None
@@ -52,14 +52,11 @@ class SVGElement (object) :
 		#filename for abs path
 		self._svgfilename=None
 	
-	def parent (self) :
-		return self._parent_elm
+	def id (self) :
+		return self._id
 	
-	def svgid (self) :
-		return self._svgid
-	
-	def set_svgid (self, id) :
-		self._svgid=id
+	def set_id (self, id) :
+		self._id=id
 	##############################################
 	#
 	#		3D change of referential
@@ -194,12 +191,6 @@ class SVGElement (object) :
 	#		SVG interface
 	#
 	##############################################
-	def attribute (self, key) :
-		return self._attributes[key]
-	
-	def attributes (self) :
-		return self._attributes
-	
 	def abs_path (self, filename) :
 		if self.parent() is None :
 			if self._svgfilename is None :
@@ -247,18 +238,6 @@ class SVGElement (object) :
 		else :
 			return self.parent().svg_transformation(matrix)
 	
-	def set_node_type (self, svgnode, typename) :
-		svgnode.nodeName=typename
-		svgnode.localName=typename
-		svgnode.tagName=typename
-	
-	def get_default (self, svgnode, attr_name, default_value=None) :
-		str_val=svgnode.getAttribute(attr_name)
-		if str_val=="" :
-			return default_value
-		else :
-			return str_val
-	
 	def read_color (self, color_str) :
 		if color_str=="none" :
 			return None
@@ -276,14 +255,10 @@ class SVGElement (object) :
 			res=val_re.match(val_str)
 			return float(res.groups()[0])
 	
-	def load_attributes (self, svgnode) :
-		for k,v in svgnode.attributes.items() :
-			self._attributes[str(k)]=str(v)
-	
-	def load_style (self, svgnode) :
+	def load_style (self) :
 		#colors
-		style=svgnode.getAttribute("style")
-		if style!="" :
+		if self.has_attribute("style") :
+			style=self.attribute("style")
 			for style_elm in style.split(";") :
 				key,val=style_elm.split(":")
 				if key=="fill" :
@@ -295,10 +270,10 @@ class SVGElement (object) :
 				elif key=="display" :
 					self.display= (val!="none")
 	
-	def load_transformation2D (self, svgnode) :
+	def load_transformation2D (self) :
 		#transformation
-		tr=svgnode.getAttribute("transform")
-		if len(tr)>0 :
+		if self.has_attribute("transform") :
+			tr=self.attribute("transform")
 			if "matrix" in tr :
 				x11,x21,x12,x22,x13,x23=(float(val) for val in matrix_re.match(tr).groups())
 				m=Matrix4( (x11,x12,0,x13,x21,x22,0,x23) )
@@ -329,10 +304,10 @@ class SVGElement (object) :
 			else :
 				raise UserWarning("don't know how to translate this transformation :\n %s" % tr)
 	
-	def load_transformation3D (self, svgnode) :
+	def load_transformation3D (self) :
 		#transformation3D
-		tr=svgnode.getAttribute("transform3D")
-		if len(tr)>0 :
+		if self.has_attribute("transform3D") :
+			tr=self.attribute("transform3D")
 			if tr[0].lower()=='a' :
 				self._absolute_3D=True
 				tr=tr[1:]
@@ -357,14 +332,15 @@ class SVGElement (object) :
 			else :
 				raise UserWarning("don't know how to translate this transformation :\n %s" % tr)
 	
-	def load (self, svgnode) :
-		self.set_svgid(self.get_default(svgnode,"id","svgelm"))
-		self.load_attributes(svgnode)
-		self.load_style(svgnode)
-		self.load_transformation2D(svgnode)
-		self.load_transformation3D(svgnode)
+	def load (self) :
+		XMLElement.load(self)
+		if self.has_attribute("id") :
+			self.set_id(self.attribute("id"))
+		self.load_style()
+		self.load_transformation2D()
+		self.load_transformation3D()
 	
-	def save_style (self, svgnode) :
+	def save_style (self) :
 		style="opacity:1"
 		if self.fill is None :
 			style+=";fill:none"
@@ -379,29 +355,31 @@ class SVGElement (object) :
 		style+=";stroke-width:%f" % self.stroke_width
 		if not self.display :
 			style+=";display:none"
-		svgnode.setAttribute("style",style)
+		self.set_attribute("style",style)
 	
-	def save_transformation2D (self, svgnode) :
+	def save_transformation2D (self) :
 		tr=self.svg_transformation(self._transform2D)
 		transform="matrix(%f %f %f %f %f %f)" % (tr[0,0],tr[1,0],tr[0,1],tr[1,1],tr[0,3],tr[1,3])
-		svgnode.setAttribute("transform",transform)
+		self.set_attribute("transform",transform)
 	
-	def save_transformation3D (self, svgnode) :
+	def save_transformation3D (self) :
 		tr=self._transform3D
 		transform="matrix(%f %f %f %f %f %f %f %f %f %f %f %f)" % (tr[0,0],tr[1,0],tr[2,0],tr[0,1],tr[1,1],tr[2,1],tr[0,2],tr[1,2],tr[2,2],tr[0,3],tr[1,3],tr[2,3])
 		if self.is_absolute() :
-			svgnode.setAttribute("transform3D","a%s" % transform)
+			self.set_attribute("transform3D","a%s" % transform)
 		else :
-			svgnode.setAttribute("transform3D",transform)
+			self.set_attribute("transform3D",transform)
 	
-	def save (self, svgnode) :
-		svgnode.setAttribute("id",str(self.svgid()))
-		self.save_style(svgnode)
-		self.save_transformation2D(svgnode)
-		self.save_transformation3D(svgnode)
+	def save (self) :
+		XMLElement.save(self)
+		if self.id() is not None :
+			self.set_attribute("id",self.id())
+		self.save_style()
+		self.save_transformation2D()
+		self.save_transformation3D()
 	##############################################
 	#
-	#		SVG interface
+	#		PGL interface
 	#
 	##############################################
 	def primitive (self, geom) :

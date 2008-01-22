@@ -49,8 +49,8 @@ class SVGPath (SVGElement) :
 	a abstraction of svg path
 	voir : http://wiki.svg.org/Path
 	"""
-	def __init__ (self, parent=None, svgid=None) :
-		SVGElement.__init__(self,parent,svgid)
+	def __init__ (self, id=None, parent=None) :
+		SVGElement.__init__(self,id,parent,"svg:path")
 		self._commands=[]
 	
 	def commands (self) :
@@ -244,17 +244,15 @@ class SVGPath (SVGElement) :
 	#		xml in out
 	#
 	##############################################
-	def load (self, svgnode) :
-		SVGElement.load(self,svgnode)
-		path_txt=svgnode.getAttribute("d")
+	def load (self) :
+		SVGElement.load(self)
+		path_txt=self.get_default("d","")
 		self.from_string(path_txt)
 	
-	def save (self, svgnode) :
-		SVGElement.save(self,svgnode)
-		self.set_node_type(svgnode,"path")
+	def save (self) :
 		path_txt=self.to_string()
-		svgnode.setAttribute("d",path_txt)
-	
+		self.set_attribute("d",path_txt)
+		SVGElement.save(self)
 	##############################################
 	#
 	#		pgl interface
@@ -406,17 +404,17 @@ class SVGPath (SVGElement) :
 class SVGConnector (SVGPath) :
 	def __init__ (self, parent=None, svgid=None) :
 		SVGPath.__init__(self,parent,svgid)
+		self.set_attribute("inkscape:connection-type","polyline")
 		self._source=None
 		self._target=None
 	
-	def load (self, svgnode) :
-		SVGPath.load(self,svgnode)
-		self._source=str(svgnode.getAttribute("inkscape:connection-start"))[1:]
-		self._target=str(svgnode.getAttribute("inkscape:connection-end"))[1:]
+	def load (self) :
+		SVGPath.load(self)
+		self._source=str(self.attribute("inkscape:connection-start"))[1:]
+		self._target=str(self.attribute("inkscape:connection-end"))[1:]
 	
-	def save (self, svgnode) :
-		SVGPath.save(self,svgnode)
-		svgnode.setAttribute("inkscape:connection-start","#%s" % self._source)
-		svgnode.setAttribute("inkscape:connection-end","#%s" % self._target)
-		svgnode.setAttribute("inkscape:connection-type","polyline")
+	def save (self) :
+		SVGPath.save(self)
+		self.set_attribute("inkscape:connection-start","#%s" % self._source)
+		self.set_attribute("inkscape:connection-end","#%s" % self._target)
 

@@ -6,19 +6,15 @@ class SVGScene (SVGGroup) :
 	maintain a list of svg elms
 	"""
 	def __init__ (self) :
-		SVGGroup.__init__(self,None,"pglscene")
-	
-	#plantgl like
-	def add (self, svgelm) :
-		self.append(svgelm)
-	##############################################
-	#
-	#		svg interface
-	#
-	##############################################
-	def save (self, svgnode) :
-		SVGGroup.save(self,svgnode)
-		self.set_node_type(svgnode,"svg")
+		SVGGroup.__init__(self,"pglscene",None)
+		self.set_nodename("svg:svg")
+		self.set_attribute("xmlns:dc","http://purl.org/dc/elements/1.1/")
+		self.set_attribute("xmlns:cc","http://web.resource.org/cc/")
+		self.set_attribute("xmlns:rdf","http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+		self.set_attribute("xmlns:svg","http://www.w3.org/2000/svg")
+		self.set_attribute("xmlns:xlink","http://www.w3.org/1999/xlink")
+		self.set_attribute("xmlns:inkscape","http://www.inkscape.org/namespaces/inkscape")
+		self.set_attribute("xmlns:sodipodi","http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd")
 	##############################################
 	#
 	#		pgl interface
