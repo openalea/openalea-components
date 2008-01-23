@@ -121,6 +121,8 @@ class SVGStack (SVGLayer) :
 				for elm in self.elements() :
 					svgim=elm[0]
 					impth=normpath(svgim.filename().replace(var_pth,""))
+					while impth[0] in ("\\","/") :
+						impth=impth[1:]
 					svgim.set_filename(impth)
 			self._variant_used=variant
 			#ajout du nouveau
@@ -165,7 +167,7 @@ class SVGStack (SVGLayer) :
 				self._masked.append(False)
 	
 	def save (self) :
-		var_mem=self.variant_used()
+		var_mem=self._variant_used
 		self.use_variant(None)
 		#variants
 		for var in self.variants() :

@@ -61,6 +61,10 @@ class SVGPath (SVGElement) :
 		for arg in cmd_args :
 			cmd.append(arg)
 		self._commands.append(cmd)
+	
+	def clear (self) :
+		self._commands=[]
+	
 	def is_closed (self) :
 		for command in self.commands() :
 			if command.type().lower()=='z' :
@@ -407,6 +411,12 @@ class SVGConnector (SVGPath) :
 		self.set_attribute("inkscape:connection-type","polyline")
 		self._source=None
 		self._target=None
+	
+	def set_source (self, svg_elm) :
+		self._source=svg_elm.id()
+	
+	def set_target (self, svg_elm) :
+		self._target=svg_elm.id()
 	
 	def load (self) :
 		SVGPath.load(self)

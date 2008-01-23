@@ -65,6 +65,9 @@ class SVGElement (XMLElement) :
 	def is_absolute (self) :
 		return self._absolute_3D
 	
+	def set_absolute (self, absolute) :
+		self._absolute_3D=absolute
+	
 	def global_transformation (self, matrix=Matrix4()) :
 		gtr=self._transform3D*matrix
 		if self.is_absolute() :
@@ -309,7 +312,7 @@ class SVGElement (XMLElement) :
 		if self.has_attribute("transform3D") :
 			tr=self.attribute("transform3D")
 			if tr[0].lower()=='a' :
-				self._absolute_3D=True
+				self.set_absolute(True)
 				tr=tr[1:]
 			else :
 				self._absolute_3D=False

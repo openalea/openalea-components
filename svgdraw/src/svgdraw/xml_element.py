@@ -56,6 +56,15 @@ class XMLElement (object) :
 	def set_child (self, ind, elm) :
 		self._children[ind]=elm
 		elm.set_parent(self)
+	
+	def remove_child (self, child) :
+		self._children.remove(child)
+		child.set_parent(None)
+	
+	def clear_children (self) :
+		for elm in self.children() :
+			elm.set_parent(None)
+		self._children=[]
 	#####################################################
 	#
 	#		attributes

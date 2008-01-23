@@ -41,18 +41,27 @@ class SVGGroup (SVGElement) :
 		self._elms.append(svgelm)
 		if isinstance(svgelm,SVGGroup) :
 			self.update_size(svgelm)
+	
+	def clear_elements (self) :
+		for elm in self.elements() :
+			self.remove_child(elm)
+		self._elms=[]
 	##################################################
 	#
 	#		elements access
 	#
 	##################################################
-	def get_node_by_id (self, svgid) :
+	def get_by_id (self, svgid) :
+		"""
+		return an element whose id is svgid
+		recursively search in subgroups
+		"""
 		for elm in self.elements() :
-			if elm.svgid()==svgid :
+			if elm.id()==svgid :
 				return elm
 		for elm in self.elements() :
 			if isinstance(elm,SVGGroup) :
-				finded=elm.get_node_by_id(svgid)
+				finded=elm.get_by_id(svgid)
 				if finded is not None :
 					return finded
 	
