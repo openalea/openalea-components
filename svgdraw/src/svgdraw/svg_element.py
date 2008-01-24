@@ -344,21 +344,26 @@ class SVGElement (XMLElement) :
 		self.load_transformation3D()
 	
 	def save_style (self) :
-		style="opacity:1"
+		style={}
+		if self.has_attribute("style") :
+			for gr in self.attribute("style").split(";") :
+				k,v=gr.split(":")
+				style[k]=v
+		style["opacity"]="1"
 		if self.fill is None :
-			style+=";fill:none"
+			style["fill"]="none"
 		else :
 			c=self.fill
-			style+=";fill:#%.2x%.2x%.2x" % (c.red,c.green,c.blue)
+			style["fill"]="#%.2x%.2x%.2x" % (c.red,c.green,c.blue)
 		if self.stroke is None :
-			style+=";stroke:none"
+			style["stroke"]="none"
 		else :
 			c=self.stroke
-			style+=";stroke:#%.2x%.2x%.2x" % (c.red,c.green,c.blue)
-		style+=";stroke-width:%f" % self.stroke_width
+			style["stroke"]="#%.2x%.2x%.2x" % (c.red,c.green,c.blue)
+		style["stroke-width"]="%f" % self.stroke_width
 		if not self.display :
-			style+=";display:none"
-		self.set_attribute("style",style)
+			style["display"]="none"
+		self.set_attribute("style",";".join(["%s:%s" % it for it in style.iteritems()]))
 	
 	def save_transformation2D (self) :
 		tr=self.svg_transformation(self._transform2D)
