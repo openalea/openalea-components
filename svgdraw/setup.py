@@ -54,7 +54,7 @@ setup(
     
     # Define what to execute with scons
     #scons_scripts=['SConstruct'],
-    scons_parameters=["build","build_prefix="+build_prefix],
+    #scons_parameters=["build","build_prefix="+build_prefix],
 
     # Packages
     namespace_packages = [namespace],
@@ -68,8 +68,8 @@ setup(
 
     zip_safe= False,
 
-    lib_dirs = {'lib' : pj(build_prefix, 'lib'), },
-    inc_dirs = { 'include' : pj(build_prefix, 'include') },
+    #lib_dirs = {'lib' : pj(build_prefix, 'lib'), },
+    #inc_dirs = { 'include' : pj(build_prefix, 'include') },
     
     #postinstall_scripts = ['',],
 
