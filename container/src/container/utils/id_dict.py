@@ -35,9 +35,12 @@ class IdDict (dict) :
 			self._id_generator.get_id(k)
 	
 	def add (self, val, key=None) :
-		key=self._id_generator.get_id(key)
-		dict.__setitem__(self,key,val)
-		return key
+		try :
+			key=self._id_generator.get_id(key)
+			dict.__setitem__(self,key,val)
+			return key
+		except IndexError :
+			raise KeyError(key)
 	
 	################################################
 	#
