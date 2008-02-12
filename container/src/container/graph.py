@@ -202,7 +202,7 @@ class Graph (IGraph,\
 	#
 	# ##########################################################
 	def add_vertex(self, vid=None):
-		return self._vertices.add(vid,(set(),set()) )
+		return self._vertices.add((set(),set()),vid )
 	add_vertex.__doc__=IMutableVertexGraph.add_vertex.__doc__
 	
 	def remove_vertex(self, vid):
@@ -229,8 +229,7 @@ class Graph (IGraph,\
 			raise InvalidVertex(sid)
 		if tid not in self :
 			raise InvalidVertex(tid)
-		eid=self._eid_generator.get_id(eid)
-		self._edges.add(eid,(sid,tid))
+		self._edges.add((sid,tid),eid)
 		self._vertices[sid][1].add(eid)
 		self._vertices[tid][0].add(eid)
 		return eid
