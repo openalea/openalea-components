@@ -426,11 +426,25 @@ class SVGConnector (SVGPath) :
 	
 	def load (self) :
 		SVGPath.load(self)
-		self._source=str(self.attribute("inkscape:connection-start"))[1:]
-		self._target=str(self.attribute("inkscape:connection-end"))[1:]
+		if self.has_attribute("inkscape:connection-start") :
+			self._source=str(self.attribute("inkscape:connection-start"))[1:]
+		else :
+			self._source=None
+		if self.has_attribute("inkscape:connection-end") :
+			self._target=str(self.attribute("inkscape:connection-end"))[1:]
+		else :
+			self._target=None
 	
 	def save (self) :
 		SVGPath.save(self)
-		self.set_attribute("inkscape:connection-start","#%s" % self._source)
-		self.set_attribute("inkscape:connection-end","#%s" % self._target)
+		if self._source is not None :
+			self.set_attribute("inkscape:connection-start","#%s" % self._source)
+		else :
+			if self.has_attribute("inkscape:connection-start") :
+				self.remove_attribute("inkscape:connection-start")
+		if self._target is not None :
+			self.set_attribute("inkscape:connection-end","#%s" % self._target)
+		else :
+			if self.has_attribute("inkscape:connection-end") :
+				self.remove_attribute("inkscape:connection-end")
 
