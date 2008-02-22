@@ -1,7 +1,7 @@
 # -*- python -*-
 # -*- coding: latin-1 -*-
 #
-#       ITopoMesh : topomesh package
+#       ITopoMesh : container package
 #
 #       Copyright or © or Copr. 2006 INRIA - CIRAD - INRA  
 #
@@ -26,166 +26,95 @@ class TopomeshError (Exception) :
 	base class for all exception in a topomesh
 	"""
 
-class InvalidCell (TopomeshError,KeyError) :
+class InvalidWisp (TopomeshError,KeyError) :
 	"""
-	exception raised when a wrong cell id is provided
-	"""
-
-class InvalidPoint (TopomeshError,KeyError) :
-	"""
-	exception raised when a wrong point id is provided
+	exception raised when a wrong wisp id is provided
 	"""
 
-class InvalidLink (TopomeshError,KeyError) :
+class InvalidDegree (TopomeshError,ValueError) :
 	"""
-	exception raised when a link between a cell and a point does not exist
+	exception raised when a the degree is outside of bounds
 	"""
 
 class ITopomesh (object) :
 	"""
 	interface definition of a topological mesh
-	a mesh links elements of two separate sets E1 (cells) and E2 (points)
-	it thus define an implicit neighborhood between elements
-	of the same set as two elements of E1 (resp E2) that share
-	the same element of E2 (resp E1)
+	a mesh is formed of elements called wisps
+	separated by elements of degree-1
 	"""
+	def degree (self) :
+		"""
+		maximum degree of elements of the mesh
+		"""
+		raise NotImplementedError
+	
 	def is_valid (self) :
 		"""
 		test wether the mesh fulfill all mesh properties
 		"""
 		raise NotImplementedError
 	
-	def has_point (self, pid) :
+	def has_wisp (self, degree, wid) :
 		"""
-		return true if the point
+		return true if the wisp
 		specified by its id is in mesh
 		"""
 		raise NotImplementedError
 	
-	def has_cell (self, cid) :
+	def borders (self, degree, wid, degree_offset=1) :
 		"""
-		return true if the cell
-		specified by its id is in mesh
+		iterator on all border of this wisp
 		"""
 		raise NotImplementedError
 	
-	def has_link (self, lid) :
+	def nb_borders (self, degree, wid, degree_offset=1) :
 		"""
-		return True if the link
-		specified by its id is in the mesh
+		number of border of this wisp
+		"""
+		raise NotImplementedError
+	
+	def regions (self, degree, wid) :
+		"""
+		iterator on all regions this wisp separate
+		"""
+		raise NotImplementedError
+	
+	def nb_regions (self, degree, wid) :
+		"""
+		number of regions this wisp separate
 		"""
 		raise NotImplementedError
 
-class ILinkMesh (object) :
+class IWispListMesh (object) :
 	"""
-	explicit links
+	mesh view as a collection of wisps
 	"""
-	def links (self) :
+	def wisps (self, degree) :
 		"""
-		iterator on all links in the mesh
-		return : iter of lid
-		"""
-		raise NotImplementedError
-	
-	def cell_links (self, cid) :
-		"""
-		iterator on all links outside a given cell
-		return : iter of lid
+		iterator on all wisps of a given degree
 		"""
 		raise NotImplementedError
 	
-	def nb_cell_links (self, cid) :
+	def nb_wisps (self, degree) :
 		"""
-		number of links attached to this cell
-		return : int
-		"""
-		raise NotImplementedError
-	
-	def point_links (self, pid) :
-		"""
-		iterator on all links inside a given point
-		return : iter of lid
-		"""
-		raise NotImplementedError
-	
-	def nb_point_links (self, cid) :
-		"""
-		number of links attached to this point
-		return : int
-		"""
-		raise NotImplementedError
-	
-	def cell (self, lid) :
-		"""
-		cell corresponding to the source of the link
-		return : cid
-		"""
-		raise NotImplementedError
-	
-	def point (self, lid) :
-		"""
-		point corresponding to the target of the link
-		return : pid
+		number of wisps of the given degree
 		"""
 		raise NotImplementedError
 
-class ICellListMesh (object) :
+class INeighborhoodMesh (object) :
 	"""
-	mesh view as a collection of cells
+	implicit neighborhood between wisps at the same scale
 	"""
-	def cells (self, pid=None) :
+	def neighbors (self, degree, wid) :
 		"""
-		iterator on cells linked to a given point
-		or all cells if pid is None
-		"""
-		raise NotImplementedError
-	
-	def nb_cells (self, pid=None) :
-		"""
-		number of cells around a point
-		or total number of cell if pid is None
+		iterator on all wisps at the same degree
+		that share a border with this wisp
 		"""
 		raise NotImplementedError
 	
-	def cell_neighbors (self, cid) :
+	def nb_neighbors (self, degree, wid) :
 		"""
-		iterator on all implicit neighbors of a cell
-		"""
-		raise NotImplementedError
-	
-	def nb_cell_neighbors (self, cid) :
-		"""
-		nb of implicit neighbors of a cell
-		"""
-		raise NotImplementedError
-
-class IPointListMesh (object) :
-	"""
-	mesh view as a collection of points
-	"""
-	def points (self, cid=None) :
-		"""
-		iterator on point around a given cell
-		or all points if cid is None
-		"""
-		raise NotImplementedError
-	
-	def nb_points (self, cid=None) :
-		"""
-		number of cells around a point
-		or total number of points if cid is None
-		"""
-		raise NotImplementedError
-	
-	def point_neighbors (self, pid) :
-		"""
-		iterator on all implicit neighbors of a point
-		"""
-		raise NotImplementedError
-	
-	def nb_point_neighbors (self, pid) :
-		"""
-		number of implicit neighbors of a point
+		number of neighbors of this wisp
 		"""
 		raise NotImplementedError
 
@@ -193,47 +122,31 @@ class IMutableMesh (object) :
 	"""
 	interface for editing methods on mesh
 	"""
-	def add_cell (self, cid=None) :
+	def add_wisp (self, degree, wid=None) :
 		"""
-		add a new cell connected to nothing
-		if cid is None, create a free id
-		return used cid
-		"""
-		raise NotImplementedError
-	
-	def remove_cell (self, cid) :
-		"""
-		remove a cell and all the references to attached points
-		do not remove attached points
+		add a new wisp connected to nothing
+		if wid is None, create a free id
+		return used wid
 		"""
 		raise NotImplementedError
 	
-	def remove_point (self, pid) :
+	def remove_wisp (self, degree, wid) :
 		"""
-		remove a point and all the references to attached cells
-		do not remove attached cells
-		"""
-		raise NotImplementedError
-	
-	def add_point (self, pid=None) :
-		"""
-		add a new point connected to nothing
-		if pid is None, create a free id
-		return used pid
+		remove wisp from the mesh
+		remove all attached links
 		"""
 		raise NotImplementedError
 	
-	def add_link (self, cid, pid, lid=None) :
+	def link (self, degree, wid, border_id) :
 		"""
-		add a link between a cell and a point
-		cell and point must already exist in the mesh
-		return the link id used
+		link a wisp of degree degree with id wid
+		with another wisp of degree degree-1 with id border_id
 		"""
 		raise NotImplementedError
 	
-	def remove_link (self, lid) :
+	def unlink (self, degree, wid, border_id) :
 		"""
-		remove a link between a cell and a point
+		remove links between a region and its border
 		"""
 		raise NotImplementedError
 

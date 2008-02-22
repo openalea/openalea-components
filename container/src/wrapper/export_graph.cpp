@@ -15,6 +15,7 @@
  *       
  *                                                                       
  *-----------------------------------------------------------------------------*/
+#include <vector>
 
 #include "container/relation.h"
 #include "container/graph.h"
@@ -110,38 +111,52 @@ int export_graph_add_edge (Graph& graph, int sid, int tid, PyObject* arg) {
 class TotoA {
 public:
 	virtual void test () const {std::cout << "A" << std::endl;}
+	void test_neighbors_iterators () {
+		Graph g;
+		for(int i=0;i<1000;++i) {
+			g.add_vertex(i);
+		}
+		for(int i=0;i<1000;++i) {
+			g.add_edge(i,(i+1)%1000);
+		}
+		std::vector<int> vid_list;
+		for(int i=0;i<1000;++i) {
+			Graph::neighbor_iterator it=g.neighbors_begin(i);
+			for(it;it!=g.neighbors_end(i);++it) {
+				vid_list.push_back(*it);
+			}
+		}
+		std::cout << "end neighbors " << vid_list.size() << std::endl;
+	}
+	void test_edges_iterators () {
+		Graph g;
+		for(int i=0;i<1000;++i) {
+			g.add_vertex(i);
+		}
+		for(int i=0;i<1000;++i) {
+			g.add_edge(i,(i+1)%1000);
+		}
+		std::vector<int> eid_list;
+		for(int i=0;i<1000;++i) {
+			Graph::vertex_edge_iterator it=g.edges_begin(i);
+			for(it;it!=g.edges_end(i);++it) {
+				eid_list.push_back(*it);
+			}
+		}
+		std::cout << "end edgers " << eid_list.size() << std::endl;
+	}
 };
-
-class TotoB : public TotoA {
-private:
-	int intern;
-public:
-	TotoB(int val) {
-		intern=val;
-	}
-	void test () const {std::cout << "B" << intern << std::endl;}
-};
-
-boost::shared_ptr<TotoA> export_test (Graph& graph, bool test) {
-	if(test) {
-		return boost::shared_ptr<TotoA>(new TotoA());
-	}
-	else {
-		return boost::shared_ptr<TotoA>(new TotoB(42));
-	}
-}
-
-void export_toto_test (const boost::shared_ptr<TotoA>& a) {
-	a->test();
-}
 
 void export_graph () {
 	export_custom_range<Graph::vertex_edge_iterator>("_PyGraphVertexEdgeRange");
 	export_custom_range<Graph::vertex_iterator>("_PyGraphVertexRange");
 	export_custom_range<Graph::neighbor_iterator>("_PyGraphNeighborRange");
 
-	class_<boost::shared_ptr<TotoA> >("_PySharedPtr")
-		.def("test",&export_toto_test);
+	class_<TotoA>("TotoA")
+		.def("test",&TotoA::test)
+		.def("test_neighbor_iterator",&TotoA::test_neighbors_iterators)
+		.def("test_edge_iterator",&TotoA::test_edges_iterators);
+
 
 	class_<Graph, bases<Relation> >("Graph", "graph")
 		//graph concept
@@ -183,7 +198,6 @@ void export_graph () {
 		.def("clear_edges",&Graph::clear_edges,"remove all links")
 		.def("clear",&Graph::clear,"remove all vertices from the graph")
 		//debug
-		.def("test",&export_test)
 		.def("state",&Graph::state,"debug function");
 
 }
