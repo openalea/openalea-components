@@ -1,17 +1,15 @@
-from openalea.container import Relation
+from openalea.container import *
 
 r=Relation()
-for i in xrange(3) :
-	print "link",r.add_link(0,i,i)
-for i in xrange(3) :
-	print "link",r.add_link(0,i)
+left=[r.add_left_element() for i in xrange(10)]
+right=[r.add_right_element() for i in xrange(5)]
+for i in xrange(5) :
+	r.add_link(left[i],right[i])
+	r.add_link(left[5+i],right[i])
 
-print "source",r.source(0)
-print "target",r.target(0)
-print "remove",r.remove_link(0)
-print "state",r.state()
-for i in xrange(3) :
-	print "link",r.add_link(0,i)
-print "clear",r.clear()
-print "test",list(r.links())
-
+print left
+print list(r.left_elements())
+print right
+print list(r.right_elements())
+print list(r.links())
+print [(r.left(lid),r.right(lid)) for lid in r.links()]

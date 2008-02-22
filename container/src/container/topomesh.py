@@ -1,7 +1,7 @@
 # -*- python -*-
 # -*- coding: latin-1 -*-
 #
-#       Topomesh : topomesh package
+#       Topomesh : container package
 #
 #       Copyright or © or Copr. 2006 INRIA - CIRAD - INRA  
 #
@@ -22,242 +22,156 @@ for a topomesh interface
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
-from interface.topomesh import InvalidCell,InvalidPoint,InvalidLink,\
-				ITopomesh,ILinkMesh,ICellListMesh,IPointListMesh,IMutableMesh
-from utils import IdDict
+from interface.topomesh import TopomeshError,InvalidWisp,InvalidDegree,\
+				ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh
+from relation import Relation
 
-class StrInvalidCell (InvalidCell) :
+class StrInvalidWisp (InvalidWisp) :
 	"""
-	exception raised when a wrong cell id is provided
+	exception raised when a wrong wisp id is provided
 	"""
-	def __init__ (self, cid) :
-		InvalidCell.__init__(self,"cell %d does not exist" % cid)
+	def __init__ (self, degree, wid) :
+		InvalidWisp.__init__(self,"wisp %d of degree %d does not exist" % (wid,degree))
 
-class StrInvalidPoint (InvalidPoint) :
+class StrInvalidDegree (InvalidDegree) :
 	"""
-	exception raised when a wrong point id is provided
+	exception raised when a wrong degree is provided
 	"""
-	def __init__ (self, pid) :
-		InvalidPoint.__init__(self,"point %d does not exist" % pid)
+	def __init__ (self, degree) :
+		InvalidDegree.__init__(self,"degree %d is outside of mesh bounds" % degree)
 
-class StrInvalidLink (InvalidLink) :
-	"""
-	exception raised when a link between a cell and a point does not exist
-	"""
-	def __init__ (self, lid) :
-		InvalidLink.__init__(self,"link %d does not exist" % lid)
-
-class Topomesh (ITopomesh,ILinkMesh,ICellListMesh,IPointListMesh,IMutableMesh) :
+class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
 	"""
 	implementation of a topological mesh
 	"""
 	__doc__+=ITopomesh.__doc__
-	def __init__ (self) :
+	def __init__ (self, degree) :
 		"""
 		constructor of an empty mesh
 		"""
-		self._cell_links=IdDict()
-		self._point_links=IdDict()
-		self._link_extremities=IdDict()
-	
+		self._degree=degree
+		self._neighborhood=[Relation() for i in xrange(degree+1)]
 	########################################################################
 	#
 	#		Mesh concept
 	#
 	########################################################################
+	def degree (self) :
+		return self._degree
+	degree.__doc__=ITopomesh.degree.__doc__
+	
 	def is_valid (self) :
 		return True
 	is_valid.__doc__=ITopomesh.is_valid.__doc__
 	
-	def has_point (self, pid) :
-		return pid in self._point_links
-	has_point.__doc__=ITopomesh.has_point.__doc__
-	
-	def has_cell (self, cid) :
-		return cid in self._cell_links
-	has_cell.__doc__=ITopomesh.has_cell.__doc__
-	
-	def has_link (self, lid) :
-		return lid in self._link_extremities
-	has_link.__doc__=ITopomesh.has_link.__doc__
-	########################################################################
-	#
-	#		Link Mesh concept
-	#
-	########################################################################
-	def links (self) :
-		return self._link_extremities.iterkeys()
-	links.__doc__=ILinkMesh.links.__doc__
-	
-	def cell_links (self, cid) :
+	def has_wisp (self, degree, wid) :
 		try :
-			return iter(self._cell_links[cid])
-		except KeyError :
-			raise StrInvalidCell(cid)
-	cell_links.__doc__=ILinkMesh.cell_links.__doc__
+			return self._neighborhood[degree].has_left(wid)
+		except IndexError :
+			raise StrInvalidDegree(degree)
+	has_wisp.__doc__=ITopomesh.has_wisp.__doc__
 	
-	def nb_cell_links (self, cid) :
-		try :
-			return len(self._cell_links[cid])
-		except KeyError :
-			raise StrInvalidCell(cid)
-	nb_cell_links.__doc__=ILinkMesh.nb_cell_links.__doc__
+	def _borders (self, degree, wid) :
+		"""
+		internal function to access borders of an element
+		"""
+		r=self._neighborhood[degree-1]
+		for lid in r.from_right(wid) :
+			yield r.left(lid)
 	
-	def point_links (self, pid) :
-		try :
-			return iter(self._point_links[pid])
-		except KeyError :
-			raise StrInvalidPoint(pid)
-	point_links.__doc__=ILinkMesh.point_links.__doc__
-	
-	def nb_point_links (self, pid) :
-		try :
-			return len(self._point_links[pid])
-		except KeyError :
-			raise StrInvalidPoint(pid)
-	nb_point_links.__doc__=ILinkMesh.nb_point_links.__doc__
-	
-	def cell (self, lid) :
-		try :
-			return self._link_extremities[lid][0]
-		except KeyError :
-			raise StrInvalidLink(lid)
-	cell.__doc__=ILinkMesh.cell.__doc__
-	
-	def point (self, lid) :
-		try :
-			return self._link_extremities[lid][1]
-		except KeyError :
-			raise StrInvalidLink(lid)
-	point.__doc__=ILinkMesh.point.__doc__
-	########################################################################
-	#
-	#		Cell list concept
-	#
-	########################################################################
-	def _cells (self, pid) :
-		try :
-			for lid in self.point_links(pid) :
-				yield self.cell(lid)
-		except KeyError :
-			raise StrInvalidPoint(pid)
-	
-	def cells (self, pid=None) :
-		if pid is None :
-			return self._cell_links.iterkeys()
+	def _borders_with_offset (self, degree, wids, offset) :
+		if offset==0 :
+			return wids
 		else :
-			return self._cells(pid)
-	cells.__doc__=ICellListMesh.cells.__doc__
+			ret=set()
+			for wid in wids :
+				ret|=set(self._borders_with_offset(degree-1,self._borders(degree,wid),offset-1))
+			return iter(ret)
 	
-	def nb_cells (self, pid=None) :
-		if pid is None :
-			return len(self._cell_links)
-		try :
-			return len(self._point_links[pid])
-		except KeyError :
-			raise StrInvalidPoint(pid)
-	nb_cells.__doc__=ICellListMesh.nb_cells.__doc__
+	def borders (self, degree, wid, offset=1) :
+		if degree-offset<0 :
+			raise InvalidDegree ("smallest wisps have no borders")
+		return self._borders_with_offset(degree-1,self._borders(degree,wid),offset-1)
+	borders.__doc__=ITopomesh.borders.__doc__
 	
-	def cell_neighbors (self, cid) :
-		neighbors=set()
-		for pid in self.points(cid) :
-			neighbors|=set(self.cells(pid))
-		neighbors.remove(cid)
-		return iter(neighbors)
-	cell_neighbors.__doc__=ICellListMesh.cell_neighbors.__doc__
+	def nb_borders (self, degree, wid) :
+		if degree<1 :
+			raise InvalidDegree ("smallest wisps have no borders")
+		return self._neighborhood[degree-1].nb_links_from_right(wid)
+	nb_borders.__doc__=ITopomesh.nb_borders.__doc__
 	
-	def nb_cell_neighbors (self, cid) :
-		neighbors=set()
-		for pid in self.points(cid) :
-			neighbors|=set(self.cells(pid))
-		return len(neighbors)-1
-	nb_cell_neighbors.__doc__=ICellListMesh.nb_cell_neighbors.__doc__
+	def regions (self, degree, wid) :
+		if degree>self.degree() :
+			raise InvalidDegree ("biggest wisps do not separate regions")
+		r=self._neighborhood[degree]
+		for lid in r.from_left(wid) :
+			yield r.right(lid)
+	regions.__doc__=ITopomesh.regions.__doc__
 	
-	#########################################################################
+	def nb_regions (self, degree, wid) :
+		if degree>self.degree() :
+			raise InvalidDegree ("biggest wisps do not separate regions")
+		return self._neighborhood[degree].nb_links_from_left(wid)
+	nb_regions.__doc__=ITopomesh.nb_regions.__doc__
+	########################################################################
 	#
-	#		Point list concept
+	#		Wisp list concept
 	#
-	#########################################################################
-	def _points (self, cid) :
+	########################################################################
+	def wisps (self, degree) :
 		try :
-			for lid in self.cell_links(cid) :
-				yield self.point(lid)
-		except KeyError :
-			raise StrInvalidCell(cid)
+			return self._neighborhood[degree].left_elements()
+		except IndexError :
+			raise StrInvalidDegree(degree)
+	wisps.__doc__=IWispListMesh.wisps.__doc__
 	
-	def points (self, cid=None) :
-		if cid is None :
-			return self._point_links.iterkeys()
-		else :
-			return self._points(cid)
-	points.__doc__=IPointListMesh.points.__doc__
-	
-	def nb_points (self, cid=None) :
-		if cid is None :
-			return len(self._point_links)
+	def nb_wisps (self, degree) :
 		try :
-			return len(self._cells[cid])
-		except KeyError :
-			raise StrInvalidCell(cid)
-	nb_points.__doc__=IPointListMesh.nb_points.__doc__
+			return self._neighborhood[degree].nb_left_elements()
+		except IndexError :
+			raise StrInvalidDegree(degree)
+	nb_wisps.__doc__=IWispListMesh.nb_wisps.__doc__
+	########################################################################
+	#
+	#		Neighborhood concept
+	#
+	########################################################################
+	def neighbors (self, degree, wid) :
+		pass
+	neighbors.__doc__=INeighborhoodMesh.neighbors.__doc__
 	
-	def point_neighbors (self, pid) :
-		neighbors=set()
-		for cid in self.cells(pid) :
-			neighbors|=set(self.points(cid))
-		neighbors.remove(pid)
-		return iter(neighbors)
-	point_neighbors.__doc__=IPointListMesh.point_neighbors.__doc__
-	
-	def nb_point_neighbors (self, pid) :
-		neighbors=set()
-		for cid in self.cells(pid) :
-			neighbors|=set(self.points(cid))
-		return len(neighbors)-1
-	nb_point_neighbors.__doc__=IPointListMesh.nb_point_neighbors.__doc__
-	
+	def nb_neighbors (self, degree, wid) :
+		pass
+	nb_neighbors.__doc__=INeighborhoodMesh.nb_neighbors.__doc__
 	########################################################################
 	#
 	#		Mutable mesh concept
 	#
 	########################################################################
-	def add_cell (self, cid=None) :
-		return self._cell_links.add(set(),cid)
-	add_cell.__doc__=IMutableMesh.add_cell.__doc__
+	def add_wisp (self, degree, wid=None) :
+		wid=self._neighborhood[degree].add_left_element(wid)
+		if degree>0 :
+			wid2=self._neighborhood[degree-1].add_right_element(wid)
+			if wid!=wid2 :
+				raise TopomeshError("internal mismatch between two relations")
+		return wid
+	add_wisp.__doc__=IMutableMesh.add_wisp.__doc__
 	
-	def remove_cell (self, cid) :
-		for lid in list(self.cell_links(cid)) :
-			self.remove_link(lid)
-		del self._cell_links[cid]
-	remove_cell.__doc__=IMutableMesh.remove_cell.__doc__
+	def remove_wisp (self, degree, wid) :
+		self._neighborhood[degree].remove_left_element(wid)
+		if degree>0 :
+			self._neighborhood[degree-1].remove_right_element(wid)
+	remove_wisp.__doc__=IMutableMesh.remove_wisp.__doc__
 	
-	def add_point (self, pid=None) :
-		return self._point_links.add(set(),pid)
-	add_point.__doc__=IMutableMesh.add_point.__doc__
+	def link (self, degree, wid, border_id) :
+		if degree<1 :
+			raise InvalidDegree ("smallest wisps have no neighbors")
+		self._neighborhood[degree-1].add_link(border_id,wid)
+	link.__doc__=IMutableMesh.link.__doc__
 	
-	def remove_point (self, pid) :
-		for lid in list(self.point_links(pid)) :
-			self.remove_link(lid)
-		del self._point_links[pid]
-	remove_point.__doc__=IMutableMesh.remove_point.__doc__
-	
-	def add_link (self, cid, pid, lid=None) :
-		if not self.has_cell(cid) :
-			raise StrInvalidCell(cid)
-		if not self.has_point(pid) :
-			raise StrInvalidPoint(pid)
-		lid=self._link_extremities.add( (cid,pid),lid )
-		self._cell_links[cid].add(lid)
-		self._point_links[pid].add(lid)
-		return lid
-	add_link.__doc__=IMutableMesh.add_link.__doc__
-	
-	def remove_link (self, lid) :
-		cid=self.cell(lid)
-		self._cell_links[cid].remove(lid)
-		pid=self.point(lid)
-		self._point_links[pid].remove(lid)
-		del self._link_extremities[lid]
-	remove_link.__doc__=IMutableMesh.remove_link.__doc__
-
+	def unlink (self, degree, wid, border_id) :
+		if degree<1 :
+			raise InvalidDegree ("smallest wisps have no neighbors")
+		self._neighborhood[degree-1].remove_link(border_id,wid)
+	unlink.__doc__=IMutableMesh.unlink.__doc__
 
