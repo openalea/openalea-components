@@ -60,7 +60,7 @@ setup(
     namespace_packages = [namespace],
     create_namespaces = True,
     packages =  [ 'openalea.' + x for x in find_packages('src') ],
-    package_dir = { 'openalea.svgdraw':  pj('src','svgdraw'),  }, 
+    package_dir = { 'openalea.svgdraw':  pj('src','svgdraw'), "":"src" }, 
 
     
     include_package_data = True,
