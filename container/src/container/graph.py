@@ -259,15 +259,15 @@ class Graph (IGraph,\
 	def extend(self, graph):
 		#vertex adding
 		trans_vid={}
-		for vid in graph.vertices() :
+		for vid in list(graph.vertices()) :
 			trans_vid[vid]=self.add_vertex()
 		
 		#edge adding
 		trans_eid={}
-		for eid in graph.edges() :
+		for eid in list(graph.edges()) :
 			sid=trans_vid[graph.source(eid)]
 			tid=trans_vid[graph.target(eid)]
-			trans_eid[eid]=self.add_edge(edge=(sid,tid))
+			trans_eid[eid]=self.add_edge(sid,tid)
 		
 		return trans_vid,trans_eid
 	extend.__doc__=IExtendGraph.extend.__doc__
