@@ -1,5 +1,5 @@
 from openalea.plantgl.scenegraph import Scene,Shape,Material,FaceSet,Polyline,Group,Translated,Scaled,Transformed
-from svg_group import SVGGroup
+from svg_group import SVGGroup,SVGLayer
 
 class SVGScene (SVGGroup) :
 	"""
@@ -15,6 +15,15 @@ class SVGScene (SVGGroup) :
 		self.set_attribute("xmlns:xlink","http://www.w3.org/1999/xlink")
 		self.set_attribute("xmlns:inkscape","http://www.inkscape.org/namespaces/inkscape")
 		self.set_attribute("xmlns:sodipodi","http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd")
+	
+	def get_layer (self, layer_name) :
+		"""
+		walk among childrens to find the first layer with the given name
+		"""
+		for elm in self.elements() :
+			if isinstance(elm,SVGLayer) :
+				if elm.attribute("inkscape:label")==layer_name :
+					return elm
 	##############################################
 	#
 	#		pgl interface
