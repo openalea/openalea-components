@@ -56,14 +56,17 @@ class CellWallCornerEffect(inkex.Effect):
 	
 	def effect(self):
 		node_pos={}
+		node_R=[]
 		for node in self.selected.values() :
 			if node.tag == inkex.addNS('path','svg') and node.get(inkex.addNS("cx","sodipodi")) is not None :#assume circle
 				node_pos[node]=simpleprimitive.element_center(node)
+				node_R.append(float(node.get(inkex.addNS("rx","sodipodi"))))
 		if len(node_pos)>2 :
+			size=sum(node_R)/len(node_R)*2.
 			cx,cy=bary(node_pos.values())
 			node_ref=iter(node_pos).next()
 			parent=node_ref.getparent()
-			box=simpleprimitive.box(parent,cx,cy,10,10,{"fill":simplestyle.svgcolors["blue"]})
+			box=simpleprimitive.box(parent,cx,cy,size,size,{"fill":simplestyle.svgcolors["blue"]})
 			box.set("id",self.uniqueId("rect"))
 			angles=[(angle(node_pos[node_ref],pt,(cx,cy)),node) for node,pt in node_pos.iteritems()]
 			angles.sort()
@@ -74,7 +77,7 @@ class CellWallCornerEffect(inkex.Effect):
 				wall=self.test_connection(n1,n2)
 				if wall is None :
 					x,y=bary([node_pos[node] for node in (n1,n2)])
-					wall=simpleprimitive.box(parent,x,y,10,10,{"fill":simplestyle.svgcolors["magenta"]})
+					wall=simpleprimitive.box(parent,x,y,size,size,{"fill":simplestyle.svgcolors["magenta"]})
 					wall.set("id",self.uniqueId("rect"))
 					for node in (n1,n2) :
 						con=simpleprimitive.connect(parent,wall,node,{"stroke":simplestyle.svgcolors["blue"]})

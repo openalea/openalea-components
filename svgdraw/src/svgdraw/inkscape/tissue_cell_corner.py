@@ -32,15 +32,18 @@ class CellCornerEffect(inkex.Effect):
 	
 	def effect(self):
 		node_pos={}
+		node_R=[]
 		for node in self.selected.values() :
 			if node.tag == inkex.addNS('path','svg') and node.get(inkex.addNS("cx","sodipodi")) is not None :#assume circle
 				node_pos[node]=simpleprimitive.element_center(node)
+				node_R.append(float(node.get(inkex.addNS("rx","sodipodi"))))
 		if len(node_pos)>2 :
+			size=sum(node_R)/len(node_R)*2.
 			cx=sum([pt[0] for pt in node_pos.itervalues()])/len(node_pos)
 			cy=sum([pt[1] for pt in node_pos.itervalues()])/len(node_pos)
 			node_ref=iter(node_pos).next()
 			parent=node_ref.getparent()
-			box=simpleprimitive.box(parent,cx,cy,10,10,{"fill":simplestyle.svgcolors["blue"]})
+			box=simpleprimitive.box(parent,cx,cy,size,size,{"fill":simplestyle.svgcolors["blue"]})
 			box.set("id",self.uniqueId("rect"))
 			angles=[(angle(node_pos[node_ref],pt,(cx,cy)),node) for node,pt in node_pos.iteritems()]
 			angles.sort()
