@@ -60,9 +60,10 @@ class CellWallCornerEffect(inkex.Effect):
 		for node in self.selected.values() :
 			if node.tag == inkex.addNS('path','svg') and node.get(inkex.addNS("cx","sodipodi")) is not None :#assume circle
 				node_pos[node]=simpleprimitive.element_center(node)
-				node_R.append(float(node.get(inkex.addNS("rx","sodipodi"))))
+				rx,ry=simpleprimitive.element_size(node)
+				node_R.append((rx+ry)/2.)
 		if len(node_pos)>2 :
-			size=sum(node_R)/len(node_R)*2.
+			size=sum(node_R)/len(node_R)
 			cx,cy=bary(node_pos.values())
 			node_ref=iter(node_pos).next()
 			parent=node_ref.getparent()

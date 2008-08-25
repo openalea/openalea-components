@@ -15,6 +15,23 @@ def element_center (node) :
 		simpletransform.applyTransformToPoint(mat,pt)
 	return pt
 
+def element_size (node) :
+	if node.tag == inkex.addNS('path','svg') :#assume circle
+		rx=float(node.get(inkex.addNS("rx","sodipodi")))
+		ry=float(node.get(inkex.addNS("ry","sodipodi")))
+	elif node.tag == inkex.addNS('rect','svg') :
+		rx=float(node.get("width"))/2.
+		ry=float(node.get("height"))/2.
+	else :
+		raise UserWarning("unrecognized node")
+	pt=[rx,ry]
+	if node.get("transform") is not None :
+		mat=simpletransform.parseTransform(node.get("transform"))
+		mat[0][2]=0
+		mat[1][2]=0
+		simpletransform.applyTransformToPoint(mat,pt)
+	return pt
+
 def box (parent, x=0, y=0, width=10, height=10, style_dict={}) :
 	new = inkex.etree.SubElement(parent,inkex.addNS('rect','svg'))
 	#new.set("id",self.uniqueId("rect"))
