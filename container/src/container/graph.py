@@ -229,7 +229,7 @@ class Graph (IGraph,\
 			raise InvalidVertex(sid)
 		if tid not in self :
 			raise InvalidVertex(tid)
-		self._edges.add((sid,tid),eid)
+		eid=self._edges.add((sid,tid),eid)
 		self._vertices[sid][1].add(eid)
 		self._vertices[tid][0].add(eid)
 		return eid
