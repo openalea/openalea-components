@@ -6,7 +6,7 @@ py_dir = '../container'
 
 # Build wrappers as shared libraries
 # utils wrapper
-env1 = env.Copy()
+env1 = env.Clone()
 
 sources = ["export_id_generator.cpp",
 	   "export_id_map.cpp",
