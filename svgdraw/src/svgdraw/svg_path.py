@@ -418,11 +418,11 @@ class SVGConnector (SVGPath) :
 	def target (self) :
 		return self._target
 	
-	def set_source (self, svg_elm) :
-		self._source=svg_elm.id()
+	def set_source (self, svg_elm_id) :
+		self._source=svg_elm_id
 	
-	def set_target (self, svg_elm) :
-		self._target=svg_elm.id()
+	def set_target (self, svg_elm_id) :
+		self._target=svg_elm_id
 	
 	def load (self) :
 		SVGPath.load(self)

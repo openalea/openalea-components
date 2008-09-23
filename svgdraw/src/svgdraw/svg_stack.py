@@ -62,17 +62,23 @@ class SVGStack (SVGLayer) :
 	def resolution (self) :
 		return self._transform3D.getTransformationB()[0]
 	
-	def add_image (self, image_name, width, height, masked=False) :
+	def set_resolution (self, dx, dy, dz) :
+		self._transform3D*=Matrix4(scaling((dx,dy,dz)))
+	
+	def add_image (self, image_name, width, height, masked=False, zreverse=False) :
 		ind=len(self)
 		gr=SVGLayer("gslice%.4d" % ind)
 		self.append(gr)
 		gr.set_size(width,height)
-		gr.translate( (0,0,ind) )
+		if zreverse :
+			gr.translate( (0,0,-ind) )
+		else :
+			gr.translate( (0,0,ind) )
 		gr.display=False
 		im=SVGImage("slice%.4d" % ind)
 		gr.append(im)
 		im.set_filename(image_name)
-		im.scale2D( (width,height,0) )
+		im.scale2D( (width,height,1.) )
 		self._masked.append(masked)
 	
 	def image (self, ind) :
@@ -147,7 +153,7 @@ class SVGStack (SVGLayer) :
 		dx=float(self.get_default("dx",1.))
 		dy=float(self.get_default("dy",1.))
 		dz=float(self.get_default("dz",1.))
-		self._transform3D*=Matrix4(scaling((dx,dy,dz)))
+		self.set_resolution(dx,dy,dz)
 		#variants
 		for i in xrange(self.nb_children()) :
 			if self.child(i).nodename()=="variant" :

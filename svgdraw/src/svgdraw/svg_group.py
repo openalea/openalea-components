@@ -14,7 +14,7 @@ class SVGGroup (SVGElement) :
 	def size (self,) :
 		return self._size
 	
-	def set_size (self, width, height, depth=0.) :
+	def set_size (self, width, height, depth=1.) :
 		self._size=Vector3(width,height,depth)
 	
 	def elements (self) :
