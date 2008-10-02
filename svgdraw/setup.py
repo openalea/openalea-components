@@ -64,7 +64,7 @@ setup(
 
     
     include_package_data = True,
-    package_data = {'' : ['*.pyd', '*.so'],},
+    package_data = {'' : ['*.pyd', '*.so', '*.dylib'],},
 
     zip_safe= False,
 
