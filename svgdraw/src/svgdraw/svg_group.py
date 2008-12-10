@@ -139,8 +139,16 @@ class SVGGroup (SVGElement) :
 			w,h,d=0,0,0
 		else :
 			w,h,d=self.parent().size()
-		width=float(self.get_default("width",w))
-		height=float(self.get_default("height",h))
+		try :
+			width = float(self.get_default("width",w))
+		except ValueError :
+			widthstr = self.attribute("width")
+			width = float(widthstr[:-2])
+		try :
+			height = float(self.get_default("height",h))
+		except ValueError :
+			heightstr = self.attribute("height")
+			height = float(heightstr[:-2])
 		depth=float(self.get_default("depth",d))
 		self.set_size(width,height,depth)
 		#element load after width and height to perform
