@@ -105,16 +105,29 @@ class INeighborhoodMesh (object) :
 	"""
 	implicit neighborhood between wisps at the same scale
 	"""
-	def neighbors (self, degree, wid) :
+	def border_neighbors (self, degree, wid) :
 		"""
 		iterator on all wisps at the same degree
 		that share a border with this wisp
 		"""
 		raise NotImplementedError
 	
-	def nb_neighbors (self, degree, wid) :
+	def nb_border_neighbors (self, degree, wid) :
 		"""
-		number of neighbors of this wisp
+		number of border_neighbors of this wisp
+		"""
+		raise NotImplementedError
+
+	def region_neighbors (self, degree, wid) :
+		"""
+		iterator on all wisps at the same degree
+		that share a region with this wisp
+		"""
+		raise NotImplementedError
+	
+	def nb_region_neighbors (self, degree, wid) :
+		"""
+		number of region_neighbors of this wisp
 		"""
 		raise NotImplementedError
 
