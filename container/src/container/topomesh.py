@@ -136,13 +136,27 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
 	#		Neighborhood concept
 	#
 	########################################################################
-	def neighbors (self, degree, wid) :
-		pass
-	neighbors.__doc__=INeighborhoodMesh.neighbors.__doc__
+	def border_neighbors (self, degree, wid) :
+		for bid in self.borders(degree,wid) :
+			for rid in self.regions(degree-1,bid) :
+				if rid != wid :
+					yield rid
+	border_neighbors.__doc__=INeighborhoodMesh.border_neighbors.__doc__
 	
-	def nb_neighbors (self, degree, wid) :
-		pass
-	nb_neighbors.__doc__=INeighborhoodMesh.nb_neighbors.__doc__
+	def nb_border_neighbors (self, degree, wid) :
+		return len(list(self.border_neighbors(degree,wid)))
+	nb_border_neighbors.__doc__=INeighborhoodMesh.nb_border_neighbors.__doc__
+	
+	def region_neighbors (self, degree, wid) :
+		for rid in self.regions(degree,wid) :
+			for bid in self.borders(degree+1,rid) :
+				if bid != wid :
+					yield bid
+	region_neighbors.__doc__=INeighborhoodMesh.region_neighbors.__doc__
+	
+	def nb_region_neighbors (self, degree, wid) :
+		return len(list(self.region_neighbors(degree,wid)))
+	nb_region_neighbors.__doc__=INeighborhoodMesh.nb_region_neighbors.__doc__
 	########################################################################
 	#
 	#		Mutable mesh concept
