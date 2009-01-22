@@ -44,7 +44,7 @@ class ITopomesh (object) :
 	"""
 	def degree (self) :
 		"""
-		maximum degree of elements of the mesh
+		maximum degree (or scale) of elements of the mesh
 		"""
 		raise NotImplementedError
 	
