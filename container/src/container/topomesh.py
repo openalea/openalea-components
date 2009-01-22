@@ -101,7 +101,7 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
 	nb_borders.__doc__=ITopomesh.nb_borders.__doc__
 	
 	def regions (self, degree, wid) :
-		if degree>self.degree() :
+		if degree >= self.degree() :
 			raise InvalidDegree ("biggest wisps do not separate regions")
 		r=self._neighborhood[degree]
 		for lid in r.from_left(wid) :
@@ -109,7 +109,7 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
 	regions.__doc__=ITopomesh.regions.__doc__
 	
 	def nb_regions (self, degree, wid) :
-		if degree>self.degree() :
+		if degree >= self.degree() :
 			raise InvalidDegree ("biggest wisps do not separate regions")
 		return self._neighborhood[degree].nb_links_from_left(wid)
 	nb_regions.__doc__=ITopomesh.nb_regions.__doc__
