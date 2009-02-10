@@ -24,6 +24,38 @@ __revision__=" $Id: graph.py 116 2007-02-07 17:44:59Z tyvokka-toufou $ "
 
 class IdGenerator(object) :
 	def __init__ (self) :
+		self._id_max = 0
+		self._available_ids = set()
+	
+	def get_id (self, id = None) :
+		if id is None :
+			if len(self._available_ids) == 0 :
+				ret = self._id_max
+				self._id_max += 1
+				return ret
+			else :
+				return self._available_ids.pop()
+		else :
+			if id >= self._id_max :
+				self._available_ids.update(xrange(self._id_max,id))
+				self._id_max = id+1
+				return id
+			else :
+				try :
+					self._available_ids.remove(id)
+					return id
+				except KeyError :
+					raise IndexError("id %d already used" % id)
+	
+	def release_id (self, id) :
+		if id > self._id_max :
+			raise IndexError("id out of range")
+		elif id in self._available_ids :
+			raise IndexError("id already not used")
+		else :
+			self._available_ids.add(id)
+class IdListGenerator(object) :
+	def __init__ (self) :
 		self._id_max=0
 		self._id_list=[]
 	
