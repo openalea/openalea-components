@@ -58,10 +58,10 @@ def clean_orphans (mesh) :
 	wisps : a list of wid
 	return : a set of wid
 	"""
-	inside_wisps = set(wisps)
+	inside_wisps = set(wids)
 	for wid in wids :
 		inside_wisps.update(mesh.border_neighbors(scale,wid))
-	return inside_cells
+	return inside_wisps
 
 def border (mesh, scale, wids) :#TODO gestion des bords du mesh a preciser
 	"""
@@ -76,7 +76,7 @@ def border (mesh, scale, wids) :#TODO gestion des bords du mesh a preciser
 	for wid in wids :
 		for bid in mesh.borders(scale,wid) :
 			if len(set(mesh.regions(scale-1,bid)) - inside_wisps) > 0 :
-				border.add(cid)
+				border.add(wid)
 	return border
 
 def shrink (mesh, scale, wids) :
