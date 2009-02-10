@@ -71,10 +71,9 @@ setup(
     #postinstall_scripts = ['',],
 
     # Scripts
-#    entry_points = { 'console_scripts': [
-#                            'fake_script = openalea.fakepackage.amodule:console_script', ],
-#                      'gui_scripts': [
-#                            'fake_gui = openalea.fakepackage.amodule:gui_script',]},
+    entry_points = {
+        "wralea": ['container.mesh = openalea.container.wralea.mesh',]
+              },
 
     # Dependencies
     setup_requires = ['openalea.deploy'],
