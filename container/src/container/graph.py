@@ -39,7 +39,7 @@ class Graph (IGraph,\
 		- vertices are tuple of edge_in,edge_out
 		- edges are tuple of source,target
 	"""
-	def __init__(self, graph=None):
+	def __init__(self, graph=None, idgenerator = "set"):
 		"""
 		constructor 
 		if graph is not none make a copy of the topological structure of graph
@@ -48,8 +48,8 @@ class Graph (IGraph,\
 		:param graph: the graph to copy, default=None
 		:type graph: Graph
 		"""
-		self._vertices=IdDict()
-		self._edges=IdDict()
+		self._vertices=IdDict(idgenerator = idgenerator)
+		self._edges=IdDict(idgenerator = idgenerator)
 		if graph is not None :
 			dummy=self.extend(graph)
 	# ##########################################################

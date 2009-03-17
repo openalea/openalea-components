@@ -21,7 +21,11 @@ This module provide a dictionnary that create keys when needed
 __license__= "Cecill-C"
 __revision__=" $Id: graph.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
-from id_generator import IdGenerator
+from id_generator import IdMaxGenerator,IdSetGenerator,IdListGenerator
+
+IdGen = {"max":IdMaxGenerator,
+		  "set":IdSetGenerator,
+		  "list":IdListGenerator}
 
 class IdDict (dict) :
 	"""
@@ -29,8 +33,16 @@ class IdDict (dict) :
 	create an id when needed
 	"""
 	def __init__ (self, *args, **kwdargs) :
+		try :
+			gen_name = kwdargs.pop("idgenerator")
+		except KeyError :
+			gen_name = "set"
 		dict.__init__(self,*args,**kwdargs)
-		self._id_generator=IdGenerator()
+		try :
+			self._id_generator=IdGen[gen_name]()
+		except KeyError :
+			raise UserWarning("the required id generator (%s) is unknown,\navailable generator are %s" % (gen_name,str(IdGen.keys())) )
+		
 		for k,v in self.iteritems() :
 			self._id_generator.get_id(k)
 	

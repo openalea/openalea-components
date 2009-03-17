@@ -72,6 +72,31 @@ def clean_remove (mesh, scale, wid) :
 	clean_remove(mesh,scale,wid2)
 	#return
 	return nwid
+
+def flip_edge (mesh, eid) :
+	"""
+	flip the orientation of an edge
+	in a triangulated mesh
+	"""
+	#definition of local elements
+	fid1,fid2 = mesh.regions(1,eid) #work only if planar polygon
+	pid3,pid4 = mesh.borders(1,eid)
+	pid1, = set(mesh.borders(2,fid1,2)) - set( (pid3,pid4) )
+	pid2, = set(mesh.borders(2,fid2,2)) - set( (pid3,pid4) )
+	eid13, = set(mesh.borders(2,fid1)) - set(mesh.regions(0,pid3))
+	eid14, = set(mesh.borders(2,fid1)) - set(mesh.regions(0,pid4))
+	eid23, = set(mesh.borders(2,fid2)) - set(mesh.regions(0,pid3))
+	eid24, = set(mesh.borders(2,fid2)) - set(mesh.regions(0,pid4))
+	#relink eid
+	mesh.unlink(1,eid,pid3)
+	mesh.unlink(1,eid,pid4)
+	mesh.link(1,eid,pid1)
+	mesh.link(1,eid,pid2)
+	#relink faces
+	mesh.unlink(2,fid1,eid14)
+	mesh.unlink(2,fid2,eid23)
+	mesh.link(2,fid1,eid23)
+	mesh.link(2,fid2,eid14)
 ###########################################################
 #
 #	remove unwanted elements
@@ -126,8 +151,9 @@ def clean_duplicated_borders (mesh, outer = True) :
 		#find duplicated borders
 		bd = {}
 		for wid in mesh.wisps(scale) :
-			rids = tuple(mesh.regions(scale,wid))
-			key = (min(rids),max(rids))
+			rids = list(mesh.regions(scale,wid))
+			rids.sort()
+			key = tuple(rids)
 			try :
 				bd[key].append(wid)
 			except KeyError :
@@ -135,7 +161,7 @@ def clean_duplicated_borders (mesh, outer = True) :
 		if outer :
 			duplicated = [v for k,v in bd.iteritems() if len(v) > 1]
 		else :
-			duplicated = [v for k,v in bd.iteritems() if k[0] != k[1] and len(v) > 1]
+			duplicated = [v for k,v in bd.iteritems() if len(k) > 1 and len(v) > 1]
 		#merge duplicates
 		for wids in duplicated :
 			wid1 = wids.pop(0)
@@ -149,7 +175,43 @@ def clean_duplicated_borders (mesh, outer = True) :
 				except ValueError :
 					print "pb"
 					wid1 = wids.pop(0)
-		
+
+def clean_duplicated_borders (mesh, outer = True) :
+	"""
+	replace all wisps that account for the same
+	border between two regions by a unique wisp
+	
+	if outer is True, then even elements that share
+	only one region are simplified
+	"""
+	for deg in xrange(mesh.degree()-1,mesh.degree()-2,-1) :
+		#find duplicated borders
+		bd = {}
+		for wid in mesh.wisps(deg) :
+			rids = list(mesh.regions(deg,wid))
+			rids.sort()
+			key = tuple(rids)
+			try :
+				bd[key].append(wid)
+			except KeyError :
+				bd[key] = [wid]
+		if outer :
+			duplicated = [(k,v) for k,v in bd.iteritems() if len(v) > 1]
+		else :
+			duplicated = [(k,v) for k,v in bd.iteritems() if len(k) > 1 and len(v) > 1]
+		#replace duplicates by a single element
+		for rids,wids in duplicated :
+			#create new single element
+			nwid = mesh.add_wisp(deg)
+			for rid in rids :
+				mesh.link(deg+1,rid,nwid)
+			#find external border of wids
+			for bid in external_border(mesh,deg,wids) :
+				mesh.link(deg,nwid,bid)
+			#remove duplicates
+			for wid in wids :
+				clean_remove(mesh,deg,wid)
+
 ###########################################################
 #
 #	mesh partitioning
@@ -168,19 +230,22 @@ def clean_duplicated_borders (mesh, outer = True) :
 		inside_wisps.update(mesh.border_neighbors(scale,wid))
 	return inside_wisps
 
-def border (mesh, scale, wids) :#TODO gestion des bords du mesh a preciser
+def border (mesh, scale, wids, outer = False) :
 	"""
 	compute the outermost layer of wisps around a set of wisps
 	mesh : a container.topomesh instance
 	scale : the scale of wisp elements
 	wids : a list of wid
+	outer : a boolean that tells wether or not wisps with only one regions are considered
 	return : a set of wid
 	"""
 	inside_wisps = set(wids)
 	border = set()
 	for wid in wids :
 		for bid in mesh.borders(scale,wid) :
-			if len(set(mesh.regions(scale-1,bid)) - inside_wisps) > 0 :
+			if outer and mesh.nb_regions(scale-1,bid) == 1 :
+				border.add(wid)
+			elif len(set(mesh.regions(scale-1,bid)) - inside_wisps) > 0 :
 				border.add(wid)
 	return border
 
@@ -202,10 +267,10 @@ def expand_to_border (mesh, scale, wids) :
 	wids : a list of wid
 	return : a set of wid
 	"""
-	border = set()
+	borders = set()
 	for wid in wids :
-		border.update(mesh.borders(scale,wid))
-	return border
+		borders.update(mesh.borders(scale,wid))
+	return borders
 	
 def expand_to_region (mesh, scale, wids) :
 	"""
@@ -220,11 +285,11 @@ def expand_to_region (mesh, scale, wids) :
 		cells.update(mesh.regions(scale,wid))
 	return cells
 
-def external_border (mesh, scale, wids) :#TODO verifier coherence avec border
+def external_border (mesh, scale, wids) :
 	"""
 	compute the list of border elements around this set of wisps
 	mesh : a container.topomesh instance
-	scale : the scale of cell elements
+	scale : the scale of wisps elements
 	wids : a list of wid
 	return : a set of wid
 	"""

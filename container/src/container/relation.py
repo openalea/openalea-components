@@ -52,13 +52,13 @@ class Relation (IRelation,ILeftListRelation,IRightListRelation,ILinkRelation,IMu
 	implementation of a relation
 	"""
 	__doc__+=IRelation.__doc__
-	def __init__ (self) :
+	def __init__ (self, idgenerator = "set") :
 		"""
 		constructor of an empty relation
 		"""
-		self._left_links=IdDict()
-		self._right_links=IdDict()
-		self._link_extremities=IdDict()
+		self._left_links=IdDict(idgenerator = idgenerator)
+		self._right_links=IdDict(idgenerator = idgenerator)
+		self._link_extremities=IdDict(idgenerator = idgenerator)
 	
 	########################################################################
 	#
