@@ -22,6 +22,8 @@ for a some topomesh algorithms
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
+from topomesh import Topomesh
+
 ###########################################################
 #
 #	mesh edition
@@ -73,10 +75,36 @@ def clean_remove (mesh, scale, wid) :
 	#return
 	return nwid
 
-def flip_edge (mesh, eid) :
+def is_flip_topo_allowed (mesh, eid) :
+	"""Test wether the given edge might be safely flipped.
+	
+	mesh: a topomesh object
+	eid: id of the edge to flip
 	"""
-	flip the orientation of an edge
+	#only edge shared by two faces
+	if mesh.nb_regions(1,eid) != 2 :
+		return False
+	#regions are triangular faces
+	for fid in mesh.regions(1,eid) :
+		if mesh.nb_borders(2,fid) != 3 :
+			return False
+	#no existing edge already between the
+	#two points of the flipped edge
+	pts = set()
+	for fid in mesh.regions(1,eid) :
+		pts.update(mesh.borders(2,fid,2))
+	pid1,pid2 = pts - set(mesh.borders(1,eid))
+	if pid1 in mesh.region_neighbors(0,pid2) :
+		return False
+	#return
+	return True
+
+def flip_edge (mesh, eid) :
+	"""Flip the orientation of an edge.
+	
 	in a triangulated mesh
+	call is_flip_topo_allowed if there is some doubt
+	on the validy of this operation
 	"""
 	#definition of local elements
 	fid1,fid2 = mesh.regions(1,eid) #work only if planar polygon
@@ -97,6 +125,105 @@ def flip_edge (mesh, eid) :
 	mesh.unlink(2,fid2,eid23)
 	mesh.link(2,fid1,eid23)
 	mesh.link(2,fid2,eid14)
+
+def is_collapse_topo_allowed (mesh, eid) :
+	"""Test wether collapse of the edge is safe.
+	
+	mesh: a topomesh object
+	eid: id of the edge to flip
+	"""
+	#collapse enabled only if faces are triangle or square
+	for fid in mesh.regions(1,eid) :
+		if mesh.nb_borders(2,fid) not in (3,4) :
+			return False
+	#construct a local copy of the mesh
+	#including all the faces that touch one
+	#of the extremity of the edge
+	#find relevant elements
+	fids = set()
+	for pid in mesh.borders(1,eid) :
+		for bid in mesh.regions(0,pid) :
+			fids.update(mesh.regions(1,bid))
+	
+	cids = set()
+	eids = set()
+	pids = set()
+	for fid in fids :
+		cids.update(mesh.regions(2,fid))
+		eids.update(mesh.borders(2,fid))
+		pids.update(mesh.borders(2,fid,2))
+	elms = (pids,eids,fids,cids)
+	#construct local mesh
+	lmesh = Topomesh(mesh.degree(),"max")
+	for deg,wids in enumerate(elms) :
+		for wid in wids :
+			lmesh.add_wisp(deg,wid)
+	for deg,wids in enumerate(elms[:-1]) :
+		for wid in wids :
+			for rid in set(mesh.regions(deg,wid)) & elms[deg + 1] :
+				lmesh.link(deg + 1,rid,wid)
+	#collapse edge on this local copy
+	pid1,pid2 = collapse_edge(lmesh,eid)
+	#test the result
+	#edges without any face
+	for wid in lmesh.wisps(1) :
+		if lmesh.nb_regions(1,wid) == 0 :
+			return False
+	#surperposed faces
+	#TODO optimization
+	for ref_fid in lmesh.wisps(2) :
+		ref_pids = set(lmesh.borders(2,ref_fid,2) )
+		for fid in [wid for wid in lmesh.wisps(2) if wid != ref_fid] :
+			pids = set(lmesh.borders(2,fid,2) )
+			if len(pids) == len(ref_pids) :
+				if pids == ref_pids :
+					return False
+			elif len(pids) > len(ref_pids) :
+				if len(pids - ref_pids) == 1 :
+					return False
+			else :
+				if len(ref_pids - pids) == 1 :
+					return False
+	#return
+	return True
+
+def collapse_edge (mesh, eid) :
+	"""Collapse an edge.
+	
+	collapse an edge and remove adjacent faces
+	face of the mesh must be triangles or quadrangles only
+	return pid1, the point where edges have been reconnected
+	       pid2, the point that have been removed
+	"""
+	pid1,pid2 = mesh.borders(1,eid)
+	#remove face adjacents to eid
+	for fid in tuple(mesh.regions(1,eid)) :
+		if mesh.nb_borders(2,fid) == 3 : #triangle to remove
+			#find edge opposite to pid1
+			eid1, = set(mesh.borders(2,fid)) - set(mesh.regions(0,pid1))
+			#find edge opposite to pid2
+			eid2, = set(mesh.borders(2,fid)) - set(mesh.regions(0,pid2))
+			#remove face
+			mesh.remove_wisp(2,fid)
+			#relink faces connected to eid1 with eid2
+			for nfid in tuple(mesh.regions(1,eid1)) :
+				mesh.unlink(2,nfid,eid1)
+				mesh.link(2,nfid,eid2)
+			#remove eid1
+			mesh.remove_wisp(1,eid1)
+			#remove eid2 if necessary TODO remove lonely point too
+			#if mesh.nb_regions(1,eid2) == 0 :
+			#	mesh.remove_wisp(1,eid2)
+	#remove eid
+	mesh.remove_wisp(1,eid)
+	#relink edges connected to pid2
+	for neid in tuple(mesh.regions(0,pid2)) :
+		mesh.unlink(1,neid,pid2)
+		mesh.link(1,neid,pid1)
+	#remove pid2
+	mesh.remove_wisp(0,pid2)
+	#return
+	return pid1,pid2
 ###########################################################
 #
 #	remove unwanted elements
