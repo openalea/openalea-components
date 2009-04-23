@@ -7,14 +7,14 @@ from relation import Relation
 
 ################################
 #
-#	topomesh
+#       topomesh
 #
 ################################
 from topomesh import Topomesh
 from topomesh_txt import write_topomesh,read_topomesh
-from topomesh_algo import clean_geometry,clean_orphans,\
-						is_flip_topo_allowed,flip_edge,\
-						is_collapse_topo_allowed,collapse_edge,\
-						expand,border,shrink,\
-						expand_to_border,expand_to_region,external_border,\
-						clean_duplicated_borders,merge_wisps
+from topomesh_algo import clean_geometry, clean_orphans,\
+                          is_flip_topo_allowed, flip_edge,\
+                          is_collapse_topo_allowed, collapse_edge,\
+                          expand, border, shrink,\
+                          expand_to_border, expand_to_region, external_border,\
+                          clean_duplicated_borders, merge_wisps
