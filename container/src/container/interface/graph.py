@@ -374,3 +374,24 @@ class ICopyGraph (object) :
         for a deep copy use the constructor `__init__`
         """
         raise NotImplementedError
+
+class IRootedGraph(object):
+    """
+    definition of graph with a root vertex.
+    """
+    def set_root(self, vtx_id):
+        """ Set the graph root.
+
+        :param vtx_id: The vertex identifier.
+        """
+        raise NotImplementedError
+
+    def get_root(self): 
+        """ Return the graph root.
+
+        :returns: vertex identifier
+
+        """
+        raise NotImplementedError
+
+    root = property( get_root, set_root )
