@@ -52,6 +52,7 @@ class Graph (IGraph,\
         self._edges=IdDict(idgenerator = idgenerator)
         if graph is not None :
             dummy=self.extend(graph)
+
     # ##########################################################
     #
     # Graph concept
