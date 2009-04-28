@@ -41,7 +41,6 @@ how to use VPlants.Container see :ref:`container_user`.
     openalea_container_topomesh_txt_ref.rst
     openalea_container_utils_utils_txt_ref.rst
     openalea_container_wralea_mesh_mesh_ref.rst
-    
-.. import fails: openalea_container_id_dict_ref.rst
-..    openalea_container_utils_id_dict_ref.rst
-..    openalea_container_utils_id_generator_ref.rst
+    openalea_container_id_dict_ref.rst
+    openalea_container_utils_id_dict_ref.rst
+    openalea_container_utils_id_generator_ref.rst
