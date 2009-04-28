@@ -1,9 +1,9 @@
 # -*- python -*-
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 #
 #       IdDict : container package
 #
-#       Copyright or © or Copr. 2006 INRIA - CIRAD - INRA
+#       Copyright  or Copr. 2006 INRIA - CIRAD - INRA
 #
 #       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
 #
@@ -22,7 +22,7 @@ __license__= "Cecill-C"
 __revision__=" $Id: graph.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
 try:
-	from _container import IdGenerator
+    from _container import IdGenerator
 except ImportError:
 	pass
 class IdDict (dict) :

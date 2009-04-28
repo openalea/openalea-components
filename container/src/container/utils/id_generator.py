@@ -1,9 +1,9 @@
 # -*- python -*-
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 #
 #       IdGenerator : graph package
 #
-#       Copyright or © or Copr. 2006 INRIA - CIRAD - INRA
+#       Copyright  or Copr. 2006 INRIA - CIRAD - INRA
 #
 #       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
 #                       Fred Theveny <theveny@cirad.fr>
