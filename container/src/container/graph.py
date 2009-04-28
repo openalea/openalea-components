@@ -1,9 +1,8 @@
-# -*- python -*-
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 #
 #       Graph : graph package
 #
-#       Copyright or © or Copr. 2006 INRIA - CIRAD - INRA
+#       Copyright or Copr. 2006 INRIA - CIRAD - INRA
 #
 #       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
 #
@@ -13,8 +12,7 @@
 #
 #       VPlants WebSite : https://gforge.inria.fr/projects/vplants/
 #
-
-__doc__="""
+"""
 This module provide a simple pure python implementation
 for a graph interface
 do not implement copy concept
@@ -36,12 +34,13 @@ class Graph (IGraph,\
     """
     directed graph with multiple links
     in this implementation :
-            - vertices are tuple of edge_in,edge_out
-            - edges are tuple of source,target
+
+        - vertices are tuple of edge_in,edge_out
+        - edges are tuple of source,target
     """
     def __init__(self, graph=None, idgenerator = "set"):
-        """
-        constructor
+        """constructor
+
         if graph is not none make a copy of the topological structure of graph
         (i.e. don't use the same id)
 
