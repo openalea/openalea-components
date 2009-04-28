@@ -22,6 +22,7 @@ for a topomesh interface
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
+from array import array
 from interface.topomesh import TopomeshError,InvalidWisp,InvalidDegree,\
                                 ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh
 from utils import IdDict
@@ -179,11 +180,11 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
     ########################################################################
     def add_wisp (self, degree, wid = None) :
         if degree > 0 :
-            wid = self._borders[degree].add(set(),wid)
+            wid = self._borders[degree].add(array("d"),wid)
             if degree < self.degree() :
-                self._regions[degree][wid] = set()
+                self._regions[degree][wid] = array("d")
         else :
-            wid = self._regions[degree].add(set(),wid)
+            wid = self._regions[degree].add(array("d"),wid)
         return wid
     add_wisp.__doc__=IMutableMesh.add_wisp.__doc__
 
@@ -205,8 +206,8 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
     def link (self, degree, wid, border_id) :
         if degree < 1 :
             raise InvalidDegree ("smallest wisps have no neighbors")
-        self._borders[degree][wid].add(border_id)
-        self._regions[degree - 1][border_id].add(wid)
+        self._borders[degree][wid].append(border_id)
+        self._regions[degree - 1][border_id].append(wid)
     link.__doc__=IMutableMesh.link.__doc__
 
     def unlink (self, degree, wid, border_id) :
