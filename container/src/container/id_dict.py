@@ -21,8 +21,10 @@ This module provide a dictionnary that create keys when needed
 __license__= "Cecill-C"
 __revision__=" $Id: graph.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
-from _container import IdGenerator
-
+try:
+	from _container import IdGenerator
+except ImportError:
+	pass
 class IdDict (dict) :
     """
     store a tuple of (id,elm)
