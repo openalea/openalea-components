@@ -13,11 +13,11 @@ from openalea.misc import sphinx_tools
 
 
 
-filenames = ['container/openalea_container_id_dict_ref.rst','container/openalea_container_id_dict_src.rst']
+#filenames = ['container/openalea_container_id_dict_ref.rst','container/openalea_container_id_dict_src.rst']
 
-for file in filenames:
-    process = sphinx_tools.PostProcess(file)
-    process.remove_file()
+#for file in filenames:
+#    process = sphinx_tools.PostProcess(file)
+#    process.remove_file()
 
 print 'Try python setup.py build_sphinx now.'
 
