@@ -180,11 +180,11 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
     ########################################################################
     def add_wisp (self, degree, wid = None) :
         if degree > 0 :
-            wid = self._borders[degree].add(array("d"),wid)
+            wid = self._borders[degree].add(array("L"),wid)
             if degree < self.degree() :
-                self._regions[degree][wid] = array("d")
+                self._regions[degree][wid] = array("L")
         else :
-            wid = self._regions[degree].add(array("d"),wid)
+            wid = self._regions[degree].add(array("L"),wid)
         return wid
     add_wisp.__doc__=IMutableMesh.add_wisp.__doc__
 
