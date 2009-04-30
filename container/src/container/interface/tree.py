@@ -13,6 +13,7 @@
 #
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr/
 #
+################################################################################
 
 """
 This module provide a set of tree concepts to form a tree interface.
@@ -206,5 +207,12 @@ class IEditableTree(object):
         """
         raise NotImplementedError
 
+    def remove_tree(self, vtx_id):
+        """
+        Remove the sub tree rooted on `vtx_id`.
+
+        :returns: bool
+        """
+        raise NotImplementedError
 
 

@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#       OpenAlea.Core
+#       OpenAlea.Container.interface.tree
 #
 #       Copyright 2006-2007 INRIA - CIRAD - INRA
 #
@@ -14,6 +14,7 @@
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 ################################################################################
+
 """This module provide a set of concepts to add properties to graph elements
 """
 
