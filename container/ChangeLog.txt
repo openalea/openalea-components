@@ -1,0 +1,4 @@
+30/04/2009
+    - Add new packages as a proposal for algorithms (traversal, backend, readwrite).
+    - Add tree interface and implementation.
+    - Provide basic traversal algorithms.
