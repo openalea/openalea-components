@@ -56,7 +56,7 @@ class Tree(IRootedGraph,
     def __len__(self):
         return self.nb_vertices()
 
-    def nb_vertices(self, scale = -1):
+    def nb_vertices(self):
         '''
         returns the number of vertices.
 
@@ -64,7 +64,7 @@ class Tree(IRootedGraph,
         '''
         return len(self._parent)
 
-    def vertices(self, scale = -1):
+    def vertices(self):
         '''
         :returns: iter of vertex_id
         '''
@@ -101,7 +101,7 @@ class Tree(IRootedGraph,
 
     def iteredges(self):
         """
-        iter on the edges of the mtg at a given scale.
+        Iter on the edges of the tree.
         """
         return ((parent, child) for child, parent in self._parent.iteritems())
 
