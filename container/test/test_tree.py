@@ -1,6 +1,7 @@
 from nose import with_setup
 from openalea.container import Tree
 from openalea.container.generator.tree import regular
+from openalea.container.traversal.tree import *
 
 g = None
 
@@ -87,4 +88,30 @@ def test_parent_et_al () :
 # Extend Graph concept
 #
 # ##########################################################
+
+# TODO
+
+############################
+# Test traversal
+def test_preorder():
+    g = regular(Tree(), 0, nb_vertices=50)
+    l = list(pre_order(g, g.root))
+    assert len(l) == len(g)
+    for i, vid in enumerate(l):
+        if vid != g.root:
+            assert g.parent(vid) in l[:i], 'vid: '+str(vid) + ' i: ' +str(i)+' : '+ str(l)
+
+def test_postorder():
+    g = regular(Tree(), 0, nb_vertices=50)
+    l = list(post_order(g, g.root))
+    assert len(l) == len(g)
+    for i, vid in enumerate(l):
+        if vid != g.root:
+            assert g.parent(vid) not in l[:i]
+
+def test_levelorder():
+    g = regular(Tree(), 0, nb_vertices=50)
+    l = list(level_order(g, g.root))
+    assert len(l) == len(g)
+    assert l == range(len(g))
 
