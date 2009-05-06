@@ -22,6 +22,8 @@ This module provides several implementation of traversal on a directed graph.
 __license__= "Cecill-C"
 __revision__=" $Id: graph.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
+from collections import deque
+
 def topological_sort(graph, vtx_id, visited = None):
     '''
     Topolofgical sort of a directed graph implementing the
@@ -38,8 +40,34 @@ def topological_sort(graph, vtx_id, visited = None):
 
     yield vtx_id
     visited[vtx_id] = True
-    for vid in g.out_neighbors(vtx_id):
+    for vid in graph.out_neighbors(vtx_id):
         if vid in visited:
             continue
-        for node in topological_sort(g, vid):
+        for node in topological_sort(graph, vid, visited):
             yield node
+
+
+def breadth_first_search(graph, vtx_id):
+    '''
+    Breadth first search of a graph implementing the
+    :class:`openalea.container.interface.graph.IGraph` interface.
+    Return an iterator on the vertices.
+
+    :Parameters:
+        - `graph`: a directed graph
+        - vtx_id: a vertex_identifier
+    .. note :: This is a non recursive implementation.
+    '''
+    visited = {}
+
+    queue = deque()
+    queue.append(vtx_id)
+
+    while queue:
+        vid = queue.popleft()
+        if vid in visited:
+            continue
+        yield vid
+        visited[vid] = True
+        queue.extend(graph.out_neighbors(vid))
+

@@ -24,6 +24,8 @@ __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
+from collections import deque
+
 def pre_order(tree, vtx_id, edge_type_property = None):
     '''
     Traverse a tree in a prefix way.
@@ -73,7 +75,6 @@ def level_order(tree, vtx_id):
 
     Traverse the root node, then its children and so on.
     '''
-    from collections import deque
     queue = deque()
     queue.append(vtx_id)
 
