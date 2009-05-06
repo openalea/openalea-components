@@ -68,6 +68,21 @@ def post_order(tree, vtx_id):
             yield node
     yield vtx_id
 
+def level_order(tree, vtx_id):
+    ''' Traverse the vertices in a level order.
+
+    Traverse the root node, then its children and so on.
+    '''
+    from collections import deque
+    queue = deque()
+    queue.append(vtx_id)
+
+    while queue:
+        vid = queue.popleft()
+        yield vid
+        queue.extend(tree.children(vid))
+
+
 def depth_order(tree, vtx_id):
     '''Traverse all the leaves first.
     Then their parent until the root.
