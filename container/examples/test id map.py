@@ -3,16 +3,16 @@ from openalea.container import IdMapFloat
 m=IdMapFloat()
 print m.add(1.,5)
 for i in xrange(10) :
-	print m.add(i*3.)
+    print m.add(i*3.)
 
 print "none",m.add(4.,None)
 
 print "len",len(m)
 print "contains",1 in m
 for i in m.iteritems() :
-	print "items",i
+    print "items",i
 for i in m :
-	print "keys",i,m[i]
+    print "keys",i,m[i]
 
 m[1]=3.14
 print "setitem",m[1]
@@ -27,4 +27,3 @@ print "clear",m.clear()
 print "clear",list(m.iteritems())
 
 print "copy",dict(m.copy())
-

@@ -25,7 +25,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
 def pre_order(tree, vtx_id, edge_type_property = None):
-    ''' 
+    '''
     Traverse a tree in a prefix way.
     (root then children)
     Return an iterator on vertices.
@@ -56,10 +56,10 @@ def pre_order(tree, vtx_id, edge_type_property = None):
         for vid in successor:
             for node in pre_order(tree, vid):
                 yield node
-    
+
 
 def post_order(tree, vtx_id):
-    ''' 
+    '''
     Traverse a tree in a postfix way.
     (from leaves to root)
     '''
@@ -79,31 +79,30 @@ def depth_order(tree, vtx_id):
 
 
 def traverse_tree(tree, vtx_id, visitor):
-  ''' 
-  Traverse a tree in a prefix or postfix way.
-  
-  We call a visitor for each vertex.
-  This is usefull for printing, cmputing or storing vertices 
-  in a specific order. 
-  
-  See boost.graph.
-  '''
+    '''
+    Traverse a tree in a prefix or postfix way.
 
-  yield visitor.pre_order(vtx_id)
+    We call a visitor for each vertex.
+    This is usefull for printing, cmputing or storing vertices
+    in a specific order.
 
-  for v in tree.children(vtx_id):
-     for res in traverse_tree(tree, v, visitor):
-        yield res
+    See boost.graph.
+    '''
 
-  yield visitor.post_order(vtx_id)
+    yield visitor.pre_order(vtx_id)
+
+    for v in tree.children(vtx_id):
+        for res in traverse_tree(tree, v, visitor):
+            yield res
+
+    yield visitor.post_order(vtx_id)
 
 
 class Visitor(object):
-  ''' Used during a tree traversal. '''
+    ''' Used during a tree traversal. '''
 
-  def pre_order(self, vtx_id): 
-     pass
+    def pre_order(self, vtx_id):
+        pass
 
-  def post_order(self, vtx_id): 
-     pass
-
+    def post_order(self, vtx_id):
+        pass

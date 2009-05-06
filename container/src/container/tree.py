@@ -28,24 +28,28 @@ from interface.tree import ITree, IMutableTree, IEditableTree
 from interface.graph import IRootedGraph, InvalidVertex, InvalidEdge
 from traversal.tree import pre_order, post_order
 
-class Tree(IRootedGraph, 
-           ITree, 
-           IMutableTree, 
+class Tree(IRootedGraph,
+           ITree,
+           IMutableTree,
            IEditableTree):
     '''
-    Implementation of a rooted :class:`Tree`, 
+    Implementation of a rooted :class:`Tree`,
     with methods to add and remove vertex.
     '''
 
-    def __init__(self, tree= None):
+    def __init__(self, root = 0, tree= None):
         '''
         Tree constructor.
+        :Parameters:
+            - `root` is the root id which is by default 0
+        :Returns:
+            - `tree` : a tree with one node.
         '''
-        self._root = 0
-        self._id = 0
+        self._root = root
+        self._id = root
         # Tree structure
         # Parent is a dict for DAG implementation
-        self._parent = {}
+        self._parent = {root : None}
         self._children = {}
 
 
@@ -117,9 +121,13 @@ class Tree(IRootedGraph,
         :param vid: the id of the vertex to remove
         :type vid: vid
         """
-        if self.nb_children(vid) == 0:
+        if vid == self.root:
+            raise InvalidVertex('Removing the root node %d is forbidden.'% vid)
+
+        elif self.nb_children(vid) == 0:
             del self._parent[vid]
-            del self._children[vid]
+            if vid in self._children:
+                del self._children[vid]
         else:
             raise InvalidVertex('Can not remove vertex %d  with children. Use remove_tree instead.'% vid)
 
@@ -135,7 +143,7 @@ class Tree(IRootedGraph,
         # Parent is a dict for DAG implementation
         self._parent.clear()
         self._children.clear()
-
+        self._parent[self._root] = None
 
     #########################################################################
     # RootedTreeConcept methods.
@@ -226,7 +234,7 @@ class Tree(IRootedGraph,
     #########################################################################
     # MutableTreeConcept methods.
     #########################################################################
-    
+
     def add_child(self, parent, child=None, **properties):
         '''
         Add a child at the end of children
@@ -295,12 +303,14 @@ class Tree(IRootedGraph,
 
     def __str__(self):
         l = ["Tree : nb_vertices=%d"%(self.nb_vertices())]
-        v  = self.root
-
-        edge_type = self.property('edge_type')
-        label = self.property('label')
-        l.extend(display_tree(self,v, edge_type=edge_type, labels=label))
         return '\n'.join(l)
+        
+        #v  = self.root
+
+        #edge_type = self.property('edge_type')
+        #label = self.property('label')
+        #l.extend(display_tree(self,v, edge_type=edge_type, labels=label))
+        #return '\n'.join(l)
 
     #########################################################################
     # Editable Tree Interface.
@@ -312,14 +322,14 @@ class Tree(IRootedGraph,
 
         :returns: Editable Tree
         """
-        tree = Tree()
-        tree._root = vtx_id
+        tree = Tree(root=vtx_id)
+        tree.root = vtx_id
         tree._parent = self._parent
         tree._children = self._children
         tree._id = self._id
         return tree
 
-    def insert_sibling_tree(self, vid, tree ): 
+    def insert_sibling_tree(self, vid, tree ):
         """
         Insert a tree before the vid.
         vid and the root of the tree are siblings.
@@ -341,9 +351,9 @@ class Tree(IRootedGraph,
             treeid_id[vtx_id] = v
 
         return treeid_id
-        
 
-    def add_child_tree(self, parent, tree): 
+
+    def add_child_tree(self, parent, tree):
         """
         Add a tree after the children of the parent vertex.
         Complexity have to be O(1) if tree == sub_tree()
@@ -378,7 +388,7 @@ class Tree(IRootedGraph,
             vertices.append(vtx_id)
 
         return vertices
-            
+
 
 
 
@@ -432,7 +442,7 @@ class PropertyTree(Tree):
 
         # Update the properties
         self._add_vertex_properties(vtx_id2, properties)
- 
+
         return vtx_id2
 
     def insert_parent(self, vtx_id, parent_id=None, **properties):
@@ -469,7 +479,7 @@ class PropertyTree(Tree):
         tree._properties = self._properties
         return tree
 
-    def insert_sibling_tree(self, vid, tree ): 
+    def insert_sibling_tree(self, vid, tree ):
         """
         Insert a tree before the vid.
         vid and the root of the tree are siblings.
@@ -487,9 +497,9 @@ class PropertyTree(Tree):
                     self._properties[name][vid] = v
 
         return treeid_id
-        
 
-    def add_child_tree(self, parent, tree): 
+
+    def add_child_tree(self, parent, tree):
         """
         Add a tree after the children of the parent vertex.
         Complexity have to be O(1) if tree == sub_tree()
@@ -571,4 +581,3 @@ class PropertyTree(Tree):
             p = self.property(name)
             if vid in p:
                 del p[vid]
-

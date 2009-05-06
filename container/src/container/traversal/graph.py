@@ -16,21 +16,21 @@
 ###############################################################################
 
 """
-This module provides several implementation of traversal on a directed graph. 
+This module provides several implementation of traversal on a directed graph.
 """
 
 __license__= "Cecill-C"
 __revision__=" $Id: graph.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
 def topological_sort(graph, vtx_id, visited = None):
-    ''' 
+    '''
     Topolofgical sort of a directed graph implementing the
     :class:`openalea.container.interface.graph.IGraph` interface.
     Return an iterator on the vertices.
 
     :Parameters:
-        - `graph`: a directed graph 
-        - vtx_id: a vertex_identifier 
+        - `graph`: a directed graph
+        - vtx_id: a vertex_identifier
     .. note :: This is a non recursive implementation.
     '''
     if visited is None:
@@ -43,5 +43,3 @@ def topological_sort(graph, vtx_id, visited = None):
             continue
         for node in topological_sort(g, vid):
             yield node
-
-

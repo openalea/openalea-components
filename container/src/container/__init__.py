@@ -2,6 +2,8 @@
 #from id_dict import IdDict
 from utils import IdDict
 from graph import Graph
+from property_graph import PropertyGraph
+from tree import Tree, PropertyTree
 from grid import Grid
 from relation import Relation
 

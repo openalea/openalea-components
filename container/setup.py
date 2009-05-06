@@ -18,10 +18,10 @@ namespace = 'openalea'
 pkg_name= namespace + '.' + name
 
 # Package version policy
-version= '2.0.0' 
+version= '2.0.0'
 
 # Description
-description= 'Basic data structures in OpenAlea.' 
+description= 'Basic data structures in OpenAlea.'
 long_description= '''
 Container is a set of data structures used in openalea
 such as : graph, grid, topomesh
@@ -31,7 +31,7 @@ such as : graph, grid, topomesh
 author= 'Jerome Chopard'
 author_email= 'jerome.chopard@sophia.inria.fr'
 url= 'http://openalea.gforge.inria.fr'
-license= 'Cecill-C' 
+license= 'Cecill-C'
 
 
 # Main setup
@@ -47,7 +47,7 @@ setup(
     license=license,
     keywords = '',
 
-    
+
     # Define what to execute with scons
     #scons_scripts=['SConstruct'],
     #scons_parameters=["build","build_prefix="+build_prefix],
@@ -57,7 +57,7 @@ setup(
     create_namespaces = True,
     packages =  [ 'openalea.' + x for x in find_packages('src') ],
     package_dir = { 'openalea.container':  pj('src','container'),
-                    '' : 'src'  }, 
+                    '' : 'src'  },
 
     include_package_data = True,
     package_data = {'' : ['*.pyd', '*.so', '*.dylib'],},
@@ -66,7 +66,7 @@ setup(
 
     #lib_dirs = {'lib' : pj(build_prefix, 'lib'), },
     #inc_dirs = { 'include' : pj(build_prefix, 'include') },
-    
+
     #postinstall_scripts = ['',],
 
     # Scripts
@@ -81,5 +81,3 @@ setup(
 
 
     )
-
-

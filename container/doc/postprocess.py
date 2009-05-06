@@ -20,4 +20,3 @@ from openalea.misc import sphinx_tools
 #    process.remove_file()
 
 print 'Try python setup.py build_sphinx now.'
-

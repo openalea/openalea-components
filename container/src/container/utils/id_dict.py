@@ -97,4 +97,3 @@ class IdDict (dict) :
 
     def update (self, E, **F) :
         raise NotImplementedError("lapin compris")
-

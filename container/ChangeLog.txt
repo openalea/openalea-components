@@ -1,3 +1,9 @@
+06/05/2009
+    - Create a first skeleton for the user documentation
+    - Implement a method to convert a Graph into a NetworkX graph
+    - Add generator methods for tree.
+    - Fix a bug in Tree. Now empty Tree (Tree without root node) are not allowed.
+
 30/04/2009
     - Add new packages as a proposal for algorithms (traversal, backend, readwrite).
     - Add tree interface and implementation.
