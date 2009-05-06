@@ -37,6 +37,9 @@ def to_networkx(g):
         - A NetworkX graph.
 
     """
-    return from_edgelist( ( (g.source(eid), g.target(eid)) for eid in g.edges()) )
+    graph = nx.DiGraph()
+    graph.add_node_from(g.vertices())
+    graph.add_edge_from(( (g.source(eid), g.target(eid)) for eid in g.edges()))
+    return graph
 
 
