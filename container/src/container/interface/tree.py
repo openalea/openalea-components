@@ -24,7 +24,7 @@ __revision__ = " $Id: $ "
 
 class ITree(object):
     """Rooted Tree interface.
- 
+
     depth(vid), depth() and sub_tree(vid) can be extenal algorithms.
     """
 
@@ -89,11 +89,11 @@ class ITree(object):
 
 class IOrderedTree(object):
     """
-    An ordered tree is a rooted tree where an order relation is 
+    An ordered tree is a rooted tree where an order relation is
     defined between chidren.
     """
 
-    def first_child(self, vid): 
+    def first_child(self, vid):
         """
         Return the first child of vid
 
@@ -137,12 +137,12 @@ class IOrderedTree(object):
 
 class IMutableTree(object):
     """
-    A mutable rooted tree is a tree with specific methods to add vertex. 
+    A mutable rooted tree is a tree with specific methods to add vertex.
     The substitute method is defined outside the interface.
     substitute(self,vid,tree)
     """
 
-    def add_child(self, parent, child ): 
+    def add_child(self, parent, child ):
         """
         Add a child at the end of children
 
@@ -152,16 +152,16 @@ class IMutableTree(object):
         raise NotImplementedError
 
 
-    def insert_sibling(self, vid1, vid2): 
+    def insert_sibling(self, vid1, vid2):
         """
         Insert vid2 before vid1.
 
         :param vid1: a vertex identifier
         :param vid2: the vertex to insert
         """
-        raise NotImplementedError 
+        raise NotImplementedError
 
-    def insert_parent(self, vtx_id, parent_id): 
+    def insert_parent(self, vtx_id, parent_id):
         """
         Insert parent_id between vtx_id and its actual parent.
 
@@ -173,7 +173,7 @@ class IMutableTree(object):
 
 class IEditableTree(object):
     """
-    An editable tree is a mutable tree where you can add 
+    An editable tree is a mutable tree where you can add
     or retrieve sub trees.
     """
 
@@ -185,7 +185,7 @@ class IEditableTree(object):
         """
         raise NotImplementedError
 
-    def insert_sibling_tree(self, vid, tree ): 
+    def insert_sibling_tree(self, vid, tree ):
         """
         Insert a tree before the vid.
         vid and the root of the tree are siblings.
@@ -195,9 +195,9 @@ class IEditableTree(object):
         :param vid: vertex identifier
         :param tree: a rooted tree
         """
-        raise NotImplementedError 
+        raise NotImplementedError
 
-    def add_child_tree(self, parent, tree): 
+    def add_child_tree(self, parent, tree):
         """
         Add a tree after the children of the parent vertex.
         Complexity have to be O(1) if tree == sub_tree()
@@ -214,5 +214,3 @@ class IEditableTree(object):
         :returns: bool
         """
         raise NotImplementedError
-
-

@@ -386,7 +386,7 @@ class IRootedGraph(object):
         """
         raise NotImplementedError
 
-    def get_root(self): 
+    def get_root(self):
         """ Return the graph root.
 
         :returns: vertex identifier

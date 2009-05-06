@@ -122,4 +122,3 @@ class IdListGenerator(object) :
     def clear (self) :
         self._id_max=0
         self._id_list=[]
-
