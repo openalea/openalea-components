@@ -24,6 +24,8 @@ __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
+from copy import deepcopy
+
 from interface.tree import ITree, IMutableTree, IEditableTree
 from interface.graph import IRootedGraph, InvalidVertex, InvalidEdge
 from traversal.tree import pre_order, post_order
@@ -125,6 +127,8 @@ class Tree(IRootedGraph,
             raise InvalidVertex('Removing the root node %d is forbidden.'% vid)
 
         elif self.nb_children(vid) == 0:
+            p = self._parent[vid]
+            self._children[p].remove(vid)
             del self._parent[vid]
             if vid in self._children:
                 del self._children[vid]
@@ -345,8 +349,11 @@ class Tree(IRootedGraph,
         treeid_id[root]=root_id
 
         # pre_order traversal from root and renumbering
-        for vtx_id in pre_order(tree, vid):
-            parent = treeid_id[tree.parent(vtx_id)]
+        vertices = pre_order(tree, root)
+        root = vertices.next()
+        for vtx_id in vertices:
+            pid = tree.parent(vtx_id)
+            parent = treeid_id[pid]
             v = self.add_child(parent)
             treeid_id[vtx_id] = v
 
@@ -367,7 +374,9 @@ class Tree(IRootedGraph,
         treeid_id[root]=root_id
 
         # pre_order traversal from root and renumbering
-        for vtx_id in pre_order(tree, root):
+        vertices = pre_order(tree, root)
+        root = vertices.next()
+        for vtx_id in vertices:
             parent = treeid_id[tree.parent(vtx_id)]
             vid = self.add_child(parent)
             treeid_id[vtx_id] = vid
@@ -383,13 +392,17 @@ class Tree(IRootedGraph,
         vid = vtx_id
 
         vertices = []
-        for vtx_id in post_order(self, vid):
+        
+        for vtx_id in list(post_order(self, vid)):
             self.remove_vertex(vtx_id)
             vertices.append(vtx_id)
 
         return vertices
 
-
+    def copy(self):
+        """ Deep copy of the tree.
+        """
+        return deepcopy(self)
 
 
 class PropertyTree(Tree):
