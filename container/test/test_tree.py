@@ -1,13 +1,13 @@
 from nose import with_setup
 from openalea.container import Tree
-from openalea.container.generator.tree import regular
-from openalea.container.traversal.tree import *
+from openalea.container.generator import regular_tree
+from openalea.container.traversal import *
 
 g = None
 
 def setup_func () :
     global g
-    g = regular(Tree(), 0, nb_vertices=19)
+    g = regular_tree(Tree(), 0, nb_vertices=19)
 
 def teardown_func () :
     g.clear()
@@ -94,7 +94,7 @@ def test_parent_et_al () :
 ############################
 # Test traversal
 def test_preorder():
-    g = regular(Tree(), 0, nb_vertices=50)
+    g = regular_tree(Tree(), 0, nb_vertices=50)
     l = list(pre_order(g, g.root))
     assert len(l) == len(g)
     for i, vid in enumerate(l):
@@ -102,7 +102,7 @@ def test_preorder():
             assert g.parent(vid) in l[:i], 'vid: '+str(vid) + ' i: ' +str(i)+' : '+ str(l)
 
 def test_postorder():
-    g = regular(Tree(), 0, nb_vertices=50)
+    g = regular_tree(Tree(), 0, nb_vertices=50)
     l = list(post_order(g, g.root))
     assert len(l) == len(g)
     for i, vid in enumerate(l):
@@ -110,8 +110,24 @@ def test_postorder():
             assert g.parent(vid) not in l[:i]
 
 def test_levelorder():
-    g = regular(Tree(), 0, nb_vertices=50)
+    g = regular_tree(Tree(), 0, nb_vertices=50)
     l = list(level_order(g, g.root))
     assert len(l) == len(g)
     assert l == range(len(g))
+
+def test_add_tree():
+    t1 = regular_tree(Tree(), 0, nb_vertices=20)
+    t2 = regular_tree(Tree(), 0, nb_vertices=18)
+
+    t = t1.copy()
+
+    n1 = len(t1)
+    n = len(t1) + len(t2)
+    t1.add_child_tree(20, t2)
+    assert len(t1) == n
+    
+    t1.remove_tree(21)
+    assert list(pre_order(t,0)) == list(pre_order(t1,0))
+    
+
 
