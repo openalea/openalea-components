@@ -24,7 +24,10 @@ __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
-def regular(tree, vtx_id, nb_children=3, nb_vertices=20):
+from random import randint
+from collections import deque
+
+def regular_tree(tree, vtx_id, nb_children=3, nb_vertices=20):
     """ Build a regular tree where each vertex has the same number of children.
 
     :Parameters:
@@ -56,7 +59,7 @@ def regular(tree, vtx_id, nb_children=3, nb_vertices=20):
             l.append(v)
     return tree
 
-def random(tree, root, nb_children=3, nb_vertices=20):
+def random_tree(tree, root, nb_children=3, nb_vertices=20):
     """ Build a random tree where each vertex has a random number of children between 1 and `nb_children`.
 
     :Parameters:
@@ -71,18 +74,17 @@ def random(tree, root, nb_children=3, nb_vertices=20):
     :Example:
 
     >>> from openalea.container.tree import PropertyTree
-    >>> from openalea.container.generator.tree import random
+    >>> from openalea.container.generator.tree import random_tree
     >>> tree = Tree()
-    >>> vid = random(tree, tree.root, nb_children=3, nb_vertices=20)
+    >>> vid = random_tree(tree, tree.root, nb_children=3, nb_vertices=20)
     >>> print len(tree)
     """
 
-    from random import randint
     vid = root
-    l=[vid]
+    l = deque([vid])
     while nb_vertices > 0:
         n = min(randint(1,nb_children), nb_vertices)
-        vid = l.pop()
+        vid = l.popleft()
         for i in range(n):
             edge_type = '+'
             if i == n/2:
