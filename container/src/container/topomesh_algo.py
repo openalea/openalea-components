@@ -343,7 +343,8 @@ def clean_duplicated_borders (mesh, outer = True) :
 #
 #       mesh partitioning
 #
-###########################################################def expand (mesh, scale, wids) :
+###########################################################
+def expand (mesh, scale, wids) :
     """
     add a layer of wisps around a given set of wisps
     using borders to define the neighborhood

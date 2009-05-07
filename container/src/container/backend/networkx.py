@@ -26,6 +26,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
 import networkx as nx
+from openalea.container import Graph
 
 def to_networkx(g):
     """ Return a NetworkX Graph from a graph.
@@ -42,4 +43,24 @@ def to_networkx(g):
     graph.add_edge_from(( (g.source(eid), g.target(eid)) for eid in g.edges()))
     return graph
 
+def from_networkx(graph):
+    """ Return a Graph from a NetworkX Directed graph.
 
+    :Parameters: 
+        - `graph` : A NetworkX graph.
+
+    :Returns: 
+        - `g`: a :class:`~openalea.container.interface.Graph`.
+
+    """
+    if not graph.directed:
+        graph = graph.to_directed()
+
+    g = Graph()
+    for vid in graph.nodes_iter():
+        g.add_vertex(vid)
+
+    for source, target in graph.edges_iter():
+        g.add_edge(source, target)
+
+    return g
