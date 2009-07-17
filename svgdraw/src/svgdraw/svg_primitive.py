@@ -209,4 +209,57 @@ class SVGImage (SVGElement) :
 		pglshape.geometry=qs
 		pglshape.appearance=tex
 		SVGElement.to_pgl3D(self,pglshape)
+class SVGText (SVGElement) :
+	"""
+	a text positioned in space
+	"""
+	def __init__ (self, id=None, parent=None) :
+		SVGElement.__init__(self,id,parent,"svg:text")
+		self._txt = None
+	
+	def pos (self) :
+		return self._transform2D.getTransformationB()[2]
+	
+	def text (self) :
+		return self._txt
+	
+	def set_text (self, txt) :
+		self._txt = txt
+	##############################################
+	#
+	#		xml in out
+	#
+	##############################################
+	def load (self) :
+		SVGElement.load(self)
+		x = float(self.get_default("x",0) )
+		y = float(self.get_default("y",0) )
+		z = float(self.get_default("z",0) )
+		x,y = self.real_pos(x,y)
+		self._transform2D *= Matrix4.translation( (x,y,z) )
+		
+		tspan = self.child(0)
+		txtnode = tspan.child(0)
+		self._txt = txtnode.get_default('data',"")
+	
+	def save (self) :
+		#raise NotImplementedError
+		x,y,z = self.pos()
+		self._transform2D *= Matrix4.translation( (-x,-y,-z) )
+		svgx,svgy = self.svg_pos(x,y)
+		self.set_attribute("x","%f" % svgx)
+		self.set_attribute("y","%f" % svgy)
+		self.set_attribute("z","%f" % z)
+		SVGElement.save(self)
+		self._transform2D *= Matrix4.translation( (x,y,z) )
+	##############################################
+	#
+	#		pgl interface
+	#
+	##############################################
+	def to_pgl2D (self, pglshape) :
+		raise NotImplementedError
+	
+	def to_pgl3D (self, pglshape) :
+		raise NotImplementedError
 

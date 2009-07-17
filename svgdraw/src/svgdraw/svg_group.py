@@ -107,6 +107,8 @@ class SVGGroup (SVGElement) :
 				return SVGGroup()
 		elif name=="image" :
 			return SVGImage()
+		elif name == "text" :
+			return SVGText()
 		else :
 			return None
 	##############################################
@@ -264,7 +266,7 @@ class SVGLayer (SVGGroup) :
 		SVGGroup.save(self)
 
 from xml_element import XMLElement
-from svg_primitive import SVGBox,SVGSphere,SVGImage
+from svg_primitive import SVGBox,SVGSphere,SVGImage,SVGText
 from svg_path import SVGPath,SVGConnector
 from svg_stack import SVGStack
 
