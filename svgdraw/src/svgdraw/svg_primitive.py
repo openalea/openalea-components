@@ -1,6 +1,7 @@
 from openalea.plantgl.scenegraph import Sphere,Box,FaceSet,QuadSet,Translated,Scaled,ImageTexture
 from openalea.plantgl.math import Vector3,Matrix4,eulerRotationZYX,scaling
 from svg_element import SVGElement
+from xml_element import XMLElement,ELEMENT_TYPE,TEXT_TYPE
 
 class SVGCenteredElement (SVGElement) :
 	def __init__ (self, id=None, parent=None, nodename=None) :
@@ -216,6 +217,7 @@ class SVGImage (SVGElement) :
 	def __init__ (self, id=None, parent=None) :
 		SVGElement.__init__(self,id,parent,"svg:text")
 		self._txt = None
+		self._font_size = 0
 	
 	def pos (self) :
 		return self._transform2D.getTransformationB()[2]
@@ -225,6 +227,12 @@ class SVGImage (SVGElement) :
 	
 	def set_text (self, txt) :
 		self._txt = txt
+	
+	def font_size (self) :
+		return self._font_size
+	
+	def set_font_size (self, size) :
+		self._font_size = size
 	##############################################
 	#
 	#		xml in out
@@ -237,19 +245,65 @@ class SVGImage (SVGElement) :
 		z = float(self.get_default("z",0) )
 		x,y = self.real_pos(x,y)
 		self._transform2D *= Matrix4.translation( (x,y,z) )
+		#font size
+		if self.has_attribute("style") :
+			style=self.attribute("style")
+			for style_elm in style.split(";") :
+				key,val=style_elm.split(":")
+				if key == "font-size" :
+					#assert val end with px
+					self._font_size = int(val[:-2])
 		
 		tspan = self.child(0)
 		txtnode = tspan.child(0)
 		self._txt = txtnode.get_default('data',"")
 	
 	def save (self) :
-		#raise NotImplementedError
 		x,y,z = self.pos()
 		self._transform2D *= Matrix4.translation( (-x,-y,-z) )
 		svgx,svgy = self.svg_pos(x,y)
 		self.set_attribute("x","%f" % svgx)
 		self.set_attribute("y","%f" % svgy)
 		self.set_attribute("z","%f" % z)
+		self.set_attribute("xml:space","preserve")
+		#font size
+		style={}
+		if self.has_attribute("style") :
+			for gr in self.attribute("style").split(";") :
+				k,v=gr.split(":")
+				style[k]=v
+		style["font-size"] = "%dpx" % self.font_size()
+		style["font-style"] = "normal"
+		style["font-weight"] = "normal"
+		style["text-align"] = "start"
+		style["text-anchor"] = "start"
+		style["font-family"] = "Bitstream Vera Sans"
+		self.set_attribute("style",";".join(["%s:%s" % it for it in style.iteritems()]))
+		
+		#span
+		if self.nb_children() > 1 :
+			raise UserWarning("trouble with text node")
+		if self.nb_children() == 1 :
+			span = self.child(0)
+			assert span.nodetype() == ELEMENT_TYPE
+			assert span.nodename() == "svg:tspan"
+		else :
+			span = XMLElement(None,ELEMENT_TYPE,"svg:tspan")
+			self.add_child(span)
+		span.set_attribute("x","%f" % svgx)
+		span.set_attribute("y","%f" % svgy)
+		span.set_attribute("sodipodi:role","line")
+		#txt
+		if span.nb_children() > 1 :
+			raise UserWarning("trouble with text node")
+		if span.nb_children() == 1 :
+			txt = span.child(0)
+			assert txt.nodetype() == TEXT_TYPE
+		else :
+			txt = XMLElement(None,TEXT_TYPE)
+			span.add_child(txt)
+		txt.set_attribute("data","%s" % self.text() )
+		#save
 		SVGElement.save(self)
 		self._transform2D *= Matrix4.translation( (x,y,z) )
 	##############################################

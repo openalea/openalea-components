@@ -1,7 +1,8 @@
 from xml.dom.minidom import Document
 
-ELEMENT_TYPE=Document.ELEMENT_NODE#default type used in nodes
-SVG_ELEMENT_TYPE=Document.ELEMENT_NODE#default type used in svg nodes
+ELEMENT_TYPE = Document.ELEMENT_NODE #default type used in nodes
+SVG_ELEMENT_TYPE = Document.ELEMENT_NODE #default type used in svg nodes
+TEXT_TYPE = Document.TEXT_NODE
 
 
 class XMLElement (object) :

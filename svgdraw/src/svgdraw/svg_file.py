@@ -29,7 +29,7 @@ class XMLFileWriter (object) :
 	def flush (self) :
 		f=open(self._filename,'w')
 		if self._xml_doc is not None :
-			f.write(self._xml_doc.toprettyxml())
+			f.write(self._xml_doc.toxml())
 		f.close()
 	
 	def close (self) :
