@@ -1,3 +1,49 @@
+# -*- python -*-
+#
+#       svgdraw: svg library
+#
+#       Copyright 2006 INRIA - CIRAD - INRA  
+#
+#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+# 
+#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#
+
+"""
+This module defines a svg element to store stacks of images
+"""
+
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+#TODO
+
+__license__= "Cecill-C"
+__revision__=" $Id: $ "
+
 from os.path import join,normpath
 from openalea.plantgl.math import Vector3,Matrix4,scaling
 from svg_group import SVGGroup,SVGLayer

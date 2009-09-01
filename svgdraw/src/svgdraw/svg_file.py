@@ -1,3 +1,25 @@
+# -*- python -*-
+#
+#       svgdraw: svg library
+#
+#       Copyright 2006 INRIA - CIRAD - INRA  
+#
+#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+# 
+#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#
+
+"""
+This module defines read an write functions
+"""
+
+__license__= "Cecill-C"
+__revision__=" $Id: $ "
+
 from xml.dom.minidom import parse,Document
 from xml_element import XMLElement
 from svg_scene import SVGScene
@@ -7,14 +29,14 @@ class XMLFileReader (object) :
 	base class to read an xml file
 	"""
 	def __init__ (self, filename) :
-		self._filename=filename
+		self._filename = filename
 	
 	def close (self) :
 		pass
 	
 	def read (self) :
-		doc=parse(self._filename)
-		elm=XMLElement()
+		doc = parse(self._filename)
+		elm = XMLElement()
 		elm.load_xml(doc)
 		return elm
 
@@ -23,20 +45,20 @@ class XMLFileWriter (object) :
 	base class to write an xml file
 	"""
 	def __init__ (self, filename) :
-		self._filename=filename
-		self._xml_doc=None
+		self._filename = filename
+		self._xml_doc = None
 	
 	def flush (self) :
-		f=open(self._filename,'w')
+		f = open(self._filename,'w')
 		if self._xml_doc is not None :
-			f.write(self._xml_doc.toxml())
+			f.write(self._xml_doc.toxml() )
 		f.close()
 	
 	def close (self) :
 		self.flush()
 	
 	def write (self, doc_elm) :
-		self._xml_doc=doc_elm.save_xml()
+		self._xml_doc = doc_elm.save_xml()
 
 def open_xml (filename, mode='r') :
 	if mode=='r' :
@@ -44,17 +66,20 @@ def open_xml (filename, mode='r') :
 	elif mode=='w' :
 		return XMLFileWriter(filename)
 	else :
-		raise UserWarning ("mode %s not recognized" % str(mode))
+		raise UserWarning ("mode %s not recognized" % str(mode) )
 
 class SVGFileReader (XMLFileReader) :
 	"""
 	base class to read an svg file
 	"""
 	def read (self) :
-		doc=XMLFileReader.read(self)
-		root=[node for node in doc.children() if node.nodename()=="svg:svg"][0]
-		sc=SVGScene()
-		sc._svgfilename=self._filename
+		doc = XMLFileReader.read(self)
+		try :
+			root = [node for node in doc.children() if node.nodename() == "svg:svg"][0]
+		except IndexError :
+			raise UserWarning("Old style svg file, you need to prefix node names with 'svg:'")
+		sc = SVGScene()
+		sc._svgfilename = self._filename
 		sc.from_node(root)
 		sc.load()
 		return sc
@@ -65,11 +90,11 @@ class SVGFileWriter (XMLFileWriter) :
 	"""
 	def __init__ (self, filename) :
 		XMLFileWriter.__init__(self,filename)
-		doc=XMLElement(None,Document.DOCUMENT_NODE,"#document")
-		comment=XMLElement(None,Document.COMMENT_NODE,"#comment")
+		doc = XMLElement(None,Document.DOCUMENT_NODE,"#document")
+		comment = XMLElement(None,Document.COMMENT_NODE,"#comment")
 		comment.set_attribute("data","created from python svgdraw module")
 		doc.add_child(comment)
-		self._svg_doc=doc
+		self._svg_doc = doc
 	
 	def write (self, svgscene) :
 		svgscene.save()

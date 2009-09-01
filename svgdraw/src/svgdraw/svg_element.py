@@ -1,3 +1,25 @@
+# -*- python -*-
+#
+#       svgdraw: svg library
+#
+#       Copyright 2006 INRIA - CIRAD - INRA  
+#
+#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+# 
+#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#
+
+"""
+This module defines an abstract svg element
+"""
+
+__license__= "Cecill-C"
+__revision__=" $Id: $ "
+
 import re
 from os.path import join,dirname
 from math import sin,cos,acos,asin
@@ -6,203 +28,205 @@ from openalea.plantgl.scenegraph import Material,Color3,\
 from openalea.plantgl.math import Vector3,Matrix3,Matrix4,eulerRotationZYX,scaling,norm
 from xml_element import XMLElement,SVG_ELEMENT_TYPE
 
-Ox=Vector3(1,0,0)
-Oy=Vector3(0,1,0)
-Oz=Vector3(0,0,1)
+Ox = Vector3(1,0,0)
+Oy = Vector3(0,1,0)
+Oz = Vector3(0,0,1)
 
 #to read svg transformations or values
 #norm : http://www.w3.org/TR/SVG/coords.html#TransformAttribute
-sep=r"\s*,?\s*"
-digit=r"([-]?\d+[.]?\d*e?[+-]?\d?)"
-val_re=re.compile(digit+r"(em)?(ex)?(px)?(pt)?(pc)?(cm)?(mm)?(in)?(\%)?")
+sep = r"\s*,?\s*"
+digit = r"([-]?\d+[.]?\d*e?[+-]?\d?)"
+float_re = re.compile(digit+r"(em)?(ex)?(px)?(pt)?(pc)?(cm)?(mm)?(in)?(\%)?")
 
-matrix_re=re.compile("matrix\("+digit+sep+digit+sep+digit+sep+digit+sep+digit+sep+digit+"\)")
-translate_re=re.compile("translate\("+digit+sep+digit+"?\)")
-scale_re=re.compile("scale\("+digit+sep+digit+"?\)")
+matrix_re = re.compile("matrix\("+digit+sep+digit+sep+digit+sep+digit+sep+digit+sep+digit+"\)")
+translate_re = re.compile("translate\("+digit+sep+digit+"?\)")
+scale_re = re.compile("scale\("+digit+sep+digit+"?\)")
 
-matrix_re3D=re.compile("matrix\("+sep+digit+sep+digit+sep+digit+sep+digit
-								 +sep+digit+sep+digit+sep+digit+sep+digit
-								 +sep+digit+sep+digit+sep+digit+sep+digit+sep+"\)")
+def read_color (color_str) :
+	if color_str == "none" :
+		return None
+	else : #assert haxedecimal definition
+	       #of the color col = #rrggbb
+		col_str = color_str.lower()[1:]#remove '#'
+		red = int(col_str[:2],16)
+		green = int(col_str[2:4],16)
+		blue = int(col_str[4:],16)
+		return Color3(red,green,blue)
 
-translate_re3D=re.compile("translate\("+digit+sep+digit+"?"+sep+digit+"?\)")
-scale_re3D=re.compile("scale\("+digit+sep+digit+"?"+sep+digit+"?\)")
+def write_color (color) :
+	if color is None :
+		return "none"
+	else :
+		return "#%.2x%.2x%.2x" % (color.red,color.green,color.blue)
+
+def read_float (val_str) :
+	if val_str == "none" :
+		return None
+	else :
+		res = float_re.match(val_str)
+		return float(res.groups()[0])
+
+def write_float (val) :
+	return "%f" % val
 
 class SVGElement (XMLElement) :
 	"""
-	base class for all styles associated with geometrical elements
-	store all attributes that cannot be stored in a plantgl scene
+	base class for all SVG element
+	store attribute of geometry and style
 	"""
-	type="style"
-	def __init__ (self, id=None, parent=None, nodename="svg") :
-		XMLElement.__init__(self,parent,SVG_ELEMENT_TYPE,nodename)
-		self._id=id
+	
+	type = "base"
+	
+	def __init__ (self, nodeid=None, parent=None, nodename="svg") :
+		XMLElement.__init__(self,parent,SVG_ELEMENT_TYPE,nodename,nodeid)
+		
 		#graphic style
-		self.display=True
-		self.fill=None
-		self.stroke=None
-		self.stroke_width=1.
-		#transformation2D
-		self._transform2D=Matrix4()#matrice de transformation
-								#de la base locale vers la base du parent
-								#parent_pos=transform*local_pos
-		#transformation3D
-		self._absolute_3D=False#transformation relative to 2D transfo or not
-		self._transform3D=Matrix4()#matrice 3D de transformation
-								#de la base locale vers la base du parent
+		self._style = {}
+		
+		#transformation
+		self._transform = Matrix4()#transformation matrix expressed
+		                           #in parent frame
+		                           #pos_Rparent = transform * pos_Rlocal
+		
 		#filename for abs path
-		self._svgfilename=None
+		self._svgfilename = None
 	
-	def id (self) :
-		return self._id
-	
-	def set_id (self, id) :
-		self._id=id
 	##############################################
 	#
-	#		3D change of referential
+	#		access to style elements
 	#
 	##############################################
-	def is_absolute (self) :
-		return self._absolute_3D
+	def get_style (self, key) :
+		"""Return style associated with this key.
+		"""
+		return self._style[key]
 	
-	def set_absolute (self, absolute) :
-		self._absolute_3D=absolute
+	def set_style (self, key, str_val) :
+		"""Set the style associated with this key.
+		"""
+		self._style[key] = str_val
 	
-	def global_transformation (self, matrix=Matrix4()) :
-		gtr=self._transform3D*matrix
-		if self.is_absolute() :
-			return gtr
+	def displayed (self) :
+		"""Tells wether this element is visible or not.
+		"""
+		if "display" in self._style :
+			return self._style["display"] != "none"
 		else :
-			return self.global_transformation2D(gtr)
+			return False
 	
-	def global_pos (self, pos=Vector3()) :
-		gpos=self._transform3D*pos
-		if self.is_absolute() :
-			return gpos
+	def set_display (self, display) :
+		"""Set the visibility of this element.
+		"""
+		if display :
+			self._style["display"] = "true"
 		else :
-			return self.global_pos2D(gpos)
+			self._style["display"] = "none"
 	
-	def global_vec (self, vec=Vector3()) :
-		gvec=Matrix3(self._transform3D)*vec
-		if self.is_absolute() :
-			return gvec
+	def fill (self) :
+		"""Return color used to fill the element.
+		"""
+		if "fill" in self._style :
+			return read_color(self._style["fill"])
 		else :
-			return self.global_vec2D(gvec)
+			return None
 	
-	def global_scale (self, scale=(1,1,1)) :
-		gsca=tuple(scale[i]*self._transform3D[i,i] for i in xrange(3))
-		if self.is_absolute() :
-			return gsca
+	def set_fill (self, color) :
+		"""Set the color used to fill the element.
+		"""
+		self._style["fill"] = write_color(color)
+	
+	def stroke (self) :
+		"""Return color used to paint border of the element.
+		"""
+		if "stroke" in self._style :
+			return read_color(self._style["stroke"])
 		else :
-			return self.global_scale2D(gsca)
+			return None
 	
-	def local_pos (self, pos=Vector3()) :
-		lpos=self._transform3D.inverse()*pos
-		if self.is_absolute() :
-			return lpos
+	def set_stroke (self, color) :
+		"""Set the color used to paint the border.
+		"""
+		self._style["stroke"] = write_color(color)
+	
+	def stroke_width (self) :
+		"""Return size of the border.
+		"""
+		if "stroke-width" in self._style :
+			width = read_float (self._style["stroke-width"])
+			if width is None :
+				return 0.
+			else :
+				return width
 		else :
-			return self.local_pos2D(lpos)
+			return 0.
 	
-	def local_vec (self, vec=Vector3()) :
-		lvec=Matrix3(self._transform3D.inverse())*vec
-		if self.is_absolute() :
-			return lvec
-		else :
-			return self.local_vec2D(lvec)
-	
-	def local_scale (self, scale=(1,1,1)) :
-		lsca=tuple(scale[i]/self._transform3D[i,i] for i in xrange(3))
-		if self.is_absolute() :
-			return lsca
-		else :
-			return self.local_scale2D(lsca)
-	
-	def abs_pos (self, pos=Vector3()) :
-		ppos=self.global_pos(pos)
-		if self.parent() is None :
-			return ppos
-		else :
-			return self.parent().abs_pos(ppos)
-	##############################################
-	#
-	#		2D change of referential
-	#
-	##############################################
-	def global_transformation2D (self, matrix=Matrix4()) :
-		return self._transform2D*matrix
-	
-	def global_pos2D (self, pos=Vector3()) :
-		return self._transform2D*pos
-	
-	def global_vec2D (self, vec=Vector3()) :
-		return Matrix3(self._transform2D)*vec
-	
-	def global_scale2D (self, scale=(1,1,1)) :
-		return tuple(scale[i]*self._transform2D[i,i] for i in xrange(3))
-	
-	def local_pos2D (self, pos=Vector3()) :
-		return self._transform2D.inverse()*pos
-	
-	def local_vec2D (self, vec=Vector3()) :
-		return Matrix3(self._transform2D.inverse())*vec
-	
-	def local_scale2D (self, scale=(1,1,1)) :
-		return tuple(scale[i]/self._transform2D[i,i] for i in xrange(3))
-	
-	def abs_pos2D (self, pos=Vector3()) :
-		ppos=self.global_pos2D(pos)
-		if self.parent() is None :
-			return ppos
-		else :
-			return self.parent().abs_pos2D(ppos)
+	def set_stroke_width (self, width) :
+		"""Set the size of the border.
+		"""
+		self._style["stroke-width"] = write_float(width)
 	##############################################
 	#
 	#		change of referential
 	#
 	##############################################
+	def global_transformation (self, matrix=Matrix4() ) :
+		return self._transform * matrix
+	
+	def global_pos (self, pos=Vector3() ) :
+		return self._transform * pos
+	
+	def global_vec (self, vec=Vector3() ) :
+		return Matrix3(self._transform) * vec
+	
+	def global_scale (self, scale=(1,1,1) ) :
+		return tuple(scale[i] * self._transform[i,i] for i in xrange(3))
+	
+	def local_pos (self, pos=Vector3() ) :
+		return self._transform.inverse() * pos
+	
+	def local_vec (self, vec=Vector3() ) :
+		return Matrix3(self._transform.inverse() ) * vec
+	
+	def local_scale (self, scale=(1,1,1)) :
+		return tuple(scale[i] / self._transform [i,i] for i in xrange(3) )
+	
+	def abs_pos (self, pos=Vector3() ) :
+		ppos = self.global_pos(pos)
+		if self.parent() is None :
+			return ppos
+		else :
+			return self.parent().abs_pos(ppos)
+	
+	def abs_scaling (self, size=Vector3() ) :
+		gsca = self.global_scale(size)
+		if self.parent() is None :
+			return gsca
+		else :
+			return self.parent().abs_scaling(gsca)
+	##############################################
+	#
+	#		modify transformation
+	#
+	##############################################
 	def set_transformation (self, matrix) :
-		self._transform3D=matrix
+		self._transform = matrix
 	
 	def transform (self, matrix) :
-		self._transform3D=matrix*self._transform3D
+		self._transform = matrix * self._transform
 	
 	def translate (self, vec) :
-		self._transform3D=Matrix4.translation(vec)*self._transform3D
+		self._transform = Matrix4.translation(vec) * self._transform
 	
-	def rotate (self, ZYXangles) :
-		self._transform3D=Matrix4(eulerRotationZYX(ZYXangles))*self._transform3D
+	def rotate (self, angle) :
+		self._transform = Matrix4(eulerRotationZYX( (angle,0,0) ) ) * self._transform
 	
 	def scale (self, scale) :
-		self._transform3D=Matrix4(scaling(scale))*self._transform3D
-	
-	def set_transformation2D (self, matrix) :
-		self._transform2D=matrix
-	
-	def transform2D (self, matrix) :
-		self._transform2D=matrix*self._transform2D
-	
-	def translate2D (self, vec) :
-		self._transform2D=Matrix4.translation(vec)*self._transform2D
-	
-	def rotate2D (self, angle) :
-		self._transform2D=Matrix4(eulerRotationZYX((angle,0,0)))*self._transform2D
-	
-	def scale2D (self, scale) :
-		self._transform2D=Matrix4(scaling(scale))*self._transform2D
+		self._transform = Matrix4(scaling(scale) ) * self._transform
 	##############################################
 	#
-	#		SVG interface
+	#		SVG frame
 	#
 	##############################################
-	def abs_path (self, filename) :
-		if self.parent() is None :
-			if self._svgfilename is None :
-				return filename
-			else :
-				return join(dirname(self._svgfilename),filename)
-		else :
-			return self.parent().abs_path(filename)
-	
 	def real_vec (self, svgx, svgy) :
 		return svgx,-svgy
 	
@@ -222,12 +246,14 @@ class SVGElement (XMLElement) :
 			return self.parent().svg_pos(x,y)
 	
 	def real_matrix (self, matrix) :
-		m=matrix
-		return Matrix4((m[0,0],-m[0,1],0,m[0,3],-m[1,0],m[1,1],0,-m[1,3]))
+		m = matrix
+		return Matrix4( (m[0,0],-m[0,1],0,m[0,3],
+		                 -m[1,0],m[1,1],0,-m[1,3]) )
 	
 	def svg_matrix (self, matrix) :
-		m=matrix
-		return Matrix4((m[0,0],-m[0,1],0,m[0,3],-m[1,0],m[1,1],0,-m[1,3]))
+		m = matrix
+		return Matrix4( (m[0,0],-m[0,1],0,m[0,3],
+		                 -m[1,0],m[1,1],0,-m[1,3]) )
 	
 	def real_transformation (self, matrix) :
 		if self.parent() is None :
@@ -241,153 +267,85 @@ class SVGElement (XMLElement) :
 		else :
 			return self.parent().svg_transformation(matrix)
 	
-	def read_color (self, color_str) :
-		if color_str=="none" :
-			return None
-		else :
-			col_str=color_str.lower()[1:]
-			red=int(col_str[:2],16)
-			green=int(col_str[2:4],16)
-			blue=int(col_str[4:],16)
-			return Color3(red,green,blue)
-	
-	def read_value (self, val_str) :
-		if val_str=="none" :
-			return None
-		else :
-			res=val_re.match(val_str)
-			return float(res.groups()[0])
-	
-	def load_style (self) :
-		#colors
-		if self.has_attribute("style") :
-			style=self.attribute("style")
-			for style_elm in style.split(";") :
-				key,val=style_elm.split(":")
-				if key=="fill" :
-					self.fill=self.read_color(val)
-				elif key=="stroke" :
-					self.stroke=self.read_color(val)
-				elif key=="stroke-width" :
-					self.stroke_width=self.read_value(val)
-				elif key=="display" :
-					self.display= (val!="none")
-	
-	def load_transformation2D (self) :
-		#transformation
-		if self.has_attribute("transform") :
-			tr=self.attribute("transform")
-			if "matrix" in tr :
-				x11,x21,x12,x22,x13,x23=(float(val) for val in matrix_re.match(tr).groups())
-				m=Matrix4( (x11,x12,0,x13,x21,x22,0,x23) )
-				self.transform2D(self.real_transformation(m))
-			elif "translate" in tr :
-				xtr,ytr=translate_re.match(tr).groups()
-				x=float(xtr)
-				if ytr is None :
-					y=x
-				else :
-					y=float(ytr)
-				x,y=self.real_vec(x,y)
-				self.translate2D( (x,y,0) )
-			elif "scale" in tr :
-				xtr,ytr=scale_re.match(tr).groups()
-				x=float(xtr)
-				if ytr is None :
-					y=x
-				else :
-					y=float(ytr)
-				self.scale2D( (x,y,0) )
-			elif "rotate" in tr :
-				raise NotImplementedError
-			elif "skewX" in tr :
-				raise NotImplementedError
-			elif "skewY" in tr :
-				raise NotImplementedError
-			else :
-				raise UserWarning("don't know how to translate this transformation :\n %s" % tr)
-	
-	def load_transformation3D (self) :
-		#transformation3D
-		if self.has_attribute("transform3D") :
-			tr=self.attribute("transform3D")
-			if tr[0].lower()=='a' :
-				self.set_absolute(True)
-				tr=tr[1:]
-			else :
-				self._absolute_3D=False
-			if "matrix" in tr :
-				x11,x21,x31,x12,x22,x32,x13,x23,x33,x14,x24,x34=(float(val) for val in matrix_re3D.match(tr).groups())
-				m=Matrix4( (x11,x12,x13,x14,x21,x22,x23,x24,x31,x32,x33,x34) )
-				self.transform(m)
-			elif "translate" in tr :
-				x,y,z=(float(val) for val in translate_re3D.match(tr).groups())
-				self.translate( (x,y,z) )
-			elif "scale" in tr :
-				x,y,z=(float(val) for val in scale_re3D.match(tr).groups())
-				self.scale( (x,y,z) )
-			elif "rotate" in tr :
-				raise NotImplementedError
-			elif "skewX" in tr :
-				raise NotImplementedError
-			elif "skewY" in tr :
-				raise NotImplementedError
-			else :
-				raise UserWarning("don't know how to translate this transformation :\n %s" % tr)
-	
-	def load (self) :
-		XMLElement.load(self)
-		if self.has_attribute("id") :
-			self.set_id(self.attribute("id"))
-		self.load_style()
-		self.load_transformation2D()
-		self.load_transformation3D()
-	
-	def save_style (self) :
-		style={}
-		if self.has_attribute("style") :
-			for gr in self.attribute("style").split(";") :
-				k,v=gr.split(":")
-				style[k]=v
-		style["opacity"]="1"
-		if self.fill is None :
-			style["fill"]="none"
-		else :
-			c=self.fill
-			style["fill"]="#%.2x%.2x%.2x" % (c.red,c.green,c.blue)
-		if self.stroke is None :
-			style["stroke"]="none"
-		else :
-			c=self.stroke
-			style["stroke"]="#%.2x%.2x%.2x" % (c.red,c.green,c.blue)
-		style["stroke-width"]="%f" % self.stroke_width
-		if not self.display :
-			style["display"]="none"
-		self.set_attribute("style",";".join(["%s:%s" % it for it in style.iteritems()]))
-	
-	def save_transformation2D (self) :
-		tr=self.svg_transformation(self._transform2D)
-		transform="matrix(%f %f %f %f %f %f)" % (tr[0,0],tr[1,0],tr[0,1],tr[1,1],tr[0,3],tr[1,3])
-		self.set_attribute("transform",transform)
-	
-	def save_transformation3D (self) :
-		tr=self._transform3D
-		transform="matrix(%f %f %f %f %f %f %f %f %f %f %f %f)" % (tr[0,0],tr[1,0],tr[2,0],tr[0,1],tr[1,1],tr[2,1],tr[0,2],tr[1,2],tr[2,2],tr[0,3],tr[1,3],tr[2,3])
-		if self.is_absolute() :
-			self.set_attribute("transform3D","a%s" % transform)
-		else :
-			self.set_attribute("transform3D",transform)
-	
-	def save (self) :
-		XMLElement.save(self)
-		if self.id() is not None :
-			self.set_attribute("id",self.id())
-		self.save_style()
-		self.save_transformation2D()
-		self.save_transformation3D()
 	##############################################
 	#
-	#		PGL interface
+	#		SVG interface
+	#
+	##############################################
+	def abs_path (self, filename) :
+		if self.parent() is None :
+			if self._svgfilename is None :
+				return filename
+			else :
+				return join(dirname(self._svgfilename),filename)
+		else :
+			return self.parent().abs_path(filename)
+	
+	def load_style (self) :
+		style = {}
+		for style_elm in self.get_default("style","").split(";") :
+			if ":" in style_elm :
+				key,val = style_elm.split(":")
+				style[key] = val
+		return style
+	
+	def load_transformation (self) :
+		#transformation
+		if self.has_attribute("transform") :
+			tr = self.attribute("transform")
+			if "matrix" in tr :
+				x11,x21,x12,x22,x13,x23 = (float(val) for val in matrix_re.match(tr).groups() )
+				m = Matrix4( (x11,x12,0,x13,
+				              x21,x22,0,x23) )
+				self.transform(self.real_transformation(m) )
+			elif "translate" in tr :
+				xtr,ytr = translate_re.match(tr).groups()
+				x = float(xtr)
+				if ytr is None :
+					y = x
+				else :
+					y = float(ytr)
+				x,y = self.real_vec(x,y)
+				self.translate( (x,y,0) )
+			elif "scale" in tr :
+				xtr,ytr = scale_re.match(tr).groups()
+				x = float(xtr)
+				if ytr is None :
+					y = x
+				else :
+					y = float(ytr)
+				self.scale( (x,y,0) )
+			elif "rotate" in tr :
+				raise NotImplementedError
+			elif "skewX" in tr :
+				raise NotImplementedError
+			elif "skewY" in tr :
+				raise NotImplementedError
+			else :
+				raise UserWarning("don't know how to translate this transformation :\n %s" % tr)
+		
+	def load (self) :
+		XMLElement.load(self)
+		self._style.update(self.load_style() )
+		self.load_transformation()
+	
+	def save_style (self) :
+		style = self.load_style()
+		style.update(self._style)
+		self.set_attribute("style",";".join(["%s:%s" % it for it in style.iteritems()]) )
+	
+	def save_transformation (self) :
+		tr = self.svg_transformation(self._transform)
+		transform = "matrix(%f %f %f %f %f %f)" % (tr[0,0],tr[1,0],tr[0,1],tr[1,1],tr[0,3],tr[1,3])
+		self.set_attribute("transform",transform)
+		
+	def save (self) :
+		XMLElement.save(self)
+		self.save_style()
+		self.save_transformation()
+	##############################################
+	#
+	#		PGL interface #TODO deprecated
 	#
 	##############################################
 	def primitive (self, geom) :

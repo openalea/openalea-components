@@ -1,3 +1,25 @@
+# -*- python -*-
+#
+#       svgdraw: svg library
+#
+#       Copyright 2006 INRIA - CIRAD - INRA  
+#
+#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+# 
+#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#
+
+"""
+This module defines a path svg element
+"""
+
+__license__= "Cecill-C"
+__revision__=" $Id: $ "
+
 import re
 from openalea.plantgl.scenegraph import Polyline,Polyline2D,BezierCurve2D,NurbsCurve2D
 from openalea.plantgl.math import Vector3,Vector2,norm
@@ -6,9 +28,9 @@ from svg_element import SVGElement
 #to read svg paths
 #I cannot for the moment repeat implicitly a command
 #norm : http://www.w3.org/TR/SVG/paths.html
-sep=r"\s*,?\s*"
-coord=r"([-]?\d+[.]?\d*)"
-point=coord+sep+coord
+sep = r"\s*,?\s*"
+coord = r"([-]?\d+[.]?\d*)"
+point = coord + sep + coord
 
 mM=sep+"([mM])"+sep+point
 zZ=sep+"([zZ])"
@@ -23,7 +45,7 @@ qQ=sep+"([qQ])"+sep+point+sep+point
 tT=sep+"([tT])"+sep+point
 aA=sep+"([aA])"+sep+point+sep+coord+sep+"([01])"+sep+"([01])"+sep+point
 
-readpath=re.compile("|".join([mM,zZ,lL,hH,vV,cC,sS,qQ,tT,aA]))
+readpath = re.compile("|".join([mM,zZ,lL,hH,vV,cC,sS,qQ,tT,aA]))
 
 
 class SVGPathCommand (object) :
@@ -33,7 +55,7 @@ class SVGPathCommand (object) :
 	"""
 	def __init__ (self, typ) :
 		self._type=typ
-		self._params=[]
+		self._params = []
 	
 	def type (self) :
 		return self._type
@@ -51,13 +73,13 @@ class SVGPath (SVGElement) :
 	"""
 	def __init__ (self, id=None, parent=None) :
 		SVGElement.__init__(self,id,parent,"svg:path")
-		self._commands=[]
+		self._commands = []
 	
 	def commands (self) :
 		return iter(self._commands)
 	
 	def append (self, cmd_typ, cmd_args=[]) :
-		cmd=SVGPathCommand(cmd_typ)
+		cmd = SVGPathCommand(cmd_typ)
 		for arg in cmd_args :
 			cmd.append(arg)
 		self._commands.append(cmd)
@@ -67,179 +89,179 @@ class SVGPath (SVGElement) :
 	
 	def is_closed (self) :
 		for command in self.commands() :
-			if command.type().lower()=='z' :
+			if command.type().lower() == 'z' :
 				return True
 		return False
 	
 	def from_string (self, command_str) :
-		self._commands=[]
-		ref_point=Vector2()
+		self._commands = []
+		ref_point = Vector2()
 		for match in readpath.finditer(command_str) :
-			cmd=[v for v in match.groups() if v is not None]
-			typ=cmd[0]
-			pth_cmd=SVGPathCommand(typ)
-			if typ=='M' :
-				svgx,svgy=(float(val) for val in cmd[1:])
-				pos=Vector2(*self.real_pos(svgx,svgy))
+			cmd = [v for v in match.groups() if v is not None]
+			typ = cmd[0]
+			pth_cmd = SVGPathCommand(typ)
+			if typ == 'M' :
+				svgx,svgy = (float(val) for val in cmd[1:])
+				pos = Vector2(*self.real_pos(svgx,svgy) )
 				pth_cmd.append(pos)
-				ref_point=pos
-			elif typ=='m' :
-				svgdx,svgdy=(float(val) for val in cmd[1:])
-				vec=Vector2(*self.real_vec(svgdx,svgdy))
+				ref_point = pos
+			elif typ == 'm' :
+				svgdx,svgdy = (float(val) for val in cmd[1:])
+				vec = Vector2(*self.real_vec(svgdx,svgdy) )
 				pth_cmd.append(vec)
-				ref_point+=vec
+				ref_point += vec
 			elif typ in ('Z','z') :
 				pass
-			elif typ=='L' :
-				svgx,svgy=(float(val) for val in cmd[1:])
-				pos=Vector2(*self.real_pos(svgx,svgy))
+			elif typ == 'L' :
+				svgx,svgy = (float(val) for val in cmd[1:])
+				pos = Vector2(*self.real_pos(svgx,svgy) )
 				pth_cmd.append(pos)
-				ref_point=pos
-			elif typ=='l' :
-				svgdx,svgdy=(float(val) for val in cmd[1:])
-				vec=Vector2(*self.real_vec(svgdx,svgdy))
+				ref_point = pos
+			elif typ == 'l' :
+				svgdx,svgdy = (float(val) for val in cmd[1:])
+				vec = Vector2(*self.real_vec(svgdx,svgdy) )
 				pth_cmd.append(vec)
-				ref_point+=vec
+				ref_point += vec
 			elif typ in ('H','h') :
-				svgdx,=(float(val) for val in cmd[1:])
-				vec=Vector2(*self.real_vec(svgdx,0))
+				svgdx, = (float(val) for val in cmd[1:])
+				vec = Vector2(*self.real_vec(svgdx,0) )
 				pth_cmd.append(vec)
-				ref_point+=vec
+				ref_point += vec
 			elif typ in ('V','v') :
-				svgdy,=(float(val) for val in cmd[1:])
-				vec=Vector2(*self.real_vec(0,svgdy))
+				svgdy, = (float(val) for val in cmd[1:])
+				vec = Vector2(*self.real_vec(0,svgdy) )
 				pth_cmd.append(vec)
-				ref_point+=vec
-			elif typ=='C' :
-				svgx1,svgy1,svgx2,svgy2,svgx,svgy=(float(val) for val in cmd[1:])
-				v1=Vector2(*self.real_pos(svgx1,svgy1))
-				v2=Vector2(*self.real_pos(svgx2,svgy2))
-				pos=Vector2(*self.real_pos(svgx,svgy))
+				ref_point += vec
+			elif typ == 'C' :
+				svgx1,svgy1,svgx2,svgy2,svgx,svgy = (float(val) for val in cmd[1:])
+				v1 = Vector2(*self.real_pos(svgx1,svgy1) )
+				v2 = Vector2(*self.real_pos(svgx2,svgy2) )
+				pos = Vector2(*self.real_pos(svgx,svgy) )
 				pth_cmd.append(v1)
 				pth_cmd.append(v2)
 				pth_cmd.append(pos)
-				ref_point=pos
+				ref_point = pos
 			elif typ=='c' :
-				svgx1,svgy1,svgx2,svgy2,svgdx,svgdy=(float(val) for val in cmd[1:])
-				v1=Vector2(*self.real_vec(svgx1,svgy1))
-				v2=Vector2(*self.real_vec(svgx2,svgy2))
-				vec=Vector2(*self.real_vec(svgdx,svgdy))
+				svgx1,svgy1,svgx2,svgy2,svgdx,svgdy = (float(val) for val in cmd[1:])
+				v1 = Vector2(*self.real_vec(svgx1,svgy1) )
+				v2 = Vector2(*self.real_vec(svgx2,svgy2) )
+				vec = Vector2(*self.real_vec(svgdx,svgdy) )
 				pth_cmd.append(v1)
 				pth_cmd.append(v2)
 				pth_cmd.append(vec)
-				ref_point+=vec
+				ref_point += vec
 			elif typ=='S' :
-				svgx2,svgy2,svgx,svgy=(float(val) for val in cmd[1:])
-				v2=Vector2(*self.real_pos(svgx2,svgy2))
-				pos=Vector2(*self.real_pos(svgx,svgy))
+				svgx2,svgy2,svgx,svgy = (float(val) for val in cmd[1:])
+				v2 = Vector2(*self.real_pos(svgx2,svgy2) )
+				pos = Vector2(*self.real_pos(svgx,svgy) )
 				pth_cmd.append(v2)
 				pth_cmd.append(pos)
-				ref_point=pos
+				ref_point = pos
 			elif typ=='s' :
-				svgx2,svgy2,svgdx,svgdy=(float(val) for val in cmd[1:])
-				v2=Vector2(*self.real_vec(svgx2,svgy2))
-				vec=Vector2(*self.real_vec(svgdx,svgdy))
+				svgx2,svgy2,svgdx,svgdy = (float(val) for val in cmd[1:])
+				v2 = Vector2(*self.real_vec(svgx2,svgy2) )
+				vec = Vector2(*self.real_vec(svgdx,svgdy) )
 				pth_cmd.append(v2)
 				pth_cmd.append(vec)
-				ref_point+=vec
-			elif typ=='Q' :
-				svgx1,svgy1,svgx,svgy=(float(val) for val in cmd[1:])
-				v1=Vector2(*self.real_pos(svgx1,svgy1))
-				pos=Vector2(*self.real_pos(svgx,svgy))
+				ref_point += vec
+			elif typ == 'Q' :
+				svgx1,svgy1,svgx,svgy = (float(val) for val in cmd[1:])
+				v1 = Vector2(*self.real_pos(svgx1,svgy1) )
+				pos = Vector2(*self.real_pos(svgx,svgy) )
 				pth_cmd.append(v1)
 				pth_cmd.append(pos)
-				ref_point=pos
+				ref_point = pos
 			elif typ=='q' :
-				svgx1,svgy1,svgdx,svgdy=(float(val) for val in cmd[1:])
-				v1=Vector2(*self.real_vec(svgx1,svgy1))
-				vec=Vector2(*self.real_vec(svgdx,svgdy))
+				svgx1,svgy1,svgdx,svgdy =( float(val) for val in cmd[1:])
+				v1 = Vector2(*self.real_vec(svgx1,svgy1) )
+				vec = Vector2(*self.real_vec(svgdx,svgdy) )
 				pth_cmd.append(v1)
 				pth_cmd.append(vec)
-				ref_point+=vec
+				ref_point += vec
 			elif typ=='T' :
-				svgx,svgy=(float(val) for val in cmd[1:])
-				pos=Vector2(*self.real_pos(svgx,svgy))
+				svgx,svgy = (float(val) for val in cmd[1:])
+				pos = Vector2(*self.real_pos(svgx,svgy) )
 				pth_cmd.append(pos)
-				ref_point=pos
+				ref_point = pos
 			elif typ=='t' :
-				svgdx,svgdy=(float(val) for val in cmd[1:])
-				vec=Vector2(*self.real_vec(svgdx,svgdy))
+				svgdx,svgdy = (float(val) for val in cmd[1:])
+				vec = Vector2(*self.real_vec(svgdx,svgdy) )
 				pth_cmd.append(vec)
-				ref_point+=vec
+				ref_point += vec
 			else :
 				raise NotImplementedError("path command type not recognized : % s" % typ)
 			self._commands.append(pth_cmd)
 	
 	def to_string (self) :
-		path_txt=""
+		path_txt = ""
 		for command in self.commands() :
-			typ=command.type()
-			if typ=='M' :
-				pos,=command.parameters()
-				x,y=self.svg_pos(*pos)
-				path_txt+="M %f %f" % (x,y)
-			elif typ=='m' :
-				vec,=command.parameters()
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="m %f %f" % (dx,dy)
+			typ = command.type()
+			if typ == 'M' :
+				pos, = command.parameters()
+				x,y = self.svg_pos(*pos)
+				path_txt += "M %f %f" % (x,y)
+			elif typ == 'm' :
+				vec, = command.parameters()
+				dx,dy = self.svg_vec(*vec)
+				path_txt += "m %f %f" % (dx,dy)
 			elif typ in ('Z','z') :
-				path_txt+="%s" % typ
-			elif typ=='L' :
-				pos,=command.parameters()
-				x,y=self.svg_pos(*pos)
-				path_txt+="L %f %f" % (x,y)
-			elif typ=='l' :
-				vec,=command.parameters()
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="l %f %f" % (dx,dy)
+				path_txt += "%s" % typ
+			elif typ == 'L' :
+				pos, = command.parameters()
+				x,y = self.svg_pos(*pos)
+				path_txt += "L %f %f" % (x,y)
+			elif typ == 'l' :
+				vec, = command.parameters()
+				dx,dy = self.svg_vec(*vec)
+				path_txt += "l %f %f" % (dx,dy)
 			elif typ in ('H','h') :
-				vec,=command.parameters()
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="%s %f" % (typ,dx)
+				vec, = command.parameters()
+				dx,dy  =self.svg_vec(*vec)
+				path_txt += "%s %f" % (typ,dx)
 			elif typ in ('V','v') :
-				vec,=command.parameters()
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="%s %f" % (typ,dy)
-			elif typ=='C' :
-				v1,v2,pos=command.parameters()
-				x1,y1=self.svg_pos(*v1)
-				x2,y2=self.svg_pos(*v2)
-				x,y=self.svg_pos(*pos)
-				path_txt+="C %f %f %f %f %f %f" % (x1,y1,x2,y2,x,y)
-			elif typ=='c' :
-				v1,v2,vec=command.parameters()
-				x1,y1=self.svg_vec(*v1)
-				x2,y2=self.svg_vec(*v2)
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="c %f %f %f %f %f %f" % (x1,y1,x2,y2,dx,dy)
-			elif typ=='S' :
-				v2,pos=command.parameters()
-				x2,y2=self.svg_pos(*v2)
-				x,y=self.svg_pos(*pos)
-				path_txt+="S %f %f %f %f" % (x2,y2,x,y)
-			elif typ=='s' :
-				v2,vec=command.parameters()
-				x2,y2=self.svg_vec(*v2)
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="s %f %f %f %f" % (x2,y2,dx,dy)
-			elif typ=='Q' :
-				v1,pos=command.parameters()
-				x1,y1=self.svg_pos(*v1)
-				x,y=self.svg_pos(*pos)
-				path_txt+="Q %f %f %f %f" % (x1,y1,x,y)
-			elif typ=='q' :
-				v1,vec=command.parameters()
-				x1,y1=self.svg_vec(*v1)
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="q %f %f %f %f" % (x1,y1,dx,dy)
-			elif typ=='T' :
-				pos,=command.parameters()
-				x,y=self.svg_pos(*pos)
-				path_txt+="T %f %f" % (x,y)
-			elif typ=='t' :
-				vec,=command.parameters()
-				dx,dy=self.svg_vec(*vec)
-				path_txt+="t %f %f" % (dx,dy)
+				vec, = command.parameters()
+				dx,dy = self.svg_vec(*vec)
+				path_txt += "%s %f" % (typ,dy)
+			elif typ == 'C' :
+				v1,v2,pos = command.parameters()
+				x1,y1 = self.svg_pos(*v1)
+				x2,y2 = self.svg_pos(*v2)
+				x,y = self.svg_pos(*pos)
+				path_txt += "C %f %f %f %f %f %f" % (x1,y1,x2,y2,x,y)
+			elif typ == 'c' :
+				v1,v2,vec = command.parameters()
+				x1,y1 = self.svg_vec(*v1)
+				x2,y2 = self.svg_vec(*v2)
+				dx,dy = self.svg_vec(*vec)
+				path_txt += "c %f %f %f %f %f %f" % (x1,y1,x2,y2,dx,dy)
+			elif typ == 'S' :
+				v2,pos = command.parameters()
+				x2,y2 = self.svg_pos(*v2)
+				x,y = self.svg_pos(*pos)
+				path_txt += "S %f %f %f %f" % (x2,y2,x,y)
+			elif typ == 's' :
+				v2,vec = command.parameters()
+				x2,y2 = self.svg_vec(*v2)
+				dx,dy = self.svg_vec(*vec)
+				path_txt += "s %f %f %f %f" % (x2,y2,dx,dy)
+			elif typ == 'Q' :
+				v1,pos = command.parameters()
+				x1,y1 = self.svg_pos(*v1)
+				x,y = self.svg_pos(*pos)
+				path_txt += "Q %f %f %f %f" % (x1,y1,x,y)
+			elif typ == 'q' :
+				v1,vec = command.parameters()
+				x1,y1 = self.svg_vec(*v1)
+				dx,dy = self.svg_vec(*vec)
+				path_txt += "q %f %f %f %f" % (x1,y1,dx,dy)
+			elif typ == 'T' :
+				pos, = command.parameters()
+				x,y = self.svg_pos(*pos)
+				path_txt += "T %f %f" % (x,y)
+			elif typ == 't' :
+				vec, = command.parameters()
+				dx,dy = self.svg_vec(*vec)
+				path_txt += "t %f %f" % (dx,dy)
 			else :
 				raise NotImplementedError("path command type not recognized : % s" % typ)
 		return path_txt
@@ -250,16 +272,16 @@ class SVGPath (SVGElement) :
 	##############################################
 	def load (self) :
 		SVGElement.load(self)
-		path_txt=self.get_default("d","")
+		path_txt = self.get_default("d","")
 		self.from_string(path_txt)
 	
 	def save (self) :
-		path_txt=self.to_string()
+		path_txt = self.to_string()
 		self.set_attribute("d",path_txt)
 		SVGElement.save(self)
 	##############################################
 	#
-	#		pgl interface
+	#		pgl interface #TODO deprecated
 	#
 	##############################################
 	def polyline_ctrl_points (self) :
@@ -409,8 +431,8 @@ class SVGConnector (SVGPath) :
 	def __init__ (self, parent=None, svgid=None) :
 		SVGPath.__init__(self,parent,svgid)
 		self.set_attribute("inkscape:connector-type","polyline")
-		self._source=None
-		self._target=None
+		self._source = None
+		self._target = None
 	
 	def source (self) :
 		return self._source
@@ -419,21 +441,21 @@ class SVGConnector (SVGPath) :
 		return self._target
 	
 	def set_source (self, svg_elm_id) :
-		self._source=svg_elm_id
+		self._source = svg_elm_id
 	
 	def set_target (self, svg_elm_id) :
-		self._target=svg_elm_id
+		self._target = svg_elm_id
 	
 	def load (self) :
 		SVGPath.load(self)
 		if self.has_attribute("inkscape:connection-start") :
-			self._source=str(self.attribute("inkscape:connection-start"))[1:]
+			self._source = str(self.attribute("inkscape:connection-start") )[1:]
 		else :
-			self._source=None
+			self._source = None
 		if self.has_attribute("inkscape:connection-end") :
-			self._target=str(self.attribute("inkscape:connection-end"))[1:]
+			self._target = str(self.attribute("inkscape:connection-end") )[1:]
 		else :
-			self._target=None
+			self._target = None
 	
 	def save (self) :
 		SVGPath.save(self)

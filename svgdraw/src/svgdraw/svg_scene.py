@@ -1,4 +1,28 @@
-from openalea.plantgl.scenegraph import Scene,Shape,Material,FaceSet,Polyline,Group,Translated,Scaled,Transformed
+# -*- python -*-
+#
+#       svgdraw: svg library
+#
+#       Copyright 2006 INRIA - CIRAD - INRA  
+#
+#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+# 
+#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#
+
+"""
+This module defines a special top level layer
+"""
+
+__license__= "Cecill-C"
+__revision__=" $Id: $ "
+
+from openalea.plantgl.scenegraph import Scene,Shape,Material,\
+                                        FaceSet,Polyline,Group,\
+                                        Translated,Scaled,Transformed
 from svg_group import SVGGroup,SVGLayer
 
 class SVGScene (SVGGroup) :
@@ -22,11 +46,11 @@ class SVGScene (SVGGroup) :
 		"""
 		for elm in self.elements() :
 			if isinstance(elm,SVGLayer) :
-				if elm.attribute("inkscape:label")==layer_name :
+				if elm.attribute("inkscape:label") == layer_name :
 					return elm
 	##############################################
 	#
-	#		pgl interface
+	#		pgl interface #TODO deprecated
 	#
 	##############################################
 	def _hack_pgl_group (self, group_shape, scene) :

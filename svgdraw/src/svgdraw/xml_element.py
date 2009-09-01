@@ -1,3 +1,25 @@
+# -*- python -*-
+#
+#       svgdraw: svg library
+#
+#       Copyright 2006 INRIA - CIRAD - INRA  
+#
+#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+# 
+#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#
+
+"""
+This module defines an abstract xml element
+"""
+
+__license__= "Cecill-C"
+__revision__=" $Id: $ "
+
 from xml.dom.minidom import Document
 
 ELEMENT_TYPE = Document.ELEMENT_NODE #default type used in nodes
@@ -11,25 +33,31 @@ class XMLElement (object) :
 	basic with no interpretation
 	just a way to manage all attributes of an element
 	"""
-	def __init__ (self, parent=None, nodetype=None, nodename=None) :
-		self._nodetype=nodetype
-		self._nodename=nodename
-		self._attributes={}
+	def __init__ (self, parent=None, nodetype=None, nodename=None, nodeid = None) :
+		self._nodetype = nodetype
+		self._nodename = nodename
+		self._attributes = {}
 		#xml tree structure
-		self._parent=parent
-		self._children=[]
+		self._parent = parent
+		self._children = []
 	
 	def nodetype (self) :
 		return self._nodetype
 	
 	def set_nodetype (self, nodetype) :
-		self._nodetype=nodetype
+		self._nodetype = nodetype
 	
 	def nodename (self) :
 		return self._nodename
 	
 	def set_nodename (self, name) :
-		self._nodename=name
+		self._nodename = name
+	
+	def id (self) :
+		return self._attributes["id"]
+	
+	def set_id (self, nodeid) :
+		self._attributes["id"] = nodeid
 	#####################################################
 	#
 	#		tree structure
@@ -39,7 +67,7 @@ class XMLElement (object) :
 		return self._parent
 	
 	def set_parent (self, parent) :
-		self._parent=parent
+		self._parent = parent
 	
 	def nb_children (self) :
 		return len(self._children)
@@ -55,7 +83,7 @@ class XMLElement (object) :
 		elm.set_parent(self)
 	
 	def set_child (self, ind, elm) :
-		self._children[ind]=elm
+		self._children[ind] = elm
 		elm.set_parent(self)
 	
 	def remove_child (self, child) :
@@ -65,7 +93,7 @@ class XMLElement (object) :
 	def clear_children (self) :
 		for elm in self.children() :
 			elm.set_parent(None)
-		self._children=[]
+		self._children = []
 	#####################################################
 	#
 	#		attributes
@@ -87,7 +115,7 @@ class XMLElement (object) :
 			return default_value
 	
 	def set_attribute (self, key, val) :
-		self._attributes[key]=val
+		self._attributes[key] = val
 	
 	def remove_attribute (self, key) :
 		del self._attributes[key]
@@ -97,10 +125,10 @@ class XMLElement (object) :
 	#
 	#####################################################
 	def from_node (self, xmlelm) :
-		self.set_nodetype(xmlelm.nodetype())
-		self.set_nodename(xmlelm.nodename())
+		self.set_nodetype(xmlelm.nodetype() )
+		self.set_nodename(xmlelm.nodename() )
 		for key in xmlelm.attributes() :
-			self.set_attribute(key,xmlelm.attribute(key))
+			self.set_attribute(key,xmlelm.attribute(key) )
 		for elm in xmlelm.children() :
 			self.add_child(elm)
 	
@@ -121,32 +149,33 @@ class XMLElement (object) :
 		self.set_nodename(xmlnode.nodeName)
 		if xmlnode.attributes is not None :
 			for k,v in xmlnode.attributes.items() :
-				self.set_attribute(str(k),str(v))
+				self.set_attribute(str(k),str(v) )
 		try :
-			self.set_attribute("data",str(xmlnode.data))
+			self.set_attribute("data",str(xmlnode.data) )
 		except AttributeError :
 			pass
 		for node in xmlnode.childNodes :
-			if node.nodeType==Document.TEXT_NODE and node.data.isspace() :#pretty print node are useless
+			if node.nodeType == Document.TEXT_NODE \
+			   and node.data.isspace() :#pretty print node are useless
 				pass
 			else :
-				elm=XMLElement()
+				elm = XMLElement()
 				elm.load_xml(node)
 				self.add_child(elm)
 	
 	def save_xml (self, xmlparent=None) :
 		typ=self.nodetype()
 		if xmlparent is None :
-			assert typ==Document.DOCUMENT_NODE
-			xmlnode=Document()
-			xmlnode.ownerDocument=xmlnode
+			assert typ == Document.DOCUMENT_NODE
+			xmlnode = Document()
+			xmlnode.ownerDocument = xmlnode
 		else :
 			if typ == Document.ATTRIBUTE_NODE :
-				xmlnode=xmlparent.ownerDocument.createAttribute(self.name())
+				xmlnode=xmlparent.ownerDocument.createAttribute(self.name() )
 			elif typ == Document.CDATA_SECTION_NODE :
 				xmlnode=xmlparent.ownerDocument.createCDATASection()
 			elif typ == Document.COMMENT_NODE :
-				xmlnode=xmlparent.ownerDocument.createComment(self.attribute("data"))
+				xmlnode=xmlparent.ownerDocument.createComment(self.attribute("data") )
 			elif typ == Document.DOCUMENT_FRAGMENT_NODE :
 				xmlnode=xmlparent.ownerDocument.createDocumentFragment()
 			elif typ == Document.DOCUMENT_NODE :
@@ -154,9 +183,9 @@ class XMLElement (object) :
 			elif typ == Document.DOCUMENT_TYPE_NODE :
 				raise UserWarning("cannot create a DOCUMENT_TYPE_NODE from there")
 			elif typ == Document.ELEMENT_NODE :
-				xmlnode=xmlparent.ownerDocument.createElement(self.nodename())
+				xmlnode=xmlparent.ownerDocument.createElement(self.nodename() )
 				for key in self.attributes() :
-					xmlnode.setAttribute(key,self.attribute(key))
+					xmlnode.setAttribute(key,self.attribute(key) )
 			elif typ == Document.ENTITY_NODE :
 				raise UserWarning("cannot create a ENTITY_NODE from there")
 			elif typ == Document.ENTITY_REFERENCE_NODE :
@@ -166,7 +195,7 @@ class XMLElement (object) :
 			elif typ == Document.PROCESSING_INSTRUCTION_NODE :
 				xmlnode=xmlparent.ownerDocument.createProcessingInstruction()
 			elif typ == Document.TEXT_NODE :
-				xmlnode=xmlparent.ownerDocument.createTextNode(self.attribute("data"))
+				xmlnode=xmlparent.ownerDocument.createTextNode(self.attribute("data") )
 			else :
 				raise UserWarning("problem")
 			#xml tree save
