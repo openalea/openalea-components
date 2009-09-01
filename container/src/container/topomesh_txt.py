@@ -21,12 +21,17 @@ This module provide a simple way to serialize a mesh in a txt file
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
+from data_prop import DataProp
 from topomesh import Topomesh
 from utils.utils_txt import write_description,read_description
 
-def topomesh_to_txt (f, mesh, description) :
-    """
-    write the txt representation of a topomesh
+def topomesh_to_txt (f, mesh, description, props) :
+    """Write the txt representation of a topomesh.
+    
+    f: an open file
+    mesh: a topomesh object
+    description: a textual description
+    props: a list of property for each degree
     """
     #create base node
     f.write("BEGIN topomesh degree %d\n" % mesh.degree())
@@ -34,12 +39,29 @@ def topomesh_to_txt (f, mesh, description) :
     #description
     write_description(f,description)
     f.write("\n")
+    
+    #write properties
+    f.write("BEGIN properties description\n")
+    for deg,deg_props in enumerate(props) :
+        f.write("deg%d" % deg)
+        for name,prop in deg_props :
+            f.write("\t%s(%s,%s)" % (name,prop.type(),prop.unit() ) )
+        f.write("\n")
+    f.write("END properties description\n")
+    f.write("\n")
 
     #write wisps
     for deg in xrange(mesh.degree() + 1) :
+        if deg < len(props) :
+            deg_props = props[deg]
+        else :
+            deg_props = []
         f.write("BEGIN wisp degree %d\n" % deg)
         for wid in mesh.wisps(deg) :
-            f.write("id %d\n" % wid)
+            f.write("id %d" % wid)
+            for name,prop in deg_props :
+                f.write("\t%s" % prop[wid])
+            f.write("\n")
         f.write("END wisp degree %d\n" % deg)
 
     #write links between wisps
@@ -68,6 +90,22 @@ def txt_to_topomesh (f, method = "set") :
     mesh = Topomesh(deg,method)
     #read description
     descr = read_description(f)
+    
+    #read properties
+    props = [[] for i in xrange(mesh.degree() + 1)]
+    line = ""
+    while "BEGIN properties description" not in line :
+        line = f.readline()
+    line = f.readline()
+    while "END properties description" not in line :
+        gr = line[:-1].split("\t")
+        prop_deg = int(gr[0][3:])
+        for prop_descr in gr[1:] :
+            name,prop = prop_descr.split("(")
+            typ,unit = prop[:-1].split(",")
+            props[prop_deg].append( (name,DataProp(type = typ,unit = unit) ) )
+        
+        line = f.readline()
 
     #wisps
     for i in xrange(mesh.degree() + 1) :
@@ -77,7 +115,12 @@ def txt_to_topomesh (f, method = "set") :
         deg = int(line.split(" ")[3])
         line = f.readline()
         while "END wisp" not in line :
-            mesh.add_wisp(deg,int(line.split(" ")[1]) )
+            gr = line.split()
+            wid = int(gr[1])
+            mesh.add_wisp(deg,wid)
+            #props
+            for ind,val in enumerate(gr[2:]) :
+            	props[deg][ind][1][wid] = eval("%s(%s)" % (props[deg][ind][1].type(),val) )
             line = f.readline()
 
     #links
@@ -91,14 +134,14 @@ def txt_to_topomesh (f, method = "set") :
         line = f.readline()
 
     #return
-    return mesh,descr
+    return mesh,descr,props
 
-def write_topomesh (filename, mesh, description) :
+def write_topomesh (filename, mesh, description, props = []) :
     """
     write a topomesh in a file using a txt representation
     """
     f = open(filename,'w')
-    topomesh_to_txt(f,mesh,description)
+    topomesh_to_txt(f,mesh,description,props)
     f.close()
 
 def read_topomesh (filename, method = "set") :
@@ -106,6 +149,6 @@ def read_topomesh (filename, method = "set") :
     read a topomesh stored in a file as a txt representation
     """
     f = open(filename,'r')
-    mesh,descr = txt_to_topomesh(f,method)
+    mesh,descr,props = txt_to_topomesh(f,method)
     f.close()
-    return mesh,descr
+    return mesh,descr,props
