@@ -1,6 +1,7 @@
 #from _container import *
 #from id_dict import IdDict
 from utils import IdDict
+from data_prop import DataProp
 from graph import Graph
 from property_graph import PropertyGraph
 from tree import Tree, PropertyTree
@@ -19,4 +20,5 @@ from topomesh_algo import clean_geometry, clean_orphans,\
                           is_collapse_topo_allowed, collapse_edge,\
                           expand, border, shrink,\
                           expand_to_border, expand_to_region, external_border,\
-                          clean_duplicated_borders, merge_wisps
+                          clean_duplicated_borders, merge_wisps,\
+                          find_cycles

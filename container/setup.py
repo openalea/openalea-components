@@ -37,7 +37,7 @@ license= 'Cecill-C'
 # Main setup
 setup(
     # Meta data
-    name='OpenAlea.Container',
+    name='openalea.container',
     version=version,
     description=description,
     long_description=long_description,

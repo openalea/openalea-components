@@ -22,8 +22,7 @@ __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
 def write_description (f, description) :
-    """
-    add a description paragraph to a given stream
+    """Add a description paragraph to a given stream
     if description is not empty
     """
     if description == "" :
@@ -34,8 +33,7 @@ def write_description (f, description) :
     f.write("END description\n")
 
 def read_description (f) :
-    """
-    read the description in a stream
+    """Read the description in a stream.
     """
     line = ""
     while "BEGIN description" not in line :
