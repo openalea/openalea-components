@@ -37,6 +37,8 @@ class XMLElement (object) :
 		self._nodetype = nodetype
 		self._nodename = nodename
 		self._attributes = {}
+		if nodeid is not None :
+			self.set_id(nodeid)
 		#xml tree structure
 		self._parent = parent
 		self._children = []

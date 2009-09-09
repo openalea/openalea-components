@@ -428,8 +428,8 @@ class SVGPath (SVGElement) :
 
 
 class SVGConnector (SVGPath) :
-	def __init__ (self, parent=None, svgid=None) :
-		SVGPath.__init__(self,parent,svgid)
+	def __init__ (self, id=None, parent=None) :
+		SVGPath.__init__(self,id,parent)
 		self.set_attribute("inkscape:connector-type","polyline")
 		self._source = None
 		self._target = None
