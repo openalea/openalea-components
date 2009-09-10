@@ -442,6 +442,7 @@ def external_border (mesh, scale, wids) :
         if (len(regions) == 1) or (len(regions - inside_wisps) > 0) :
             border.append(bid)
     return border
+
 def find_cycles (mesh, scale, length_max) :
 	"""Find all cycles in the mesh.
 	
