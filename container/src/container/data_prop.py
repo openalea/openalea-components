@@ -21,6 +21,49 @@ This module provide a python definition of a property
 __license__= "Cecill-C"
 __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 
+class Quantity (object) :
+	"""Associate some semantic and unit to a value
+	"""
+	def __init__ (value, unit = "", type = "", description = "") :
+		"""Constructor.
+		
+		value: the actual value of the quantity
+		       may be a single value or a map of values
+		unit: string description of the physical unit
+		type: string description of the type of object
+		      (e.g.: 'float','int','Vector3')
+		description: a string describing the quantity
+		"""
+		self._value = value
+		self._unit = unit
+		self._type = type
+		self._description = description
+	
+	##########################################################
+	#
+	#		accessors
+	#
+	##########################################################
+	def value (self) :
+		"""Retrieve the value of this quantity.
+		"""
+		return self._value
+	
+	def unit (self) :
+		"""Retrieve unit of this quantity.
+		"""
+		return self._unit
+	
+	def type (self) :
+		"""Retrieve type of data in this quantity.
+		"""
+		return self._type
+	
+	def description (self) :
+		"""Return the description associated with this quantity.
+		"""
+		return self._description
+
 class DataProp (dict) :
 	"""
 	Implementation of property with unit, type and description

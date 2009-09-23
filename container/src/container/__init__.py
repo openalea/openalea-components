@@ -1,7 +1,7 @@
 #from _container import *
 #from id_dict import IdDict
 from utils import IdDict
-from data_prop import DataProp
+from data_prop import Quantity,DataProp
 from graph import Graph
 from property_graph import PropertyGraph
 from tree import Tree, PropertyTree
