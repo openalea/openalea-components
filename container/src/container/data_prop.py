@@ -49,6 +49,11 @@ class Quantity (object) :
 		"""
 		return self._value
 	
+	def set_value (self, value) :
+		"""Set the value of this quantity.
+		"""
+		self._value = value
+	
 	def unit (self) :
 		"""Retrieve unit of this quantity.
 		"""
@@ -63,6 +68,23 @@ class Quantity (object) :
 		"""Return the description associated with this quantity.
 		"""
 		return self._description
+	
+	##########################################################
+	#
+	#		dict interface for dict quantities
+	#
+	##########################################################
+	def __iter__ (self) :
+		return iter(self._value)
+	
+	def iteritems (self) :
+		return self._value.iteritems()
+	
+	def __getitem__ (self, key) :
+		return self._value[key]
+	
+	def __setitem__ (self, key, val) :
+		self._value[key] = val
 
 class DataProp (dict) :
 	"""
