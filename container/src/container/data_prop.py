@@ -71,11 +71,61 @@ class Quantity (object) :
 	
 	##########################################################
 	#
+	#		number interface
+	#
+	##########################################################
+	def __iadd__ (self, value) :
+		"""Add a value to this quantity.
+		"""
+		if isinstance(self._value,dict) :
+			for k,v in self._value.iteritems() :
+				self._value[k] += value
+		else :
+			self._value += value
+		return self
+	
+	def __isub__ (self, value) :
+		"""Substract a value from this quantity.
+		"""
+		if isinstance(self._value,dict) :
+			for k,v in self._value.iteritems() :
+				self._value[k] -= value
+		else :
+			self._value -= value
+		return self
+	
+	def __imul__ (self, value) :
+		"""Multiply this quantity by a value.
+		"""
+		if isinstance(self._value,dict) :
+			for k,v in self._value.iteritems() :
+				self._value[k] *= value
+		else :
+			self._value *= value
+		return self
+	
+	def __idiv__ (self, value) :
+		"""Divide this quantity by a value.
+		"""
+		if isinstance(self._value,dict) :
+			for k,v in self._value.iteritems() :
+				self._value[k] /= value
+		else :
+			self._value /= value
+		return self
+	##########################################################
+	#
 	#		dict interface for dict quantities
 	#
 	##########################################################
+	def __len__ (self) :
+		return len(self._value)
+	
 	def __iter__ (self) :
 		return iter(self._value)
+	
+	def itervalues (self) :
+		return self._value.itervalues()
 	
 	def iteritems (self) :
 		return self._value.iteritems()
