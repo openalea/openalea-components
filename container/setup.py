@@ -18,7 +18,7 @@ namespace = 'openalea'
 pkg_name= namespace + '.' + name
 
 # Package version policy
-version= '2.0.0'
+version= '2.0.1'
 
 # Description
 description= 'Basic data structures in OpenAlea.'
@@ -55,7 +55,8 @@ setup(
     # Packages
     namespace_packages = [namespace],
     create_namespaces = True,
-    packages =  [ 'openalea.' + x for x in find_packages('src') ],
+    #packages =  [ 'openalea.' + x for x in find_packages('src') ],
+    packages =  [ 'openalea.container' ],
     package_dir = { 'openalea.container':  pj('src','container'),
                     '' : 'src'  },
 

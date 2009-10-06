@@ -8,7 +8,7 @@ pj = os.path.join
 
 name = 'container'
 
-options = Options('options.py', ARGUMENTS)
+options = Variables('options.py', ARGUMENTS)
 tools = ['boost_python']
 
 env = ALEASolution(options, tools)
