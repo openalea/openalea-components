@@ -160,6 +160,8 @@ class Tree(IRootedGraph,
         :param vtx_id: The vertex identifier.
          '''
         self._root = vtx_id
+        if self._root not in self._parent:
+            self._parent[self._root] = None
 
     def get_root(self):
         '''
@@ -320,18 +322,45 @@ class Tree(IRootedGraph,
     # Editable Tree Interface.
     #########################################################################
 
-    def sub_tree(self, vtx_id):
-        """
-        Return a reference of the tree rooted on `vtx_id`.
+    def sub_tree(self, vtx_id, copy=True):
+        """Return the subtree rooted on `vtx_id`.
 
-        :returns: Editable Tree
+        The induced subtree of the tree has the vertices in the ancestors of vtx_id.
+
+        :Parameters:
+          - `vtx_id`: A vertex of the original tree.
+          - `copy`:  
+            If True, return a new tree holding the subtree. If False, the subtree is
+            created using the original tree by deleting all vertices not in the subtree.
+
+        :returns: A sub tree of the tree. If copy=True, a new Tree is returned. 
+            Else the subtree is created inplace by modifying the original tree. 
         """
-        tree = Tree(root=vtx_id)
-        tree.root = vtx_id
-        tree._parent = self._parent
-        tree._children = self._children
-        tree._id = self._id
-        return tree
+
+        if not copy:
+            # remove all vertices not in the sub_tree
+            bunch = set(pre_order(self, vtx_id))
+            for vid in self:
+                if vid not in bunch:
+                    self.remove_vertex(vid)
+
+            self._root = vtx_id
+            self._parent[self._root] = None
+            return self
+        else:
+            treeid_id = {}
+            tree = Tree()
+            tree.root = 0
+            treeid_id[vtx_id] = tree.root
+            subtree = pre_order(self, vtx_id)
+            
+            subtree.next()
+            for vid in subtree:
+                parent = treeid_id[self.parent(vid)]
+                v = tree.add_child(parent)
+                treeid_id[vid] = v
+
+            return tree
 
     def insert_sibling_tree(self, vid, tree ):
         """
@@ -349,16 +378,12 @@ class Tree(IRootedGraph,
         treeid_id[root]=root_id
 
         # pre_order traversal from root and renumbering
-        vertices = pre_order(tree, root)
-        root = vertices.next()
-        for vtx_id in vertices:
-            pid = tree.parent(vtx_id)
-            parent = treeid_id[pid]
+        for vtx_id in pre_order(tree, vid):
+            parent = treeid_id[tree.parent(vtx_id)]
             v = self.add_child(parent)
             treeid_id[vtx_id] = v
 
         return treeid_id
-
 
     def add_child_tree(self, parent, tree):
         """
@@ -374,9 +399,7 @@ class Tree(IRootedGraph,
         treeid_id[root]=root_id
 
         # pre_order traversal from root and renumbering
-        vertices = pre_order(tree, root)
-        root = vertices.next()
-        for vtx_id in vertices:
+        for vtx_id in pre_order(tree, root):
             parent = treeid_id[tree.parent(vtx_id)]
             vid = self.add_child(parent)
             treeid_id[vtx_id] = vid
@@ -477,20 +500,49 @@ class PropertyTree(Tree):
     # Editable Tree Interface.
     #########################################################################
 
-    def sub_tree(self, vtx_id):
-        """
-        Return a reference of the tree rooted on `vtx_id`.
+    def sub_tree(self, vtx_id, copy=True):
+        """Return the subtree rooted on `vtx_id`.
 
-        :returns: Editable Tree
-        """
-        tree = PropertyTree()
-        tree._root = vtx_id
-        tree._parent = self._parent
-        tree._children = self._children
-        tree._id = self._id
+        The induced subtree of the tree has the vertices in the ancestors of vtx_id.
 
-        tree._properties = self._properties
-        return tree
+        :Parameters:
+          - `vtx_id`: A vertex of the original tree.
+          - `copy`:  
+            If True, return a new tree holding the subtree. If False, the subtree is
+            created using the original tree by deleting all vertices not in the subtree.
+
+        :returns: A sub tree of the tree. If copy=True, a new Tree is returned. 
+            Else the subtree is created inplace by modifying the original tree. 
+        """
+        if not copy:
+            # remove all vertices not in the sub_tree
+            bunch = set(pre_order(self, vtx_id))
+            for vid in self:
+                if vid not in bunch:
+                    self.remove_vertex(vid)
+                    self._remove_vertex_properties(vid)
+
+            self.root = vtx_id
+            return self
+        else:
+            treeid_id = {}
+            tree = self.__class__()
+            tree.root = 0
+            treeid_id[vtx_id] = tree.root
+            subtree = pre_order(tree, vtx_id)
+            subtree.next()
+            for vid in subtree:
+                parent = treeid_id[self.parent(vid)]
+                v = tree.add_child(parent)
+                treeid_id[vid] = v
+
+            for tid, vid in treeid_id.iteritems():
+                for name in self.properties():
+                    v = self.property(name).get(tid)
+                    if v is not None:
+                        tree._properties[name][vid] = v
+
+            return tree
 
     def insert_sibling_tree(self, vid, tree ):
         """
