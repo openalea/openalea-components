@@ -80,5 +80,6 @@ setup(
     dependency_links = ['http://openalea.gforge.inria.fr/pi'],
     #install_requires = [],
 
+    pylint_packages = ['src/container', 'src/container/backend', 'src/container/utils', 'src/container/generator', 'src/openalea/iterator', 'src/openalea/traversal']
 
     )
