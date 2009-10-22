@@ -23,9 +23,9 @@ __revision__=" $Id: $ "
 from openalea.core import Factory
 from openalea.core.interface import *
 
-__name__ = "container.mesh"
-__alias__ = []
-__version__ = '0.0.2'
+__name__ = "openalea.container.mesh"
+__alias__ = ['container.mesh']
+__version__ = '0.0.3'
 __license__ = "Cecill-C"
 __authors__ = 'Jerome Chopard'
 __institutes__ = 'INRIA/CIRAD'
