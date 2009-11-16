@@ -18,7 +18,7 @@ namespace = 'openalea'
 pkg_name= namespace + '.' + name
 
 # Package version policy
-version= '2.0.1'
+version= '2.0.2'
 
 # Description
 description= 'Basic data structures in OpenAlea.'
