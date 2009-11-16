@@ -1,30 +1,42 @@
-from openalea.deploy import gforge
+from os import rename
+from os.path import basename,join
 from glob import glob
-from os import path
-import getpass
+from getpass import getpass
+from openalea.misc.gforge_upload import Uploader
 
-egg_files=glob("dist/*.egg")
+egg_files = glob("dist/*.egg")
 if len(egg_files)!=1 :
-	raise UserWarning("clean dist directory")
+	raise UserWarning("clean dist directory and reload setup.py")
 
-filename=egg_files[0]
+oldname = basename(egg_files[0])
+
+if oldname.startswith("VPlants.") :
+	filename = oldname
+else :
+	filename = "VPlants.%s" % oldname
+	rename(join("dist",oldname),
+	       join("dist",filename) )
 print filename
-name_end=path.basename(filename).split("-")[1]
-release=".".join(name_end.split(".")[:2])
 
-project=43 #vplants
-package=path.basename(filename).split("-")[0]#"VPlants-NotReleased"
+kwds = {}
+kwds['project'] = "openalea"
+kwds['package'] = "VPlants"
+kwds['release'] = "0.7"
+kwds['directory'] = "dist/"
+kwds['simulate'] = False
+kwds['login'] = "chopard"
+kwds['password'] = getpass("password for chopard:")
 
-passwd = getpass.getpass("password:")
-gforge.login("chopard",passwd)
-print "loged"
-print "package"
-if gforge.get_package_id(project,package)<0 :
-	gforge.add_package(project,package)
-print "release"
-if gforge.get_release_id(project,package,release)<0 :
-	gforge.add_release(project,package,release,"","")
-print "add file"
-gforge.add_file(43,package,release,filename)
-print "added"
-gforge.logout()
+#python 2.5
+kwds['filename'] = filename
+uploader = Uploader(**kwds)
+uploader.add()
+#python 2.6
+filename26 = filename.replace("py2.5","py2.6")
+rename(join("dist",filename),
+       join("dist",filename26) )
+
+kwds['filename'] = filename26
+uploader = Uploader(**kwds)
+uploader.add()
+
