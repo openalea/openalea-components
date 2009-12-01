@@ -20,9 +20,21 @@ This module defines read an write functions
 __license__= "Cecill-C"
 __revision__=" $Id: $ "
 
-from xml.dom.minidom import parse,Document
+from xml.dom.minidom import parse,parseString,Document
 from xml_element import XMLElement
 from svg_scene import SVGScene
+
+class XMLReader (object) :
+	"""Base class to read aserialized xml.
+	"""
+	def __init__ (self) :
+		pass
+	
+	def from_xml (self, data) :
+		doc = parseString(data)
+		elm = XMLElement()
+		elm.load_xml(doc)
+		return elm
 
 class XMLFileReader (object) :
 	"""
@@ -39,6 +51,15 @@ class XMLFileReader (object) :
 		elm = XMLElement()
 		elm.load_xml(doc)
 		return elm
+
+class XMLWriter (object) :
+	"""Base class to serialize an xml file
+	"""
+	def __init__ (self) :
+		self._xml_doc = None
+	
+	def to_xml (self) :
+		return self._xml_doc.toxml()
 
 class XMLFileWriter (object) :
 	"""
@@ -84,6 +105,43 @@ class SVGFileReader (XMLFileReader) :
 		sc.load()
 		return sc
 
+class SVGReader (XMLReader) :
+	"""Base class to read svg data.
+	"""
+	def from_xml (self, data) :
+		doc = XMLReader.from_xml(self,data)
+		try :
+			root = [node for node in doc.children() if node.nodename() == "svg:svg"][0]
+		except IndexError :
+			raise UserWarning("Old style svg file, you need to prefix node names with 'svg:'")
+		sc = SVGScene()
+		sc.from_node(root)
+		sc.load()
+		return sc
+
+class SVGWriter (XMLWriter) :
+	"""Base class to serialize an svg file.
+	"""
+	def __init__ (self, svgscene) :
+		XMLWriter.__init__(self)
+		doc = XMLElement(None,
+		                 Document.DOCUMENT_NODE,
+		                 "#document")
+		comment = XMLElement(None,
+		                     Document.COMMENT_NODE,
+		                     "#comment")
+		comment.set_attribute("data",
+		                      "created from python svgdraw module")
+		doc.add_child(comment)
+		self._svg_doc = doc
+		self._svg_scene = svgscene
+		self._svg_doc.add_child(svgscene)
+	
+	def to_xml (self) :
+		self._svg_scene.save()
+		self._xml_doc = self._svg_doc.save_xml()
+		return XMLWriter.to_xml(self)
+
 class SVGFileWriter (XMLFileWriter) :
 	"""
 	base class to write an svg file
@@ -108,4 +166,15 @@ def open_svg (filename, mode='r') :
 		return SVGFileWriter(filename)
 	else :
 		raise UserWarning ("mode %s not recognized" % str(mode))
+def to_xml (svgscene) :
+	"""Serialize a scene into a string.
+	"""
+	w = SVGWriter(svgscene)
+	return w.to_xml()
+
+def from_xml (data) :
+	"""Deserialize a string into a scene.
+	"""
+	r = SVGReader()
+	return r.from_xml(data)
 

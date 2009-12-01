@@ -446,6 +446,11 @@ class SVGConnector (SVGPath) :
 	def set_target (self, svg_elm_id) :
 		self._target = svg_elm_id
 	
+	##############################################
+	#
+	#		path modification
+	#
+	##############################################
 	def load (self) :
 		SVGPath.load(self)
 		if self.has_attribute("inkscape:connection-start") :

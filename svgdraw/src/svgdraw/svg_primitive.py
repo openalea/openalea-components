@@ -24,6 +24,7 @@ from openalea.plantgl.scenegraph import Sphere,Box,FaceSet,QuadSet,Translated,Sc
 from openalea.plantgl.math import Vector3,Matrix4,eulerRotationZYX,scaling
 from svg_element import SVGElement,read_float,write_float
 from xml_element import XMLElement
+from svg_path import SVGPath
 
 class SVGCenteredElement (SVGElement) :
 	def __init__ (self, id=None, parent=None, nodename=None) :
@@ -84,12 +85,13 @@ class SVGBox (SVGCenteredElement) :
 		pglshape.geometry=Box(Vector3(1,1,1))
 		SVGCenteredElement.to_pgl3D(self,pglshape)
 
-class SVGSphere (SVGCenteredElement) :
+class SVGSphere (SVGCenteredElement,SVGPath) :
 	"""
 	a circle or sphere
 	"""
 	def __init__ (self, id=None, parent=None) :
-		SVGCenteredElement.__init__(self,id,parent,"svg:path")
+		SVGPath.__init__(self,id,parent)
+		#SVGCenteredElement.__init__(self)
 		self.set_attribute("sodipodi:type","arc")
 	##############################################
 	#
@@ -97,7 +99,7 @@ class SVGSphere (SVGCenteredElement) :
 	#
 	##############################################
 	def load (self) :
-		SVGCenteredElement.load(self)
+		SVGPath.load(self)
 		rx = float(self.get_default("sodipodi:rx",0) )
 		ry = float(self.get_default("sodipodi:ry",0) )
 		cx = float(self.get_default("sodipodi:cx",0) )
@@ -117,7 +119,7 @@ class SVGSphere (SVGCenteredElement) :
 		svgcx,svgcy = self.svg_pos(cx,cy)
 		self.set_attribute("sodipodi:cx","%f" % svgcx)
 		self.set_attribute("sodipodi:cy","%f" % svgcy)
-		SVGCenteredElement.save(self)
+		SVGPath.save(self)
 		self._transform *= Matrix4.translation( (cx,cy,cz) )
 		self._transform *=Matrix4(scaling( (rx,ry,rz) ) )
 	##############################################
@@ -127,11 +129,11 @@ class SVGSphere (SVGCenteredElement) :
 	##############################################
 	def to_pgl2D (self, pglshape) :
 		pglshape.geometry=Sphere(1.,32)
-		SVGCenteredElement.to_pgl2D(self,pglshape)
+		SVGPath.to_pgl2D(self,pglshape)
 	
 	def to_pgl3D (self, pglshape) :
 		pglshape.geometry=Sphere(1.,8)
-		SVGCenteredElement.to_pgl3D(self,pglshape)
+		SVGPath.to_pgl3D(self,pglshape)
 
 class SVGImage (SVGElement) :
 	"""
