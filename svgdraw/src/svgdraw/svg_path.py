@@ -272,8 +272,18 @@ class SVGPath (SVGElement) :
 	##############################################
 	def load (self) :
 		SVGElement.load(self)
-		path_txt = self.get_default("d","")
-		self.from_string(path_txt)
+		if self.nodename() == "line" :
+			x1 = float(self.get_default("x1",0) )
+			y1 = float(self.get_default("x1",0) )
+			x2 = float(self.get_default("x1",0) )
+			y2 = float(self.get_default("x1",0) )
+			self.append('M',[(x1,y1)])
+			self.append('L',[(x2,y2)])
+		elif self.nodename() in ("polyline","polygone") :
+			raise NotImplementedError("polyline to path still need to be done :)")
+		else :
+			path_txt = self.get_default("d","")
+			self.from_string(path_txt)
 	
 	def save (self) :
 		path_txt = self.to_string()

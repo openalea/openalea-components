@@ -66,7 +66,7 @@ def _expand_path (svgelm, sc) :
 				
 				svgelm.append('M',[tup2(pt1)])
 				svgelm.append('L',[tup2(pt2)])
-		elif isinstance(svgelm,SVGSphere) :
+		"""elif isinstance(svgelm,SVGSphere) :
 			if len(tuple(svgelm.commands() ) ) == 0 :
 				#TODO better circle
 				cent = svgelm.center()
@@ -79,5 +79,5 @@ def _expand_path (svgelm, sc) :
 				svgelm.append('L',[tup2(pt1)])
 				svgelm.append('L',[tup2(pt2)])
 				svgelm.append('L',[tup2(pt3)])
-				svgelm.append('z')
+				svgelm.append('z')"""
 

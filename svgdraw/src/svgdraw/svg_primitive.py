@@ -24,7 +24,6 @@ from openalea.plantgl.scenegraph import Sphere,Box,FaceSet,QuadSet,Translated,Sc
 from openalea.plantgl.math import Vector3,Matrix4,eulerRotationZYX,scaling
 from svg_element import SVGElement,read_float,write_float
 from xml_element import XMLElement
-from svg_path import SVGPath
 
 class SVGCenteredElement (SVGElement) :
 	def __init__ (self, id=None, parent=None, nodename=None) :
@@ -85,25 +84,30 @@ class SVGBox (SVGCenteredElement) :
 		pglshape.geometry=Box(Vector3(1,1,1))
 		SVGCenteredElement.to_pgl3D(self,pglshape)
 
-class SVGSphere (SVGCenteredElement,SVGPath) :
+class SVGSphere (SVGCenteredElement) :
 	"""
 	a circle or sphere
 	"""
 	def __init__ (self, id=None, parent=None) :
-		SVGPath.__init__(self,id,parent)
-		#SVGCenteredElement.__init__(self)
-		self.set_attribute("sodipodi:type","arc")
+		SVGCenteredElement.__init__(self,id,parent,"svg:ellipse")
+	
 	##############################################
 	#
 	#		xml in out
 	#
 	##############################################
 	def load (self) :
-		SVGPath.load(self)
-		rx = float(self.get_default("sodipodi:rx",0) )
-		ry = float(self.get_default("sodipodi:ry",0) )
-		cx = float(self.get_default("sodipodi:cx",0) )
-		cy = float(self.get_default("sodipodi:cy",0) )
+		SVGCenteredElement.load(self)
+		rx = float(self.get_default("r",
+		           self.get_default("rx",
+		           self.get_default("sodipodi:rx",0) ) ) )
+		ry = float(self.get_default("r",
+		           self.get_default("ry",
+		           self.get_default("sodipodi:ry",0) ) ) )
+		cx = float(self.get_default("cx",
+		           self.get_default("sodipodi:cx",0) ) )
+		cy = float(self.get_default("cy",
+		           self.get_default("sodipodi:cy",0) ) )
 		cx,cy = self.real_pos(cx,cy)
 		self._transform *= Matrix4.translation( (cx,cy,0) )#order is important
 		self._transform *= Matrix4(scaling( (rx,ry,1) ) )
@@ -114,12 +118,12 @@ class SVGSphere (SVGCenteredElement,SVGPath) :
 		cx,cy,cz = self.center()
 		self._transform *= Matrix4(scaling(tuple(inv(r) for r in (rx,ry,rz) ) ) )
 		self._transform *= Matrix4.translation( (-cx,-cy,-cz) )
-		self.set_attribute("sodipodi:rx","%f" % rx)
-		self.set_attribute("sodipodi:ry","%f" % ry)
+		self.set_attribute("rx","%f" % rx)
+		self.set_attribute("ry","%f" % ry)
 		svgcx,svgcy = self.svg_pos(cx,cy)
-		self.set_attribute("sodipodi:cx","%f" % svgcx)
-		self.set_attribute("sodipodi:cy","%f" % svgcy)
-		SVGPath.save(self)
+		self.set_attribute("cx","%f" % svgcx)
+		self.set_attribute("cy","%f" % svgcy)
+		SVGCenteredElement.save(self)
 		self._transform *= Matrix4.translation( (cx,cy,cz) )
 		self._transform *=Matrix4(scaling( (rx,ry,rz) ) )
 	##############################################

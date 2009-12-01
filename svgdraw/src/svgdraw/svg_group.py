@@ -106,7 +106,18 @@ class SVGGroup (SVGElement) :
 		name = xmlelm.nodename()
 		if name[:4] == "svg:" :
 			name = name[4:]
-		if name == "path" :#either a path, a circle or a connector
+		
+		if name == "rect" :
+			return SVGBox()
+		elif name == "image" :
+			return SVGImage()
+		elif name == "text" :
+			return SVGText()
+		elif name == "circle" :
+			return SVGSphere()
+		elif name == "ellipse" :
+			return SVGSphere()
+		elif name == "path" :#either a path, a circle or a connector
 			if xmlelm.has_attribute("sodipodi:type") :#may be a circle
 				if xmlelm.attribute("sodipodi:type") == "arc" :#its a circle
 					return SVGSphere()
@@ -117,8 +128,6 @@ class SVGGroup (SVGElement) :
 					return SVGConnector()
 				else : #it's a simple path
 					return SVGPath()
-		elif name == "rect" :
-			return SVGBox()
 		elif name == "g" :#either a group or a layer
 			if xmlelm.has_attribute("inkscape:groupmode") : #either a layer or a stack
 				if xmlelm.has_attribute("descr") and xmlelm.attribute("descr") == "stack" :
@@ -127,10 +136,6 @@ class SVGGroup (SVGElement) :
 					return SVGLayer()
 			else :
 				return SVGGroup()
-		elif name == "image" :
-			return SVGImage()
-		elif name == "text" :
-			return SVGText()
 		else :
 			return None
 	##############################################
