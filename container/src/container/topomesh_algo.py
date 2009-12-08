@@ -126,7 +126,7 @@ def flip_edge (mesh, eid) :
     mesh.link(2,fid1,eid23)
     mesh.link(2,fid2,eid14)
 
-def is_collapse_topo_allowed (mesh, eid) :
+def is_collapse_topo_allowed (mesh, eid, protected_edges) :
     """Test wether collapse of the edge is safe.
 
     mesh: a topomesh object
@@ -145,14 +145,18 @@ def is_collapse_topo_allowed (mesh, eid) :
         for bid in mesh.regions(0,pid) :
             fids.update(mesh.regions(1,bid))
 
-    cids = set()
     eids = set()
     pids = set()
     for fid in fids :
-        cids.update(mesh.regions(2,fid))
         eids.update(mesh.borders(2,fid))
         pids.update(mesh.borders(2,fid,2))
-    elms = (pids,eids,fids,cids)
+    elms = (pids,eids,fids)
+    if mesh.degree() == 3 :
+        cids = set()
+        for fid in fids :
+            cids.update(mesh.regions(2,fid))
+        elms = elms + (cids,)
+    
     #construct local mesh
     lmesh = Topomesh(mesh.degree(),"max")
     for deg,wids in enumerate(elms) :
@@ -163,7 +167,10 @@ def is_collapse_topo_allowed (mesh, eid) :
             for rid in set(mesh.regions(deg,wid)) & elms[deg + 1] :
                 lmesh.link(deg + 1,rid,wid)
     #collapse edge on this local copy
-    pid1,pid2 = collapse_edge(lmesh,eid)
+    try :
+    	pid1,pid2 = collapse_edge(lmesh,eid,protected_edges)
+    except UserWarning :
+    	return False
     #test the result
     #edges without any face
     for wid in lmesh.wisps(1) :
@@ -187,7 +194,7 @@ def is_collapse_topo_allowed (mesh, eid) :
     #return
     return True
 
-def collapse_edge (mesh, eid) :
+def collapse_edge (mesh, eid, protected_edges) :
     """Collapse an edge.
 
     collapse an edge and remove adjacent faces
@@ -197,12 +204,18 @@ def collapse_edge (mesh, eid) :
     """
     pid1,pid2 = mesh.borders(1,eid)
     #remove face adjacents to eid
-    for fid in tuple(mesh.regions(1,eid)) :
+    for fid in tuple(mesh.regions(1,eid) ) :
         if mesh.nb_borders(2,fid) == 3 : #triangle to remove
             #find edge opposite to pid1
             eid1, = set(mesh.borders(2,fid)) - set(mesh.regions(0,pid1))
             #find edge opposite to pid2
             eid2, = set(mesh.borders(2,fid)) - set(mesh.regions(0,pid2))
+            #test for edge protected
+            if eid1 in protected_edges :
+            	if eid2 in protected_edges :
+            		raise UserWarning("unable to collapse edge %d on edge %d" % (eid1,eid2) )
+            	else :
+            		eid1,eid2 = eid2,eid1
             #remove face
             mesh.remove_wisp(2,fid)
             #relink faces connected to eid1 with eid2

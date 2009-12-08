@@ -59,15 +59,30 @@ class Quantity (object) :
 		"""
 		return self._unit
 	
+	def set_unit (self, unit) :
+		"""Set unit of this quantity.
+		"""
+		self._unit = unit
+	
 	def type (self) :
 		"""Retrieve type of data in this quantity.
 		"""
 		return self._type
 	
+	def set_type (self, type) :
+		"""Set type of data in this quantity.
+		"""
+		self._type = type
+	
 	def description (self) :
 		"""Return the description associated with this quantity.
 		"""
 		return self._description
+	
+	def set_description (self, description) :
+		"""Set the description associated with this quantity.
+		"""
+		self._description = description
 	
 	##########################################################
 	#
@@ -135,6 +150,9 @@ class Quantity (object) :
 	
 	def __setitem__ (self, key, val) :
 		self._value[key] = val
+	
+	def pop (self, key) :
+		return self._value.pop(key)
 
 class DataProp (dict) :
 	"""
