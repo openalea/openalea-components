@@ -20,7 +20,6 @@ This module defines a set of primitive elements
 __license__= "Cecill-C"
 __revision__=" $Id: $ "
 
-from vplants.plantgl.math import Matrix4
 from svg_element import SVGElement,read_float,write_float
 from xml_element import XMLElement,ELEMENT_TYPE,TEXT_TYPE
 
@@ -44,15 +43,21 @@ def read_text_fragments (span_node, current_size) :
 	return fragments
 
 class SVGText (SVGElement) :
+	"""A text positioned in space
 	"""
-	a text positioned in space
-	"""
-	def __init__ (self, id=None, parent=None) :
-		SVGElement.__init__(self,id,parent,"svg:text")
-		self._txt_fragments = []
+	def __init__ (self, x, y, txt, font_size = 8, id=None) :
+		SVGElement.__init__(self,id,None,"svg:text")
+		self._x = x
+		self._y = y
+		self.set_text(txt,font_size)
 		
+	##################################################
+	#
+	#		attributes
+	#
+	##################################################
 	def pos (self) :
-		return self._transform.getTransformationB()[2]
+		return (self._x,self._y)
 	
 	def text (self) :
 		return "".join(tup[0] for tup in self._txt_fragments)
@@ -65,6 +70,9 @@ class SVGText (SVGElement) :
 	
 	def add_text_fragment (self, txt, font_size) :
 		self._txt_fragments.append( (txt,font_size) )
+	
+	def clear (self) :
+		self._txt_fragments = []
 	##############################################
 	#
 	#		font size style
@@ -98,32 +106,28 @@ class SVGText (SVGElement) :
 	##############################################
 	def load (self) :
 		SVGElement.load(self)
-		x = float(self.get_default("x",0) )
-		y = float(self.get_default("y",0) )
-		x,y = self.real_pos(x,y)
-		self._transform *= Matrix4.translation( (x,y,0) )
+		self._x = read_float(self.get_default("x","0") )
+		self._y = read_float(self.get_default("y","0") )
 		
 		#read txt fragments
+		self.clear()
 		size = self.font_size()
 		for txt,size in read_text_fragments(self.child(0),size) :
 			self.add_text_fragment(txt,size)
 		self.clear_children()
 	
 	def save (self) :
-		x,y,z = self.pos()
-		self._transform *= Matrix4.translation( (-x,-y,-z) )
-		svgx,svgy = self.svg_pos(x,y)
-		self.set_attribute("x","%f" % svgx)
-		self.set_attribute("y","%f" % svgy)
+		self.set_attribute("x","%f" % self._x)
+		self.set_attribute("y","%f" % self._y)
 		self.set_attribute("xml:space","preserve")
 		
 		#text fragments
-		for txt,size in self._txt_fragments :
+		self.clear_children()		for txt,size in self._txt_fragments :
 			#span
 			span = XMLElement(None,ELEMENT_TYPE,"svg:tspan")
 			self.add_child(span)
-			span.set_attribute("x","%f" % svgx)
-			span.set_attribute("y","%f" % svgy)
+			span.set_attribute("x","%f" % self._x)
+			span.set_attribute("y","%f" % self._y)
 			span.set_attribute("sodipodi:role","line")
 			span.set_attribute("style","font-size:%s" % write_float(size) )
 			#txt
@@ -132,15 +136,4 @@ class SVGText (SVGElement) :
 			txtelm.set_attribute("data","%s" % txt)
 		#save
 		SVGElement.save(self)
-		self._transform *= Matrix4.translation( (x,y,z) )
-	##############################################
-	#
-	#		pgl interface #TODO deprecated
-	#
-	##############################################
-	def to_pgl2D (self, pglshape) :
-		raise NotImplementedError
-	
-	def to_pgl3D (self, pglshape) :
-		raise NotImplementedError
 

@@ -25,7 +25,7 @@ from xml_element import XMLElement
 from svg_scene import SVGScene
 
 class XMLReader (object) :
-	"""Base class to read aserialized xml.
+	"""Base class to read a serialized xml.
 	"""
 	def __init__ (self) :
 		pass

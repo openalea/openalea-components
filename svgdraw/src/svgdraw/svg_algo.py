@@ -20,6 +20,7 @@ This module defines a set of algorithms for svg elements
 __license__= "Cecill-C"
 __revision__=" $Id: $ "
 
+from math import sqrt
 from svg_primitive import SVGCenteredElement,SVGSphere
 from svg_path import SVGPath,SVGConnector
 from svg_group import SVGGroup
@@ -34,15 +35,14 @@ def expand_path (sc) :
 
 def find_center (elm) :
 	if isinstance(elm,SVGCenteredElement) :
-		return elm.center()
+		pt = elm.center()
 	elif isinstance(elm,SVGPath) :
 		pts = tuple(elm.polyline_ctrl_points() )
-		return pts[len(pts) / 2]
+		pt = pts[len(pts) / 2]
 	else :
-		raise NotImplementedError("don't know how to handleelm of type %s" % type(elm) )
-
-def tup2 (vec) :
-	return (vec[0],vec[1])
+		raise NotImplementedError("don't know how to handle elm of type %s" % type(elm) )
+	
+	return elm.scene_pos(pt)
 
 def _expand_path (svgelm, sc) :
 	if isinstance(svgelm,SVGGroup) :
@@ -56,28 +56,26 @@ def _expand_path (svgelm, sc) :
 				pt1 = find_center(source_elm)
 				pt2 = find_center(target_elm)
 				if isinstance(source_elm,SVGCenteredElement) :
-					ori = pt2 - pt1
-					ori.normalize()
-					pt1 += ori * abs(ori * source_elm.radius() )
+					dx = pt2[0] - pt1[0]
+					dy = pt2[1] - pt1[1]
+					n = sqrt(dx * dx + dy * dy)
+					dx /= n
+					dy /= n
+					rx,ry = source_elm.radius()
+					R = abs(dx * rx + dy * ry)
+					pt1 = (pt1[0] + dx * R,
+					       pt1[1] + dy * R)
 				if isinstance(target_elm,SVGCenteredElement) :
-					ori = pt1 - pt2
-					ori.normalize()
-					pt2 += ori * abs(ori * target_elm.radius() )
+					dx = pt1[0] - pt2[0]
+					dy = pt1[1] - pt2[1]
+					n = sqrt(dx * dx + dy * dy)
+					dx /= n
+					dy /= n
+					rx,ry = target_elm.radius()
+					R = abs(dx * rx + dy * ry)
+					pt2 = (pt2[0] + dx * R,
+					       pt2[1] + dy * R)
 				
-				svgelm.append('M',[tup2(pt1)])
-				svgelm.append('L',[tup2(pt2)])
-		"""elif isinstance(svgelm,SVGSphere) :
-			if len(tuple(svgelm.commands() ) ) == 0 :
-				#TODO better circle
-				cent = svgelm.center()
-				rad = svgelm.radius()
-				pt0 = cent + (rad[0],0,0)
-				pt1 = cent + (0,rad[1],0)
-				pt2 = cent - (rad[0],0,0)
-				pt3 = cent - (0,rad[1],0)
-				svgelm.append('M',[tup2(pt0)])
-				svgelm.append('L',[tup2(pt1)])
-				svgelm.append('L',[tup2(pt2)])
-				svgelm.append('L',[tup2(pt3)])
-				svgelm.append('z')"""
+				svgelm.append('M',[pt1])
+				svgelm.append('L',[pt2])
 

@@ -22,15 +22,8 @@ __revision__=" $Id: $ "
 
 import re
 from os.path import join,dirname
-from math import sin,cos,acos,asin
-from openalea.plantgl.scenegraph import Material,Color3,\
-								Translated,Scaled,AxisRotated,Transformed
-from openalea.plantgl.math import Vector3,Matrix3,Matrix4,eulerRotationZYX,scaling,norm
 from xml_element import XMLElement,SVG_ELEMENT_TYPE
-
-Ox = Vector3(1,0,0)
-Oy = Vector3(0,1,0)
-Oz = Vector3(0,0,1)
+from transform import SVGTransform,translation,rotation,scaling
 
 #to read svg transformations or values
 #norm : http://www.w3.org/TR/SVG/coords.html#TransformAttribute
@@ -51,13 +44,13 @@ def read_color (color_str) :
 		red = int(col_str[:2],16)
 		green = int(col_str[2:4],16)
 		blue = int(col_str[4:],16)
-		return Color3(red,green,blue)
+		return (red,green,blue)
 
 def write_color (color) :
 	if color is None :
 		return "none"
 	else :
-		return "#%.2x%.2x%.2x" % (color.red,color.green,color.blue)
+		return "#%.2x%.2x%.2x" % color
 
 def read_float (val_str) :
 	if val_str == "none" :
@@ -84,9 +77,9 @@ class SVGElement (XMLElement) :
 		self._style = {}
 		
 		#transformation
-		self._transform = Matrix4()#transformation matrix expressed
-		                           #in parent frame
-		                           #pos_Rparent = transform * pos_Rlocal
+		self._transform = SVGTransform()#transformation matrix expressed
+		                                #in parent frame
+		                                #pos_Rparent = transform * pos_Rlocal
 		
 		#filename for abs path
 		self._svgfilename = None
@@ -164,108 +157,65 @@ class SVGElement (XMLElement) :
 		"""Set the size of the border.
 		"""
 		self._style["stroke-width"] = write_float(width)
+	##################################################
+	#
+	#		natural vs svg position
+	#
+	##################################################
+	def natural_pos (self, svgx, svgy) :
+		"""Return position in a natural frame
+		
+		Oy oriented toward top instead of bottom.
+		"""
+		if self.parent() is None :
+			return (svgx,svgy)
+		else :
+			return self.parent().natural_pos(svgx,svgy)
+	
+	def svg_pos (self, x, y) :
+		"""Return position in drawing frame.
+		
+		Oy oriented toward bottom.
+		"""
+		if self.parent() is None :
+			return (x,y)
+		else :
+			return self.parent().svg_pos(x,y)
+	
 	##############################################
 	#
 	#		change of referential
 	#
 	##############################################
-	def global_transformation (self, matrix=Matrix4() ) :
-		return self._transform * matrix
-	
-	def global_pos (self, pos=Vector3() ) :
-		return self._transform * pos
-	
-	def global_vec (self, vec=Vector3() ) :
-		return Matrix3(self._transform) * vec
-	
-	def global_scale (self, scale=(1,1,1) ) :
-		return tuple(scale[i] * self._transform[i,i] for i in xrange(3))
-	
-	def local_pos (self, pos=Vector3() ) :
-		return self._transform.inverse() * pos
-	
-	def local_vec (self, vec=Vector3() ) :
-		return Matrix3(self._transform.inverse() ) * vec
-	
-	def local_scale (self, scale=(1,1,1)) :
-		return tuple(scale[i] / self._transform [i,i] for i in xrange(3) )
-	
-	def abs_pos (self, pos=Vector3() ) :
-		ppos = self.global_pos(pos)
+	def scene_pos (self, pos) :
+		ppos = self._transform.apply_to_point(pos)
 		if self.parent() is None :
 			return ppos
 		else :
-			return self.parent().abs_pos(ppos)
+			return self.parent().scene_pos(ppos)
 	
-	def abs_scaling (self, size=Vector3() ) :
-		gsca = self.global_scale(size)
-		if self.parent() is None :
-			return gsca
-		else :
-			return self.parent().abs_scaling(gsca)
 	##############################################
 	#
-	#		modify transformation
+	#		transformation
 	#
 	##############################################
-	def set_transformation (self, matrix) :
-		self._transform = matrix
+	def transformation (self) :
+		return self._transform
 	
-	def transform (self, matrix) :
-		self._transform = matrix * self._transform
+	def set_transformation (self, transfo) :
+		self._transform.clone(transfo)
 	
-	def translate (self, vec) :
-		self._transform = Matrix4.translation(vec) * self._transform
+	def transform (self, transfo) :
+		self._transform = self._transform * transfo
+	
+	def translate (self, dx, dy) :
+		self._transform = self._transform * translation(dx,dy)
 	
 	def rotate (self, angle) :
-		self._transform = Matrix4(eulerRotationZYX( (angle,0,0) ) ) * self._transform
+		self._transform = self._transform * rotation(angle)
 	
-	def scale (self, scale) :
-		self._transform = Matrix4(scaling(scale) ) * self._transform
-	##############################################
-	#
-	#		SVG frame
-	#
-	##############################################
-	def real_vec (self, svgx, svgy) :
-		return svgx,-svgy
-	
-	def svg_vec (self, x, y) :
-		return x,-y
-	
-	def real_pos (self, svgx, svgy) :
-		if self.parent() is None :
-			return self.real_vec(svgx,svgy)
-		else :
-			return self.parent().real_pos(svgx,svgy)
-	
-	def svg_pos (self, x, y) :
-		if self.parent() is None :
-			return self.svg_vec(x,y)
-		else :
-			return self.parent().svg_pos(x,y)
-	
-	def real_matrix (self, matrix) :
-		m = matrix
-		return Matrix4( (m[0,0],-m[0,1],0,m[0,3],
-		                 -m[1,0],m[1,1],0,-m[1,3]) )
-	
-	def svg_matrix (self, matrix) :
-		m = matrix
-		return Matrix4( (m[0,0],-m[0,1],0,m[0,3],
-		                 -m[1,0],m[1,1],0,-m[1,3]) )
-	
-	def real_transformation (self, matrix) :
-		if self.parent() is None :
-			return self.real_matrix(matrix)
-		else :
-			return self.parent().real_transformation(matrix)
-	
-	def svg_transformation (self, matrix) :
-		if self.parent() is None :
-			return self.svg_matrix(matrix)
-		else :
-			return self.parent().svg_transformation(matrix)
+	def scale (self, sx, sy) :
+		self._transform = self._transform * scaling(sx,sy)
 	
 	##############################################
 	#
@@ -289,147 +239,21 @@ class SVGElement (XMLElement) :
 				style[key] = val
 		return style
 	
-	def load_transformation (self) :
-		#transformation
-		if self.has_attribute("transform") :
-			tr = self.attribute("transform")
-			if "matrix" in tr :
-				x11,x21,x12,x22,x13,x23 = (float(val) for val in matrix_re.match(tr).groups() )
-				m = Matrix4( (x11,x12,0,x13,
-				              x21,x22,0,x23) )
-				self.transform(self.real_transformation(m) )
-			elif "translate" in tr :
-				xtr,ytr = translate_re.match(tr).groups()
-				x = float(xtr)
-				if ytr is None :
-					y = x
-				else :
-					y = float(ytr)
-				x,y = self.real_vec(x,y)
-				self.translate( (x,y,0) )
-			elif "scale" in tr :
-				xtr,ytr = scale_re.match(tr).groups()
-				x = float(xtr)
-				if ytr is None :
-					y = x
-				else :
-					y = float(ytr)
-				self.scale( (x,y,0) )
-			elif "rotate" in tr :
-				raise NotImplementedError
-			elif "skewX" in tr :
-				raise NotImplementedError
-			elif "skewY" in tr :
-				raise NotImplementedError
-			else :
-				raise UserWarning("don't know how to translate this transformation :\n %s" % tr)
-		
 	def load (self) :
 		XMLElement.load(self)
 		self._style.update(self.load_style() )
-		self.load_transformation()
+		#transformation
+		if self.has_attribute("transform") :
+			txt = self.attribute("transform")
+			self._transform.read(txt)
 	
 	def save_style (self) :
 		style = self.load_style()
 		style.update(self._style)
 		self.set_attribute("style",";".join(["%s:%s" % it for it in style.iteritems()]) )
 	
-	def save_transformation (self) :
-		tr = self.svg_transformation(self._transform)
-		transform = "matrix(%f %f %f %f %f %f)" % (tr[0,0],tr[1,0],tr[0,1],tr[1,1],tr[0,3],tr[1,3])
-		self.set_attribute("transform",transform)
-		
 	def save (self) :
 		XMLElement.save(self)
 		self.save_style()
-		self.save_transformation()
-	##############################################
-	#
-	#		PGL interface #TODO deprecated
-	#
-	##############################################
-	def primitive (self, geom) :
-		while isinstance(geom,Transformed) :
-			geom=geom.geometry
-		return geom
-	
-	def pgl_transfo2D (self, geom) :
-		scaling,rotation,trans=self._transform2D.getTransformationB()
-		if scaling[0]!=1 or scaling[1]!=1 :
-			geom=Scaled(scaling,geom)
-		if rotation[0]!=0 :
-			geom=AxisRotated(Oz,rotation[0],geom)
-		if trans[0]!=0 or trans[1]!=0 :
-			geom=Translated(trans,geom)
-		return geom
-	
-	def pgl_style (self, pglshape) :
-		#style
-		if pglshape.appearance is None :
-			mat=Material()
-		else :
-			mat=pglshape.appearance
-		if self.fill is None :
-			if self.stroke is not None :
-				mat.ambient=self.stroke
-		else :
-			mat.ambient=self.fill
-		pglshape.appearance=mat
-	
-	def to_pgl2D (self, pglshape) :
-		#style
-		self.pgl_style(pglshape)
-		#transformation
-		pglshape.geometry=self.pgl_transfo2D(pglshape.geometry)
-	
-	def pgl_transfo3D (self, geom) :
-		if self.is_absolute() :
-			mat=self._transform3D
-		else :
-			mat=self._transform2D*self._transform3D
-		scaling,rotation,trans=mat.getTransformationB()
-		#scaling
-		if scaling[0]!=1 or scaling[1]!=1 or scaling[2]!=1 :
-			geom=Scaled(scaling,geom)
-		#la rotation peut etre fausse
-		#implementation perso
-		mat=Matrix3(mat)
-		col=[mat.getColumn(i) for i in xrange(3)]
-		scal=[v.normalize() for v in col]
-		mat=Matrix3(*col)
-		ca=(mat.trace()-1.)/2.
-		if abs(ca-1)>1e-6 :#angle!=0
-			if abs(ca+1.)<1e-3 :#angle=pi
-				angle=acos(ca)
-				axis=Vector3(mat[2,1],mat[0,2],mat[1,0])
-				if norm(axis)<1e-3 :#rotation suivant un axe du repere
-					axis=Vector3()
-					for i in xrange(3) :
-						if mat[i,i]>0 :
-							axis[i]=1
-			else :
-				n=mat-mat.transpose()
-				if n[2,2]>0. :
-					angle=acos(ca)
-				else :
-					angle=-acos(ca)
-				n/=(2*sin(angle))
-				axis=Vector3(n[2,1],n[0,2],n[1,0])
-			geom=AxisRotated(axis,angle,geom)
-		"""if rotation[2]!=0 :
-			geom=AxisRotated(Ox,rotation[2],geom)
-		if rotation[1]!=0 :
-			geom=AxisRotated(Oy,rotation[1],geom)
-		if rotation[0]!=0 :
-			geom=AxisRotated(Oz,rotation[0],geom)"""
-		#translation
-		if norm(trans)>0 :
-			geom=Translated(trans,geom)
-		return geom
-	
-	def to_pgl3D (self, pglshape) :
-		#style
-		self.pgl_style(pglshape)
-		#transformation
-		pglshape.geometry=self.pgl_transfo3D(pglshape.geometry)
+		self.set_attribute("transform",self._transform.write() )
 

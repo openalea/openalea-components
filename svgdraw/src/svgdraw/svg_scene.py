@@ -20,17 +20,13 @@ This module defines a special top level layer
 __license__= "Cecill-C"
 __revision__=" $Id: $ "
 
-from openalea.plantgl.scenegraph import Scene,Shape,Material,\
-                                        FaceSet,Polyline,Group,\
-                                        Translated,Scaled,Transformed
 from svg_group import SVGGroup,SVGLayer
 
 class SVGScene (SVGGroup) :
+	"""Maintain a list of svg elms
 	"""
-	maintain a list of svg elms
-	"""
-	def __init__ (self) :
-		SVGGroup.__init__(self,"pglscene",None)
+	def __init__ (self, width = 0, height = 0) :
+		SVGGroup.__init__(self,width,height,"pglscene")
 		self.set_nodename("svg:svg")
 		self.set_attribute("xmlns:dc","http://purl.org/dc/elements/1.1/")
 		self.set_attribute("xmlns:cc","http://web.resource.org/cc/")
@@ -40,9 +36,37 @@ class SVGScene (SVGGroup) :
 		self.set_attribute("xmlns:inkscape","http://www.inkscape.org/namespaces/inkscape")
 		self.set_attribute("xmlns:sodipodi","http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd")
 	
-	def get_layer (self, layer_name) :
+	##################################################
+	#
+	#		id generator
+	#
+	##################################################
+	##################################################
+	#
+	#		natural vs svg position
+	#
+	##################################################
+	def natural_pos (self, svgx, svgy) :
+		"""Return position in a natural frame
+		
+		Oy oriented toward top instead of bottom.
 		"""
-		walk among childrens to find the first layer with the given name
+		return (svgx,self.height() - svgy)
+	
+	def svg_pos (self, x, y) :
+		"""Return position in drawing frame.
+		
+		Oy oriented toward bottom.
+		"""
+		return (x,self._height() - y)
+	
+	##################################################
+	#
+	#		layers access
+	#
+	##################################################
+	def get_layer (self, layer_name) :
+		"""Walks among childrens to find the first layer with the given name
 		"""
 		for elm in self.elements() :
 			if isinstance(elm,SVGLayer) :
@@ -55,32 +79,4 @@ class SVGScene (SVGGroup) :
 		for elm in self.elements() :
 			if isinstance(elm,SVGLayer) :
 				yield elm
-	
-	##############################################
-	#
-	#		pgl interface #TODO deprecated
-	#
-	##############################################
-	def _hack_pgl_group (self, group_shape, scene) :
-		try :
-			for shp in group_shape._shape_list :
-				scene.add(shp)
-				self._hack_pgl_group(shp,scene)
-		except AttributeError :
-			pass
-	
-	def to_pgl2D (self) :
-		scene=Scene()
-		border=Shape()
-		SVGGroup.to_pgl2D(self,border)
-		scene.add(border)
-		self._hack_pgl_group(border,scene)
-		return scene
-	
-	def to_pgl3D (self) :
-		scene=Scene()
-		border=Shape()
-		SVGGroup.to_pgl3D(self,border)
-		scene.add(border)
-		self._hack_pgl_group(border,scene)
-		return scene
+
