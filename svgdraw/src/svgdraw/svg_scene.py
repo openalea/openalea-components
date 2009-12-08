@@ -48,6 +48,14 @@ class SVGScene (SVGGroup) :
 			if isinstance(elm,SVGLayer) :
 				if elm.attribute("inkscape:label") == layer_name :
 					return elm
+	
+	def layers (self) :
+		"""Iterate on all layers in this scene.
+		"""
+		for elm in self.elements() :
+			if isinstance(elm,SVGLayer) :
+				yield elm
+	
 	##############################################
 	#
 	#		pgl interface #TODO deprecated
