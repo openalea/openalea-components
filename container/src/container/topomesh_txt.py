@@ -113,15 +113,18 @@ def txt_to_topomesh (f, method = "set") :
         while "BEGIN wisp" not in line :
             line = f.readline()
         deg = int(line.split(" ")[3])
-        line = f.readline()
+        line = f.readline().rstrip()
         while "END wisp" not in line :
             gr = line.split()
             wid = int(gr[1])
             mesh.add_wisp(deg,wid)
             #props
             for ind,val in enumerate(gr[2:]) :
-            	props[deg][ind][1][wid] = eval("%s(%s)" % (props[deg][ind][1].type(),val) )
-            line = f.readline()
+            	if props[deg][ind][1].type() == 'str' :
+            		props[deg][ind][1][wid] = val
+            	else :
+            		props[deg][ind][1][wid] = eval("%s(%s)" % (props[deg][ind][1].type(),val) )
+            line = f.readline().rstrip()
 
     #links
     line = ""
