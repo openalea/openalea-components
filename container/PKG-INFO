@@ -1,13 +1,13 @@
 Metadata-Version: 1.0
-Name: openalea.utils
-Version: 0.0.1
-Summary: utils for container
+Name: openalea.container
+Version: 2.0.1.dev-r6958
+Summary: Basic data structures in OpenAlea.
 Home-page: http://openalea.gforge.inria.fr
 Author: Jerome Chopard
 Author-email: jerome.chopard@sophia.inria.fr
 License: Cecill-C
 Description: 
-        contains set of container data structures
-	like graph,grid,topomesh
+        Container is a set of data structures used in openalea
+        such as : graph, grid, topomesh
         
 Platform: UNKNOWN
