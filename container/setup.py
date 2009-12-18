@@ -11,26 +11,16 @@ import os
 from setuptools import setup, find_packages
 
 
-# Name and version of for your 'distribution archive'
+# Meta information
+# (used to construct egg infos)
 
-# (This will determine the name of the egg, as well as the name of the pakage directory under Python/lib/site-packages)
-# (This name is also the one to use in setup script of other packages to declare a dependency to this package)
-# (The version number is used by deploy to detect UPDATES)
-
-name = 'container'
-version= '2.0.3'
-
-# Packages list, namespace and root directory of packages
-
-# (this will determine the archive content and the names of your modules)
-# (with the loop used bellow,all packages,ie all directories with a __init__.py, under pkg_root_dir will be recursively detected and named according to the directory hirearchy)
-# (namespace allows you to choose a prefix for package names (eg alinea, openalea,...). 
-# (This functionality needs deploy to be installed)
-# (if you want more control on what to put in your distribution, you can manually edit the' packages' list 
-# (the 'package_dir' dictionary must content the pkg_rootdir and all top-level pakages under it)
+from openalea.deploy.metainfo import read_metainfo
+metadata = read_metainfo('metainfo.ini', verbose=True)
+for key,value in zip(metadata.keys(), metadata.values()):
+    exec("%s = '%s'" % (key, value))
 
 
-namespace = 'openalea'
+
 pkg_root_dir = 'src'
 pkgs = [ pkg for pkg in find_packages(pkg_root_dir) if namespace not in pkg]
 top_pkgs = [pkg for pkg in pkgs if  len(pkg.split('.')) < 2]
@@ -41,17 +31,10 @@ package_dir = dict( [('',pkg_root_dir)] + [(namespace + "." + pkg, pkg_root_dir 
 # (to be kept only if you have visual components)
 wralea_entry_points = ['container.mesh = openalea.container.wralea.mesh']
 
-# Meta information
-# (used to construct egg infos)
-description= 'Basic data structures in OpenAlea.'
-long_description= '''
-Container is a set of data structures used in openalea
-such as : graph, grid, topomesh
-'''
-author= 'Jerome Chopard'
-author_email= 'jerome.chopard@sophia.inria.fr'
-url= 'http://openalea.gforge.inria.fr'
-license= 'Cecill-C'
+
+
+
+
 
 # dependencies to other eggs
 # (This is used by deploy to automatically downloads eggs during the installation of your package)
@@ -82,8 +65,8 @@ setup(
     version=version,
     description=description,
     long_description=long_description,
-    author=author,
-    author_email=author_email,
+    author=authors,
+    author_email=authors_email,
     url=url,
     license=license,
     keywords = '',

@@ -29,8 +29,8 @@ Documentation
 .. toctree::
     :maxdepth: 1
 
-    User Guide<user/index.rst>   
-    Reference Guide<container/index.rst>
+    User Guide<user/index.rst>
+    Reference Guide<user/autosum.rst>
 
 - A `PDF <../latex/container.pdf>`_ version of |container| documentation is 
   available.
