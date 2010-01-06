@@ -24,45 +24,308 @@ import re
 from svg_element import SVGElement,read_float
 
 #to read svg paths
-#I cannot for the moment repeat implicitly a command
 #norm : http://www.w3.org/TR/SVG/paths.html
 sep = r"\s*,?\s*"
 coord = r"([-]?\d+[.]?\d*)"
 point = coord + sep + coord
+remaining = r"(.*)$"
 
-mM=sep+"([mM])"+sep+point
-zZ=sep+"([zZ])"
+mM_data = re.compile(sep + point + remaining)
+
 #staight lines
-lL=sep+"([lL])"+sep+point
-hH=sep+"([hH])"+sep+coord
-vV=sep+"([vV])"+sep+coord
+lL_data = re.compile(sep + point + remaining)
+hH_data = re.compile(sep + coord + remaining)
+vV_data = re.compile(sep + coord + remaining)
+
 #curves
-cC=sep+"([cC])"+sep+point+sep+point+sep+point
+cC_data = re.compile(sep + point
+                   + sep + point
+                   + sep + point)
+
 sS=sep+"([sS])"+sep+point+sep+point
 qQ=sep+"([qQ])"+sep+point+sep+point
 tT=sep+"([tT])"+sep+point
 aA=sep+"([aA])"+sep+point+sep+coord+sep+"([01])"+sep+"([01])"+sep+point
 
-readpath = re.compile("|".join([mM,zZ,lL,hH,vV,cC,sS,qQ,tT,aA]))
-
+cmd_typ = re.compile(sep + "([mMzZlLhHvVcC])" + remaining)
 
 class SVGPathCommand (object) :
 	"""
 	a abstraction of svg path commands
 	voir : http://wiki.svg.org/Path
 	"""
-	def __init__ (self, typ) :
-		self._type=typ
-		self._params = []
+	def __init__ (self, relative = False) :
+		self._relative = relative
 	
-	def type (self) :
-		return self._type
+	def is_relative (self) :
+		return self._relative
 	
-	def parameters (self) :
-		return iter(self._params)
+	def set_relative (self, relative) :
+		self._relative = relative
 	
-	def append (self, val) :
-		self._params.append(val)
+	def copy (self) :
+		"""Create a new copy of this command.
+		
+		Usefull for implicit declarations
+		in SVG files.
+		"""
+		return SVGPathCommand(self._relative)
+	
+	def from_string (self, txt) :
+		"""Fill the relevant parameters
+		from the given string
+		
+		Return the string without the
+		consumed elements
+		"""
+		return txt
+	
+	def to_string (self) :
+		"""Construct a string representation
+		of this command.
+		"""
+		return ""
+	
+	def polyline_ctrl_points (self, last_point = None) :
+		"""List of ctrl points.
+		
+		The element of path represented
+		by this command is seen as a polyline.
+		"""
+		return []
+	
+	def nurbs_ctrl_points (self, last_point = None) :
+		"""List of ctrl points.
+		
+		The element of path represented
+		by this command is seen as a nurbs.
+		Default, return polyline_ctrl_points
+		"""
+		return self.polyline_ctrl_points(last_point)
+
+class SVGPathMoveToCommand (SVGPathCommand) :
+	"""A displacement of the current point.
+	"""
+	
+	def __init__ (self, x, y, relative = False) :
+		SVGPathCommand.__init__(self,relative)
+		self._x = x
+		self._y = y
+	
+	def copy (self) :
+		return SVGPathMoveToCommand(self._x,self._y,self.is_relative() )
+	
+	def from_string (self, txt) :
+		match = mM_data.match(txt)
+		if match is None :
+			raise UserWarning("unable to find MoveTo parameters in %s" % txt)
+		x,y,ret = match.groups()
+		self._x = float(x)
+		self._y = float(y)
+		return ret
+	
+	def to_string (self) :
+		if self.is_relative() :
+			txt = "m"
+		else :
+			txt = "M"
+		txt += " %f" % self._x
+		txt += " %f" % self._y
+		
+		return txt
+	
+	def polyline_ctrl_points (self, last_point = None) :
+		if (last_point is None) or (not self.is_relative() ) :
+			return [(self._x,self._y)]
+		else :
+			return [(last_point[0] + self._x,last_point[1] + self._y)]
+
+class SVGPathCloseCommand (SVGPathCommand) :
+	"""Close a path
+	"""
+	
+	def __init__ (self) :
+		SVGPathCommand.__init__(self)
+	
+	def copy (self) :
+		return SVGPathCloseCommand()
+	
+	def to_string (self) :
+		return "z"
+
+class SVGPathLineToCommand (SVGPathCommand) :
+	"""A straight line.
+	"""
+	
+	def __init__ (self, x, y, relative = False) :
+		SVGPathCommand.__init__(self,relative)
+		self._x = x
+		self._y = y
+	
+	def copy (self) :
+		return SVGPathLineToCommand(self._x,self._y,self.is_relative() )
+	
+	def from_string (self, txt) :
+		match = lL_data.match(txt)
+		if match is None :
+			raise UserWarning("unable to find LineTo parameters in %s" % txt)
+		x,y,ret = match.groups()
+		self._x = float(x)
+		self._y = float(y)
+		return ret
+	
+	def to_string (self) :
+		if self.is_relative() :
+			txt = "l"
+		else :
+			txt = "L"
+		txt += " %f" % self._x
+		txt += " %f" % self._y
+		
+		return txt
+	
+	def polyline_ctrl_points (self, last_point = None) :
+		if (last_point is None) or (not self.is_relative() ) :
+			return [(self._x,self._y)]
+		else :
+			return [(last_point[0] + self._x,last_point[1] + self._y)]
+
+class SVGPathHorizontalCommand (SVGPathCommand) :
+	"""A straight horizontal line.
+	"""
+	
+	def __init__ (self, x, relative = False) :
+		SVGPathCommand.__init__(self,relative)
+		self._x = x
+	
+	def copy (self) :
+		return SVGPathHorizontalCommand(self._x,self.is_relative() )
+	
+	def from_string (self, txt) :
+		match = hH_data.match(txt)
+		if match is None :
+			raise UserWarning("unable to find HorizontalLineTo parameters in %s" % txt)
+		x,ret = match.groups()
+		self._x = float(x)
+		return ret
+	
+	def to_string (self) :
+		if self.is_relative() :
+			txt = "h"
+		else :
+			txt = "H"
+		txt += " %f" % self._x
+		
+		return txt
+	
+	def polyline_ctrl_points (self, last_point = None) :
+		if self.is_relative() :
+			if last_point is None :
+				return  [(self._x,0)]
+			else :
+				return [(last_point[0] + self._x,last_point[1])]
+		else :
+			return [(self._x,last_point[1])]
+
+class SVGPathVerticalCommand (SVGPathCommand) :
+	"""A straight vertical line.
+	"""
+	
+	def __init__ (self, y, relative = False) :
+		SVGPathCommand.__init__(self,relative)
+		self._y = y
+	
+	def copy (self) :
+		return SVGPathVerticalCommand(self._y,self.is_relative() )
+	
+	def from_string (self, txt) :
+		match = vV_data.match(txt)
+		if match is None :
+			raise UserWarning("unable to find VerticalLineTo parameters in %s" % txt)
+		y,ret = match.groups()
+		self._y = float(y)
+		return ret
+	
+	def to_string (self) :
+		if self.is_relative() :
+			txt = "v"
+		else :
+			txt = "V"
+		txt += " %f" % self._y
+		
+		return txt
+	
+	def polyline_ctrl_points (self, last_point = None) :
+		if self.is_relative() :
+			if last_point is None :
+				return [(0,self._y)]
+			else :
+				return [(last_point[0],last_point[1] + self._y)]
+		else :
+			return [(last_point[0],self._y)]
+
+class SVGPathCurveToCommand (SVGPathCommand) :
+	"""A curved line (nurbs).
+	"""
+	
+	def __init__ (self, pt1, pt2, pt3, relative = False) :
+		SVGPathCommand.__init__(self,relative)
+		self._pt1 = pt1
+		self._pt2 = pt2
+		self._pt3 = pt3
+	
+	def copy (self) :
+		return SVGPathCurveToCommand(self._pt1,
+		                             self._pt2,
+		                             self._pt3,
+		                             self.is_relative() )
+	
+	def from_string (self, txt) :
+		match = cC_data.match(txt)
+		if match is None :
+			raise UserWarning("unable to find CurveTo parameters in %s" % txt)
+		x1,y1,x2,y2,x3,y3,ret = match.groups()
+		self._pt1 = (float(x1),float(y1) )
+		self._pt2 = (float(x2),float(y2) )
+		self._pt3 = (float(x3),float(y3) )
+		return ret
+	
+	def to_string (self) :
+		if self.is_relative() :
+			txt = "c"
+		else :
+			txt = "C"
+		for pt in (self._pt1,self._pt2,self._pt3) :
+			txt += " %f %f" % pt
+		
+		return txt
+	
+	def polyline_ctrl_points (self, last_point = None) :
+		raise NotImplementedError
+#		if (last_point is None) or (not self.is_relative() ) :
+#			return [(self._x,self._y)]
+#		else :
+#			return [(last_point[0] + self._x,last_point[1] + self._y)]
+
+
+def cmd_factory (typ) :
+	relative = typ.islower()
+	typ = typ.lower()
+	
+	if typ == "m" :
+		return SVGPathMoveToCommand(None,None,relative)
+	elif typ == "z" :
+		return SVGPathCloseCommand()
+	elif typ == "l" :
+		return SVGPathLineToCommand(None,None,relative)
+	elif typ == "h" :
+		return SVGPathHorizontalCommand(None,relative)
+	elif typ == "v" :
+		return SVGPathVerticalCommand(None,relative)
+	elif typ == "c" :
+		return SVGPathCurveToCommand(None,None,None,relative)
+	else :
+		raise NotImplementedError("path command type not recognized : % s" % typ)
 
 class SVGPath (SVGElement) :
 	"""An abstraction of svg path
@@ -80,18 +343,38 @@ class SVGPath (SVGElement) :
 	def commands (self) :
 		return iter(self._commands)
 	
-	def append (self, cmd_typ, cmd_args=[]) :
-		cmd = SVGPathCommand(cmd_typ)
-		for arg in cmd_args :
-			cmd.append(arg)
+	def clear (self) :
+		self._commands = []
+	
+	def close (self) :
+		"""Close the path.
+		"""
+		cmd = SVGPathCloseCommand()
 		self._commands.append(cmd)
 	
-	def clear (self) :
-		self._commands=[]
+	def move_to (self, x, y, relative = False) :
+		"""Move pen to a given location.
+		"""
+		cmd = SVGPathMoveToCommand(x,y,relative)
+		self._commands.append(cmd)
+	
+	def line_to (self, x, y, relative = False) :
+		"""Trace a straight line up to the
+		given location.
+		"""
+		cmd = SVGPathLineToCommand(x,y,relative)
+		self._commands.append(cmd)
+	
+	def curve_to (self, pt1, pt2, pt3, relative = False) :
+		"""Trace a curved line between the
+		given control points.
+		"""
+		cmd = SVGPathCurveToCommand(pt1,pt2,pt3,relative)
+		self._commands.append(cmd)
 	
 	def is_closed (self) :
-		for command in self.commands() :
-			if command.type().lower() == 'z' :
+		for cmd in self.commands() :
+			if isinstance(cmd,SVGPathCloseCommand) :
 				return True
 		return False
 	
@@ -100,147 +383,30 @@ class SVGPath (SVGElement) :
 	#		txt interface
 	#
 	##################################################
-	def from_string (self, command_str) :
-		self._commands = []
-		ref_x = 0
-		ref_y = 0
-		for match in readpath.finditer(command_str) :
-			cmd = [v for v in match.groups() if v is not None]
-			typ = cmd[0]
-			pth_cmd = SVGPathCommand(typ)
-			if typ == 'M' :
-				x,y = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x,y) )
-				ref_x = x
-				ref_y = y
-			elif typ == 'm' :
-				dx,dy = (float(val) for val in cmd[1:])
-				pth_cmd.append( (dx,dy) )
-				ref_x += dx
-				ref_y += dy
-			elif typ in ('Z','z') :
-				pass
-			elif typ == 'L' :
-				x,y = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x,y) )
-				ref_x = x
-				ref_y = y
-			elif typ == 'l' :
-				dx,dy = (float(val) for val in cmd[1:])
-				pth_cmd.append( (dx,dy) )
-				ref_x += dx
-				ref_y += dy
-			elif typ in ('H','h') :
-				dx, = (float(val) for val in cmd[1:])
-				pth_cmd.append( (dx,0) )
-				ref_x += dx
-			elif typ in ('V','v') :
-				dy, = (float(val) for val in cmd[1:])
-				pth_cmd.append( (0,dy) )
-				ref_y += dy
-			elif typ == 'C' :
-				x1,y1,x2,y2,x,y = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x1,y1) )
-				pth_cmd.append( (x2,y2) )
-				pth_cmd.append( (x,y) )
-				ref_x = x
-				ref_y = y
-			elif typ=='c' :
-				x1,y1,x2,y2,dx,dy = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x1,y1) )
-				pth_cmd.append( (x2,y2) )
-				pth_cmd.append( (dx,dy) )
-				ref_x += dx
-				ref_y += dy
-			elif typ=='S' :
-				x2,y2,x,y = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x2,y2) )
-				pth_cmd.append( (x,y) )
-				ref_x = x
-				ref_y = y
-			elif typ=='s' :
-				x2,y2,dx,dy = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x2,y2) )
-				pth_cmd.append( (x,y) )
-				ref_x += dx
-				ref_y += dy
-			elif typ == 'Q' :
-				x1,y1,x,y = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x1,y1) )
-				pth_cmd.append( (x,y) )
-				ref_x = x
-				ref_y = y
-			elif typ=='q' :
-				x1,y1,dx,dy = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x1,y1) )
-				pth_cmd.append( (dx,dy) )
-				ref_x += dx
-				ref_y += dy
-			elif typ=='T' :
-				x,y = (float(val) for val in cmd[1:])
-				pth_cmd.append( (x,y) )
-				ref_x = x
-				ref_y = y
-			elif typ=='t' :
-				dx,dy = (float(val) for val in cmd[1:])
-				pth_cmd.append( (dx,dy) )
-				ref_x += dx
-				ref_y += dy
+	def from_string (self, txt) :
+		self.clear()
+		last_cmd = None
+		while len(txt) > 0 :
+			#find command type
+			match = cmd_typ.match(txt)
+			if match is None :#use last command
+				cmd = last_cmd.copy()
 			else :
-				raise NotImplementedError("path command type not recognized : % s" % typ)
-			self._commands.append(pth_cmd)
+				typ,txt = (v for v in match.groups() if v is not None)
+				cmd = cmd_factory(typ)
+			
+			#fill command with parameters
+			txt = cmd.from_string(txt)
+			self._commands.append(cmd)
+			
+			last_cmd = cmd
 	
 	def to_string (self) :
-		path_txt = ""
-		for command in self.commands() :
-			typ = command.type()
-			if typ == 'M' :
-				pos, = command.parameters()
-				path_txt += "M %f %f" % pos
-			elif typ == 'm' :
-				vec, = command.parameters()
-				path_txt += "m %f %f" % vec
-			elif typ in ('Z','z') :
-				path_txt += "%s" % typ
-			elif typ == 'L' :
-				pos, = command.parameters()
-				path_txt += "L %f %f" % pos
-			elif typ == 'l' :
-				vec, = command.parameters()
-				path_txt += "l %f %f" % vec
-			elif typ in ('H','h') :
-				vec, = command.parameters()
-				path_txt += "%s %f" % ( (typ,) + vec)
-			elif typ in ('V','v') :
-				vec, = command.parameters()
-				path_txt += "%s %f" % ( (typ,) + vec)
-			elif typ == 'C' :
-				v1,v2,pos = command.parameters()
-				path_txt += "C %f %f %f %f %f %f" % (v1 + v2 + pos)
-			elif typ == 'c' :
-				v1,v2,vec = command.parameters()
-				path_txt += "c %f %f %f %f %f %f" % (v1 + v2 + vec)
-			elif typ == 'S' :
-				v2,pos = command.parameters()
-				path_txt += "S %f %f %f %f" % (v2 + pos)
-			elif typ == 's' :
-				v2,vec = command.parameters()
-				path_txt += "s %f %f %f %f" % (v2 + vec)
-			elif typ == 'Q' :
-				v1,pos = command.parameters()
-				path_txt += "Q %f %f %f %f" % (v1 + pos)
-			elif typ == 'q' :
-				v1,vec = command.parameters()
-				path_txt += "q %f %f %f %f" % (v1 + vec)
-			elif typ == 'T' :
-				pos, = command.parameters()
-				path_txt += "T %f %f" % pos
-			elif typ == 't' :
-				vec, = command.parameters()
-				path_txt += "t %f %f" % vec
-			else :
-				raise NotImplementedError("path command type not recognized : % s" % typ)
-		return path_txt
+		txt = ""
+		for cmd in self.commands() :
+			txt += cmd.to_string()
+		
+		return txt
 	##############################################
 	#
 	#		xml in out
@@ -253,8 +419,8 @@ class SVGPath (SVGElement) :
 			y1 = read_float(self.get_default("y1","0") )
 			x2 = read_float(self.get_default("x2","0") )
 			y2 = read_float(self.get_default("y2","0") )
-			self.append('M',[(x1,y1)])
-			self.append('L',[(x2,y2)])
+			self.move_to(x1,y1,False)
+			self.line_to(x2,y2,False)
 		elif self.nodename() in ("polyline","polygone") :
 			raise NotImplementedError("polyline to path still need to be done :)")
 		else :
@@ -274,138 +440,49 @@ class SVGPath (SVGElement) :
 		"""Return a list of control points
 		to view this path as a polyline
 		"""
-		ref_x = 0
-		ref_y = 0
-		for command in self.commands() :
-			typ = command.type()
-			if typ == 'M' :
-				pos, = command.parameters()
-				ref_x,ref_y = pos
-				yield (ref_x,ref_y)
-			elif typ == 'm' :
-				vec, = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			elif typ in ('Z','z') :
-				pass
-			elif typ == 'L' :
-				pos, = command.parameters()
-				ref_x,ref_y = pos
-				yield (ref_x,ref_y)
-			elif typ == 'l' :
-				vec, = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			elif typ in ('H','h') :
-				vec, = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			elif typ in ('V','v') :
-				vec, = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			elif typ == 'C' :
-				v1,v2,pos = command.parameters()
-				ref_x,ref_y = pos
-				yield (ref_x,ref_y)
-			elif typ == 'c' :
-				v1,v2,vec = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			elif typ == 'S' :
-				v2,pos = command.parameters()
-				ref_x,ref_y = pos
-				yield (ref_x,ref_y)
-			elif typ == 's' :
-				v2,vec = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			elif typ == 'Q' :
-				v1,pos = command.parameters()
-				ref_x,ref_y = pos
-				yield (ref_x,ref_y)
-			elif typ == 'q' :
-				v1,vec = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			elif typ == 'T' :
-				pos, = command.parameters()
-				ref_x,ref_y = pos
-				yield (ref_x,ref_y)
-			elif typ == 't' :
-				vec, = command.parameters()
-				ref_x += vec[0]
-				ref_y += vec[1]
-				yield (ref_x,ref_y)
-			else :
-				raise NotImplementedError("path command type not recognized : % s" % typ)
+		last_point = (0,0)
+		for cmd in self.commands() :
+			pts = cmd.polyline_ctrl_points(last_point)
+			for pt in pts :
+				yield pt
+			if len(pts) > 0 :
+				last_point = pts[-1]
 	
 	def nurbs_ctrl_points (self) :#TODO
 		"""Return a list of control points from this path
 		"""
-		ref_point=Vector2(0,0)
-		for command in self.commands() :
-			typ=command.type()
-			if typ=='M' :
-				ref_point,=command.parameters()
-				yield ref_point
-			elif typ=='m' :
-				vec,=command.parameters()
-				ref_point==vec
-				yield ref_point
-			elif typ in ('Z','z') :
-				pass
-			elif typ=='L' :
-				ref_point,=command.parameters()
-				yield ref_point
-			elif typ=='l' :
-				vec=command.parameters()
-				ref_point+=vec
-				yield ref_point
-			elif typ=='C' :
-				v1,v2,ref_point=command.parameters()
-				yield v1
-				yield v2
-				yield ref_point
-			elif typ=='c' :
-				v1,v2,vec=command.parameters()
-				yield ref_point+v1
-				yield ref_point+v2
-				ref_point+=vec
-				yield ref_point
-			else :
-				raise UserWarning("command not available for nurbs %s" % typ)
+		last_point = (0,0)
+		for cmd in self.commands() :
+			pts = cmd.nurbs_ctrl_points(last_point)
+			for pt in pts :
+				yield pt
+			if len(pts) > 0 :
+				last_point = pts[-1]
 	
 	def nurbs (self, ctrl_pts=None, degree=3, uniform=False) :
-		#control point
-		if ctrl_pts is None :
-			ctrl_pts=list(self.nurbs_ctrl_points())
-		#knot vector
-		nb_pts=len(ctrl_pts)
-		nb_arc=(nb_pts-1)/degree
-		nb_knots=degree+nb_pts
-		p=0.
-		param=[p]
-		for i in xrange(nb_arc) :
-			if uniform :
-				p+=1
-			else :
-				p+=norm(ctrl_pts[degree*i]-ctrl_pts[degree*(i+1)])
-			param.append(p)
-		kv=[param[0]]
-		for p in param :
-			for j in xrange(degree) :
-				kv.append(p)
-		kv.append(param[-1])
-		#curve
-		return NurbsCurve2D([Vector3(v[0],v[1],1.) for v in ctrl_pts],kv,degree,60)
+		raise NotImplementedError
+#		#control point
+#		if ctrl_pts is None :
+#			ctrl_pts=list(self.nurbs_ctrl_points())
+#		#knot vector
+#		nb_pts=len(ctrl_pts)
+#		nb_arc=(nb_pts-1)/degree
+#		nb_knots=degree+nb_pts
+#		p=0.
+#		param=[p]
+#		for i in xrange(nb_arc) :
+#			if uniform :
+#				p+=1
+#			else :
+#				p+=norm(ctrl_pts[degree*i]-ctrl_pts[degree*(i+1)])
+#			param.append(p)
+#		kv=[param[0]]
+#		for p in param :
+#			for j in xrange(degree) :
+#				kv.append(p)
+#		kv.append(param[-1])
+#		#curve
+#		return NurbsCurve2D([Vector3(v[0],v[1],1.) for v in ctrl_pts],kv,degree,60)
 
 class SVGConnector (SVGPath) :
 	def __init__ (self, source, target, id=None) :

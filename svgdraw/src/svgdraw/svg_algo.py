@@ -76,6 +76,6 @@ def _expand_path (svgelm, sc) :
 					pt2 = (pt2[0] + dx * R,
 					       pt2[1] + dy * R)
 				
-				svgelm.append('M',[pt1])
-				svgelm.append('L',[pt2])
+				svgelm.move_to(*pt1)
+				svgelm.line_to(*pt2)
 
