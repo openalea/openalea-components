@@ -128,7 +128,7 @@ class PropertyGraph(IPropertyGraph, Graph):
     def extend(self, graph):
         """todo"""
         trans_vid, trans_eid = Graph.extend(self,graph)
-        #mise a jour des proprietes sur les vertices
+        # update properties on vertices
         for prop_name in graph.vertex_property_names():
             if prop_name not in self._vertex_property:
                 self.add_vertex_property(prop_name)
@@ -136,7 +136,7 @@ class PropertyGraph(IPropertyGraph, Graph):
 
             for vid, val in graph.vertex_property(prop_name).iteritems():
                 prop[trans_vid[vid]] = val
-        #mise a jour des proprietes sur les edges
+        # update properties on edges
         for prop_name in graph.edge_property_names():
             if prop_name not in self._edge_property:
                 self.add_edge_property(prop_name)

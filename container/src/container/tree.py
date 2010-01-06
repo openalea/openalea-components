@@ -127,9 +127,10 @@ class Tree(IRootedGraph,
             raise InvalidVertex('Removing the root node %d is forbidden.'% vid)
 
         elif self.nb_children(vid) == 0:
-            p = self._parent[vid]
-            self._children[p].remove(vid)
-            del self._parent[vid]
+            p = self.parent(vid)
+            if p is not None:
+                self._children[p].remove(vid)
+                del self._parent[vid]
             if vid in self._children:
                 del self._children[vid]
         else:
@@ -216,7 +217,10 @@ class Tree(IRootedGraph,
         :returns: iter of vertex identifier
         '''
         parent = self.parent(vtx_id)
-        return (vid for vid in self._children[parent] if vid != vtx_id)
+        if parent is None:
+            return iter([])
+        else:
+            return (vid for vid in self._children[parent] if vid != vtx_id)
 
 
     def nb_siblings(self, vtx_id):
@@ -226,7 +230,8 @@ class Tree(IRootedGraph,
         :returns: int
         '''
         parent = self.parent(vtx_id)
-        return self.nb_children(parent)-1
+        n = self.nb_children(parent)
+        return n-1 if n > 0 else 0
 
 
     def is_leaf(self, vtx_id):
@@ -517,10 +522,22 @@ class PropertyTree(Tree):
         if not copy:
             # remove all vertices not in the sub_tree
             bunch = set(pre_order(self, vtx_id))
-            for vid in self:
-                if vid not in bunch:
-                    self.remove_vertex(vid)
-                    self._remove_vertex_properties(vid)
+            remove_bunch = set(self) - bunch
+
+            for vid in remove_bunch:
+                self._remove_vertex_properties(vid)
+
+                #self.remove_vertex(vid)
+                # remove parent edge
+                pid = self.parent(vid)
+                if pid is not None:
+                    self._children[pid].remove(vid)
+                    del self._parent[vid]
+                # remove children edges
+                for cid in self.children(vid):
+                    self._parent[cid] = None
+                if vid in self._children:
+                    del self._children[vid]
 
             self.root = vtx_id
             return self
@@ -528,19 +545,21 @@ class PropertyTree(Tree):
             treeid_id = {}
             tree = self.__class__()
             tree.root = 0
+
+            for name in self.properties():
+                tree.add_property(name)
+            
             treeid_id[vtx_id] = tree.root
-            subtree = pre_order(tree, vtx_id)
+            subtree = pre_order(self, vtx_id)
             subtree.next()
             for vid in subtree:
-                parent = treeid_id[self.parent(vid)]
-                v = tree.add_child(parent)
-                treeid_id[vid] = v
+                pid = self.parent(vid)
+                if pid is not None:
+                    parent = treeid_id[pid]
+                    v = tree.add_child(parent)
+                    treeid_id[vid] = v
 
-            for tid, vid in treeid_id.iteritems():
-                for name in self.properties():
-                    v = self.property(name).get(tid)
-                    if v is not None:
-                        tree._properties[name][vid] = v
+                tree._add_vertex_properties(v, self.get_vertex_property(vid))
 
             return tree
 
@@ -646,3 +665,10 @@ class PropertyTree(Tree):
             p = self.property(name)
             if vid in p:
                 del p[vid]
+
+    def get_vertex_property(self, vid):
+        """ Returns all the properties defined on a vertex.
+        """
+        p = self.properties()
+        return dict((name,p[name][vid]) for name in p if vid in p[name])
+
