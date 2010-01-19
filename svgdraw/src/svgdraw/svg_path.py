@@ -40,7 +40,8 @@ vV_data = re.compile(sep + coord + remaining)
 #curves
 cC_data = re.compile(sep + point
                    + sep + point
-                   + sep + point)
+                   + sep + point
+                   + remaining)
 
 sS=sep+"([sS])"+sep+point+sep+point
 qQ=sep+"([qQ])"+sep+point+sep+point
