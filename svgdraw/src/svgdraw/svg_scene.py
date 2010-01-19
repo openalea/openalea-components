@@ -58,7 +58,7 @@ class SVGScene (SVGGroup) :
 		
 		Oy oriented toward bottom.
 		"""
-		return (x,self._height() - y)
+		return (x,self.height() - y)
 	
 	##################################################
 	#

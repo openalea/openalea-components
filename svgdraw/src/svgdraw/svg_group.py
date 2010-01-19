@@ -134,12 +134,12 @@ class SVGGroup (SVGElement) :
 	#		change of referential
 	#
 	##############################################
-	def real_pos (self, svgx, svgy) :
-		return (svgx,self._height - svgy)
-	
-	def svg_pos (self, x, y) :
-		return (x,self._height - y)
-		
+#	def real_pos (self, svgx, svgy) :
+#		return (svgx,self._height - svgy)
+#	
+#	def svg_pos (self, x, y) :
+#		return (x,self._height - y)
+#		
 	##############################################
 	#
 	#		xml interface
