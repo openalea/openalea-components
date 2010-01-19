@@ -18,7 +18,7 @@ namespace = 'openalea'
 pkg_name= namespace + '.' + name
 
 # Package version policy
-version= '2.0.0' 
+version= '0.8.0' 
 
 # Description
 description= 'basic elements to construct tissue models' 

@@ -302,11 +302,18 @@ class SVGPathCurveToCommand (SVGPathCommand) :
 		return txt
 	
 	def polyline_ctrl_points (self, last_point = None) :
-		raise NotImplementedError
-#		if (last_point is None) or (not self.is_relative() ) :
-#			return [(self._x,self._y)]
-#		else :
-#			return [(last_point[0] + self._x,last_point[1] + self._y)]
+		if (last_point is None) or (not self.is_relative() ) :
+			return [self._pt1,self._pt2,self._pt3]
+		else :
+			return [(last_point[0] + x,last_point[1] + y) \
+			        for x,y in (self._pt1,self._pt2,self._pt3)]
+	
+	def nurbs_ctrl_points (self, last_point = None) :
+		if (last_point is None) or (not self.is_relative() ) :
+			return [self._pt1,self._pt2,self._pt3]
+		else :
+			return [(last_point[0] + x,last_point[1] + y) \
+			        for x,y in (self._pt1,self._pt2,self._pt3)]
 
 
 def cmd_factory (typ) :
