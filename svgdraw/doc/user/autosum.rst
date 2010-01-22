@@ -6,7 +6,7 @@
 .. In other words, sphinx will automatically create the reference guide (using automodule)
    only if it can import the module.
 
-.. Keep the structure of this file as close as possible to the orginal one
+.. Keep the structure of this file as close as possible to the original one
 
 
 .. _svgdraw_reference:
@@ -27,7 +27,6 @@ Download the source file :download:`../../src/svgdraw/clean.py`.
 .. automodule:: openalea.svgdraw.clean
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -43,7 +42,6 @@ Download the source file :download:`../../src/svgdraw/scripts.py`.
 .. automodule:: openalea.svgdraw.scripts
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -59,7 +57,6 @@ Download the source file :download:`../../src/svgdraw/svg_algo.py`.
 .. automodule:: openalea.svgdraw.svg_algo
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -75,7 +72,6 @@ Download the source file :download:`../../src/svgdraw/svg_element.py`.
 .. automodule:: openalea.svgdraw.svg_element
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -91,7 +87,6 @@ Download the source file :download:`../../src/svgdraw/svg_file.py`.
 .. automodule:: openalea.svgdraw.svg_file
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -107,7 +102,6 @@ Download the source file :download:`../../src/svgdraw/svg_group.py`.
 .. automodule:: openalea.svgdraw.svg_group
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -123,7 +117,6 @@ Download the source file :download:`../../src/svgdraw/svg_path.py`.
 .. automodule:: openalea.svgdraw.svg_path
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -139,7 +132,6 @@ Download the source file :download:`../../src/svgdraw/svg_primitive.py`.
 .. automodule:: openalea.svgdraw.svg_primitive
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -155,7 +147,6 @@ Download the source file :download:`../../src/svgdraw/svg_scene.py`.
 .. automodule:: openalea.svgdraw.svg_scene
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -171,7 +162,6 @@ Download the source file :download:`../../src/svgdraw/svg_stack.py`.
 .. automodule:: openalea.svgdraw.svg_stack
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -187,7 +177,6 @@ Download the source file :download:`../../src/svgdraw/svg_text.py`.
 .. automodule:: openalea.svgdraw.svg_text
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -203,7 +192,6 @@ Download the source file :download:`../../src/svgdraw/transform.py`.
 .. automodule:: openalea.svgdraw.transform
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
@@ -219,6 +207,5 @@ Download the source file :download:`../../src/svgdraw/xml_element.py`.
 .. automodule:: openalea.svgdraw.xml_element
     :members:
     :undoc-members:
-    :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
