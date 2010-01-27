@@ -33,11 +33,17 @@ translate_re = re.compile("translate\("+digit+sep+digit+"?\)")
 scale_re = re.compile("scale\("+digit+sep+digit+"?\)")
 
 class SVGTransform (object) :
-	"""Class to manage SVG transformations.
+	"""Class to manage SVG transformations
 	
 	scaling,translation,rotation
 	"""
+	
 	def __init__ (self) :
+		"""Constructor
+		
+		Initialise to an identity
+		transformation.
+		"""
 		self._m00 = 1.
 		self._m01 = 0.
 		self._m10 = 0.
@@ -59,13 +65,29 @@ class SVGTransform (object) :
 	#
 	#############################################
 	def apply_to_vec (self, vec) :
-		"""Apply the transformation to a given vector.
+		"""Apply the transformation to a given vector
+		
+		Discard any translation
+		.. seealso:: :func:`apply_to_point`
+		
+		:Parameters:
+		 - `vec` (float,float)
+		
+		:Returns Type: float,float
 		"""
 		return (self._m00 * vec[0] + self._m01 * vec[1],
 		        self._m10 * vec[0] + self._m11 * vec[1])
 	
 	def apply_to_point (self, point) :
-		"""Apply the transformation to a point.
+		"""Apply the transformation to a point
+		
+		Apply also any translation
+		.. seealso:: :func:`apply_to_vec`
+		
+		:Parameters:
+		 - `vec` (float,float)
+		
+		:Returns Type: float,float
 		"""
 		vec = self.apply_to_vec(point)
 		return (vec[0] + self._t0,vec[1] + self._t1)
@@ -76,7 +98,10 @@ class SVGTransform (object) :
 	#
 	#############################################
 	def clone (self, transfo) :
-		"""Clone the transfo in self.
+		"""Clone the transfo in self
+		
+		:Parameters:
+		 - `transfo` (:class:SVGTransform)
 		"""
 		self._m00 = transfo._m00
 		self._m01 = transfo._m01
@@ -87,10 +112,15 @@ class SVGTransform (object) :
 		self._t1 = transfo._t1
 	
 	def __mul__ (self, transfo) :
-		"""Composition of transformations.
+		"""Composition of transformations
 		
 		Add the translation part and
 		multiply the matrix part
+		
+		:Parameters:
+		 - `transfo` (:class:SVGTransform)
+		
+		:Returns Type: :class:SVGTransform
 		"""
 		ret = SVGTransform()
 		ret._m00 = self._m00 * transfo._m00 + self._m01 * transfo._m10
@@ -111,6 +141,9 @@ class SVGTransform (object) :
 	def read (self, txt) :
 		"""Read a txt description of the transfo
 		see SVG norm.
+		
+		:Parameters:
+		 - `txt` (str)
 		"""
 		if "matrix" in txt :
 			m00,m10,m01,m11,t0,t1 = (float(val) for val in matrix_re.match(txt).groups() )
@@ -141,7 +174,9 @@ class SVGTransform (object) :
 			raise UserWarning("don't know how to translate this transformation :\n %s" % txts)
 	
 	def write (self) :
-		"""Return a txt description of the transfo.
+		"""Return a txt description of the transfo
+		
+		:Returns Type: str
 		"""
 		return "matrix(%f %f %f %f %f %f)" % (self._m00,
 		                                      self._m10,
@@ -152,7 +187,13 @@ class SVGTransform (object) :
 
 def translation (dx, dy) :
 	"""Return a transformation that translate
-	objects. Displacement is dx and dy.
+	objects.
+	
+	:Parameters:
+	 - `dx` (float) - displacement along Ox
+	 - `dy` (float) - displacement along Oy
+	
+	:Returns Type: :class:SVGTransform
 	"""
 	transfo = SVGTransform()
 	transfo._t0 = dx
@@ -162,7 +203,14 @@ def translation (dx, dy) :
 
 def scaling (sx, sy = None) :
 	"""Return a transformation that scale
-	objects. Scaling is sx along x and sy along y.
+	objects.
+	
+	:Parameters:
+	 - `sx` (float) - scaling along Ox
+	 - `sy` (float) - scaling along Oy
+	   if None, will be taken equal to sx
+	
+	:Returns Type: :class:SVGTransform
 	"""
 	if sy is None :
 		sy = sx
@@ -175,7 +223,13 @@ def scaling (sx, sy = None) :
 
 def rotation (angle) :
 	"""Return a transformation that rotate
-	objects with an angle 'angle' expressed in radians.
+	objects.
+	
+	:Parameters:
+	 - `angle` (float) - angle of rotation
+	    expressed in radians
+	
+	:Returns Type: :class:SVGTransform
 	"""
 	transfo = SVGTransform()
 	asin = sin(angle)
@@ -190,6 +244,13 @@ def rotation (angle) :
 def matricial (m00, m01, m10, m11, t0, t1) :
 	"""Return the transformation that correspond
 	to this coefficients.
+	
+	:Parameters:
+	 - `mij` (float) - coefficient of the rotation
+	    matrix (ith line, jth column)
+	 - `ti` (float) - coefficient of the translation
+	
+	:Returns Type: :class:SVGTransform
 	"""
 	transfo = SVGTransform()
 	transfo._m00 = m00

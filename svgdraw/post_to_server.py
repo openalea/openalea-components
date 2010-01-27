@@ -27,16 +27,8 @@ kwds['simulate'] = False
 kwds['login'] = "chopard"
 kwds['password'] = getpass("password for chopard:")
 
-#python 2.5
+#python 2.6
 kwds['filename'] = filename
-uploader = Uploader(**kwds)
-uploader.add()
-#python 2.6
-filename26 = filename.replace("py2.5","py2.6")
-rename(join("dist",filename),
-       join("dist",filename26) )
-
-kwds['filename'] = filename26
 uploader = Uploader(**kwds)
 uploader.add()
 

@@ -1,4 +1,3 @@
-
 .. this file is dedicated to the reference guide
 
 .. In order to include a module so that it is automatically documented, it must in your python path
@@ -209,3 +208,6 @@ Download the source file :download:`../../src/svgdraw/xml_element.py`.
     :undoc-members:
     :show-inheritance:
     :synopsis: doc todo
+
+
+

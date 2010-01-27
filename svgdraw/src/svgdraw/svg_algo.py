@@ -29,11 +29,16 @@ def expand_path (sc) :
 	"""Ensure that all elements that
 	are not direct svg primitives are
 	well defined as path.
+	
+	:Parameters:
+	 - 'sc' (:class:`SVGScene`)
+	
+	:Return: None, modify scene in place
 	"""
 	for elm in sc.elements() :
 		_expand_path(elm,sc)
 
-def find_center (elm) :
+def _find_center (elm) :
 	if isinstance(elm,SVGCenteredElement) :
 		pt = elm.center()
 	elif isinstance(elm,SVGPath) :
@@ -53,8 +58,8 @@ def _expand_path (svgelm, sc) :
 			if len(tuple(svgelm.commands() ) ) == 0 :
 				source_elm = sc.get_by_id(svgelm.source() )
 				target_elm = sc.get_by_id(svgelm.target() )
-				pt1 = find_center(source_elm)
-				pt2 = find_center(target_elm)
+				pt1 = _find_center(source_elm)
+				pt2 = _find_center(target_elm)
 				if isinstance(source_elm,SVGCenteredElement) :
 					dx = pt2[0] - pt1[0]
 					dy = pt2[1] - pt1[1]

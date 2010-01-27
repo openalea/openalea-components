@@ -36,6 +36,20 @@ translate_re = re.compile("translate\("+digit+sep+digit+"?\)")
 scale_re = re.compile("scale\("+digit+sep+digit+"?\)")
 
 def read_color (color_str) :
+	"""Read a color string
+	
+	:Parameters:
+	 - `color_str` (str) - a valid
+	   string representation of
+	   an SVG color
+	
+	:Return: tuple R,G,B if color
+	  is valid, None otherwise
+	
+	Returns Type:
+	 - (int,int,int)
+	 - None
+	"""
 	if color_str == "none" :
 		return None
 	else : #assert haxedecimal definition
@@ -47,12 +61,35 @@ def read_color (color_str) :
 		return (red,green,blue)
 
 def write_color (color) :
+	"""Create an str repr of a color
+	
+	:Parameters:
+	 - `color` ( (int,int,int) ) -
+	   RGB representation of a color,
+	   (None for empty color)
+	
+	:Returns Type: str
+	"""
 	if color is None :
 		return "none"
 	else :
 		return "#%.2x%.2x%.2x" % color
 
 def read_float (val_str) :
+	"""Read a float string
+	
+	:Parameters:
+	 - `val_str` (str) - a valid
+	   string representation of
+	   a floating number
+	
+	:Return: the value if the string
+	  is valid, None otherwise
+	
+	Returns Type:
+	 - float
+	 - None
+	"""
 	if val_str == "none" :
 		return None
 	else :
@@ -60,17 +97,36 @@ def read_float (val_str) :
 		return float(res.groups()[0])
 
 def write_float (val) :
-	return "%f" % val
+	"""Create an str repr of a float
+	
+	:Parameters:
+	 - `val` (float) - actual value
+	   of the number or None
+	
+	:Returns Type: str
+	"""
+	if val is None :
+		return "none"
+	else :
+		return "%f" % val
 
 class SVGElement (XMLElement) :
-	"""
-	base class for all SVG element
-	store attribute of geometry and style
-	"""
+	"""Base class for all SVG element
 	
-	type = "base"
+	store attributes of geometry and style
+	"""
 	
 	def __init__ (self, nodeid=None, parent=None, nodename="svg") :
+		"""Constructor
+		
+		:Parameters:
+		 - `nodeid` (str) - a unique id for this node
+		 - `parent` (:class:`SVGElement`) - owner of
+		    this node. Default None means that this
+		    element is top level.
+		 - `nodename` (str) - name of this particular
+		    type of node
+		"""
 		XMLElement.__init__(self,parent,SVG_ELEMENT_TYPE,nodename,nodeid)
 		
 		#graphic style
@@ -90,17 +146,28 @@ class SVGElement (XMLElement) :
 	#
 	##############################################
 	def get_style (self, key) :
-		"""Return style associated with this key.
+		"""Return style associated with this key
+		
+		:Parameters:
+		 - `key` (str) - style descriptor
+		
+		:Returns Type: str
 		"""
 		return self._style[key]
 	
 	def set_style (self, key, str_val) :
-		"""Set the style associated with this key.
+		"""Set the style associated with this key
+		
+		:Parameters:
+		 - `key` (str) - style descriptor
+		 - `str_val` (str) - actual value
 		"""
 		self._style[key] = str_val
 	
 	def displayed (self) :
-		"""Tells wether this element is visible or not.
+		"""Tells wether this element is visible or not
+		
+		:Returns Type: bool
 		"""
 		if "display" in self._style :
 			return self._style["display"] != "none"
@@ -108,7 +175,10 @@ class SVGElement (XMLElement) :
 			return False
 	
 	def set_display (self, display) :
-		"""Set the visibility of this element.
+		"""Set the visibility of this element
+		
+		:Parameters:
+		 - `display` (bool)
 		"""
 		if display :
 			self._style["display"] = "true"
@@ -116,7 +186,15 @@ class SVGElement (XMLElement) :
 			self._style["display"] = "none"
 	
 	def fill (self) :
-		"""Return color used to fill the element.
+		"""Return color used to fill the element
+		
+		Return None if element is not filled
+		
+		.. seealso: :func:stroke
+		
+		:Returns Type:
+		 - (int,int,int)
+		 - None
 		"""
 		if "fill" in self._style :
 			return read_color(self._style["fill"])
@@ -124,12 +202,27 @@ class SVGElement (XMLElement) :
 			return None
 	
 	def set_fill (self, color) :
-		"""Set the color used to fill the element.
+		"""Set the color used to fill the element
+		
+		.. seealso: :func:set_stroke
+		
+		:Parameters:
+		 - `color` (int,int,int) - color
+		   used to fill the element, None
+		   if no color is used
 		"""
 		self._style["fill"] = write_color(color)
 	
 	def stroke (self) :
-		"""Return color used to paint border of the element.
+		"""Return color used to paint border of the element
+		
+		Return None if element is not filled
+		
+		.. seealso: :func:fill
+		
+		:Returns Type:
+		 - (int,int,int)
+		 - None
 		"""
 		if "stroke" in self._style :
 			return read_color(self._style["stroke"])
@@ -137,15 +230,24 @@ class SVGElement (XMLElement) :
 			return None
 	
 	def set_stroke (self, color) :
-		"""Set the color used to paint the border.
+		"""Set the color used to paint the border
+		
+		.. seealso: :func:set_fill
+		
+		:Parameters:
+		 - `color` (int,int,int) - color
+		   used to fill border ofthe element,
+		   None if no color is used
 		"""
 		self._style["stroke"] = write_color(color)
 	
 	def stroke_width (self) :
-		"""Return size of the border.
+		"""Return size of the border
+		
+		:Returns Type: float
 		"""
 		if "stroke-width" in self._style :
-			width = read_float (self._style["stroke-width"])
+			width = read_float(self._style["stroke-width"])
 			if width is None :
 				return 0.
 			else :
@@ -154,33 +256,13 @@ class SVGElement (XMLElement) :
 			return 0.
 	
 	def set_stroke_width (self, width) :
-		"""Set the size of the border.
+		"""Set the size of the border
+		
+		:Parameters:
+		 - `width` (float) - size of
+		   the border in pixels
 		"""
 		self._style["stroke-width"] = write_float(width)
-	##################################################
-	#
-	#		natural vs svg position
-	#
-	##################################################
-	def natural_pos (self, svgx, svgy) :
-		"""Return position in a natural frame
-		
-		Oy oriented toward top instead of bottom.
-		"""
-		if self.parent() is None :
-			return (svgx,svgy)
-		else :
-			return self.parent().natural_pos(svgx,svgy)
-	
-	def svg_pos (self, x, y) :
-		"""Return position in drawing frame.
-		
-		Oy oriented toward bottom.
-		"""
-		if self.parent() is None :
-			return (x,y)
-		else :
-			return self.parent().svg_pos(x,y)
 	
 	##############################################
 	#
@@ -188,6 +270,19 @@ class SVGElement (XMLElement) :
 	#
 	##############################################
 	def scene_pos (self, pos) :
+		"""Express the position in scene
+		absolute referential.
+		
+		Apply recursively all transformations
+		to pos to obtain the absolute position
+		in the scene.
+		
+		:Parameters:
+		 - `pos` (float,float) - local
+		    coordinates of a point
+		
+		:Returns Type: float,float
+		"""
 		ppos = self._transform.apply_to_point(pos)
 		if self.parent() is None :
 			return ppos
@@ -200,21 +295,65 @@ class SVGElement (XMLElement) :
 	#
 	##############################################
 	def transformation (self) :
+		"""Retrieve the associated transformation
+		
+		:Returns Type: :class:`SVGTransform`
+		"""
 		return self._transform
 	
 	def set_transformation (self, transfo) :
+		"""Set the transformation of this element
+		
+		Copy the transformation, then assign it
+		to the element.
+		
+		:Parameters:
+		 - `transfo` (:class:`SVGTransform`)
+		"""
 		self._transform.clone(transfo)
 	
 	def transform (self, transfo) :
+		"""Combine a transformation with
+		the actual transformation of this
+		element.
+		
+		:Parameters:
+		 - `transfo` (:class:`SVGTransform`)
+		"""
 		self._transform = self._transform * transfo
 	
 	def translate (self, dx, dy) :
+		"""Combine a translation
+		with the actual transformation
+		of this element.
+		
+		:Parameters:
+		 - `dx` (float) - x displacement
+		 - `dy` (float) - y displacement
+		"""
 		self._transform = self._transform * translation(dx,dy)
 	
 	def rotate (self, angle) :
+		"""Combine a rotation
+		with the actual transformation
+		of this element.
+		
+		:Parameters:
+		 - `angle` (float) - angle of
+		   the rotation around Oz in
+		   direct orientation.
+		"""
 		self._transform = self._transform * rotation(angle)
 	
 	def scale (self, sx, sy) :
+		"""Combine a scaling
+		with the actual transformation
+		of this element.
+		
+		:Parameters:
+		 - `sx` (float) - x scaling
+		 - `sy` (float) - y scaling
+		"""
 		self._transform = self._transform * scaling(sx,sy)
 	
 	##############################################
@@ -223,6 +362,12 @@ class SVGElement (XMLElement) :
 	#
 	##############################################
 	def abs_path (self, filename) :
+		"""absolute path to SVG file
+		
+		Used by images to access their
+		content since it is stored
+		outside of the main SVG file.
+		"""
 		if self.parent() is None :
 			if self._svgfilename is None :
 				return filename
@@ -232,6 +377,14 @@ class SVGElement (XMLElement) :
 			return self.parent().abs_path(filename)
 	
 	def load_style (self) :
+		"""Load style attribute as a map
+		
+		Style attributes are originally stored
+		in a "style" attribute. Parse this
+		attribute to create a more easy access.
+		
+		:Returns Type: dict of (str|str)
+		"""
 		style = {}
 		for style_elm in self.get_default("style","").split(";") :
 			if ":" in style_elm :
@@ -240,6 +393,8 @@ class SVGElement (XMLElement) :
 		return style
 	
 	def load (self) :
+		"""Load SVG attributes from XML attributes
+		"""
 		XMLElement.load(self)
 		self._style.update(self.load_style() )
 		#transformation
@@ -248,11 +403,15 @@ class SVGElement (XMLElement) :
 			self._transform.read(txt)
 	
 	def save_style (self) :
+		"""Save style map as an XML attribute
+		"""
 		style = self.load_style()
 		style.update(self._style)
 		self.set_attribute("style",";".join(["%s:%s" % it for it in style.iteritems()]) )
 	
 	def save (self) :
+		"""Save SVG attributes as XML attributes
+		"""
 		XMLElement.save(self)
 		self.save_style()
 		self.set_attribute("transform",self._transform.write() )

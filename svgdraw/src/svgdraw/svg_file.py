@@ -24,8 +24,13 @@ from xml.dom.minidom import parse,parseString,Document
 from xml_element import XMLElement
 from svg_scene import SVGScene
 
+#######################################################
+#
+#		pure xml
+#
+#######################################################
 class XMLReader (object) :
-	"""Base class to read a serialized xml.
+	"""Base class to read a serialized xml
 	"""
 	def __init__ (self) :
 		pass
@@ -37,8 +42,10 @@ class XMLReader (object) :
 		return elm
 
 class XMLFileReader (object) :
-	"""
-	base class to read an xml file
+	"""Base class to read an xml file
+	
+	.. seealso: use :func:`open_xml` instead
+	   of directly creating this object.
 	"""
 	def __init__ (self, filename) :
 		self._filename = filename
@@ -62,8 +69,10 @@ class XMLWriter (object) :
 		return self._xml_doc.toxml()
 
 class XMLFileWriter (object) :
-	"""
-	base class to write an xml file
+	"""Base class to write an xml file
+	
+	.. seealso: use :func:`open_xml` instead
+	   of directly creating this object.
 	"""
 	def __init__ (self, filename) :
 		self._filename = filename
@@ -82,6 +91,15 @@ class XMLFileWriter (object) :
 		self._xml_doc = doc_elm.save_xml()
 
 def open_xml (filename, mode='r') :
+	"""Open an xml stream
+	
+	:Parameters:
+	 - `filename` (str) - name of the stream
+	 - `mode` ('r' or 'w') - open the stream
+	   to read ('r') or write ('w') data
+	
+	:Returns Type: XMLStream
+	"""
 	if mode=='r' :
 		return XMLFileReader(filename)
 	elif mode=='w' :
@@ -89,9 +107,33 @@ def open_xml (filename, mode='r') :
 	else :
 		raise UserWarning ("mode %s not recognized" % str(mode) )
 
-class SVGFileReader (XMLFileReader) :
+#######################################################
+#
+#		svg
+#
+#######################################################
+class SVGReader (XMLReader) :
+	"""Base class to read svg data
+	
+	.. seealso: use :func:`from_xml` instead
+	   of directly creating this object.
 	"""
-	base class to read an svg file
+	def from_xml (self, data) :
+		doc = XMLReader.from_xml(self,data)
+		try :
+			root = [node for node in doc.children() if node.nodename() == "svg:svg"][0]
+		except IndexError :
+			raise UserWarning("Old style svg file, you need to prefix node names with 'svg:'")
+		sc = SVGScene()
+		sc.from_node(root)
+		sc.load()
+		return sc
+
+class SVGFileReader (XMLFileReader) :
+	"""Base class to read an svg file
+	
+	.. seealso: use :func:`open_svg` instead
+	   of directly creating this object.
 	"""
 	def read (self) :
 		doc = XMLFileReader.read(self)
@@ -105,22 +147,11 @@ class SVGFileReader (XMLFileReader) :
 		sc.load()
 		return sc
 
-class SVGReader (XMLReader) :
-	"""Base class to read svg data.
-	"""
-	def from_xml (self, data) :
-		doc = XMLReader.from_xml(self,data)
-		try :
-			root = [node for node in doc.children() if node.nodename() == "svg:svg"][0]
-		except IndexError :
-			raise UserWarning("Old style svg file, you need to prefix node names with 'svg:'")
-		sc = SVGScene()
-		sc.from_node(root)
-		sc.load()
-		return sc
-
 class SVGWriter (XMLWriter) :
-	"""Base class to serialize an svg file.
+	"""Base class to serialize an svg file
+	
+	.. seealso: use :func:`to_xml` instead
+	   of directly creating this object.
 	"""
 	def __init__ (self, svgscene) :
 		XMLWriter.__init__(self)
@@ -143,8 +174,10 @@ class SVGWriter (XMLWriter) :
 		return XMLWriter.to_xml(self)
 
 class SVGFileWriter (XMLFileWriter) :
-	"""
-	base class to write an svg file
+	"""Base class to write an svg file
+	
+	.. seealso: use :func:`open_svg` instead
+	   of directly creating this object.
 	"""
 	def __init__ (self, filename) :
 		XMLFileWriter.__init__(self,filename)
@@ -160,6 +193,15 @@ class SVGFileWriter (XMLFileWriter) :
 		XMLFileWriter.write(self,self._svg_doc)
 
 def open_svg (filename, mode='r') :
+	"""Open a stream to read svg data
+	
+	:Parameters:
+	 - `filename` (str) - name of the stream
+	 - `mode` ('r' or 'w') - open the stream
+	   to read ('r') or write ('w') data
+	
+	:Returns Type: SVGStream
+	"""
 	if mode=='r' :
 		return SVGFileReader(filename)
 	elif mode=='w' :
@@ -167,13 +209,28 @@ def open_svg (filename, mode='r') :
 	else :
 		raise UserWarning ("mode %s not recognized" % str(mode))
 def to_xml (svgscene) :
-	"""Serialize a scene into a string.
+	"""Serialize a scene into a string
+	
+	.. seealso: :func:`from_xml`
+	
+	:Parameters:
+	 - `svgscene` (:class:`SVGScene`)
+	
+	:Returns Type: str
 	"""
 	w = SVGWriter(svgscene)
 	return w.to_xml()
 
 def from_xml (data) :
-	"""Deserialize a string into a scene.
+	"""Deserialize a string into a scene
+	
+	.. seealso: :func:`to_xml`
+	
+	:Parameters:
+	 - `data` (str) - xml representation
+	   of a scene.
+	
+	:Returns Type: :class:`SVGScene`
 	"""
 	r = SVGReader()
 	return r.from_xml(data)
