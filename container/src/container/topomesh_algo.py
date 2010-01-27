@@ -29,22 +29,30 @@ from topomesh import Topomesh
 #       mesh edition
 #
 ###########################################################
-def clean_remove (mesh, scale, wid) :
+def clean_remove (mesh, degree, wid) :
+    """Remove a wisp and all wisps of smaller degree
+    that are no longer connected to anything.
+    
+    :Parameters:
+     - `mesh` (:class:`Topomesh`) - mesh the wisp
+                                    belong to
+     - `degree` (int) - degree of the wisp
+     - `wid` (wid) - id of the wisp to remove in
+                     the first place
     """
-    remove a wisp and all wisps of smaller degree
-    that are no longer connected to anything
-    """
-    wid_list = [wid]
-    for deg in xrange(scale,0,-1) :
+    to_remove = [wid]
+    for deg in xrange(degree,0,-1) :
         orphans = set()
-        for wid in wid_list :
-            bids = tuple(mesh.borders(deg,wid))
+        for wid in to_remove :
+            bids = tuple(mesh.borders(deg,wid) )
             mesh.remove_wisp(deg,wid)
             for bid in bids :
-                if mesh.nb_regions(deg-1,bid) == 0 :
+                if mesh.nb_regions(deg - 1,bid) == 0 :
                     orphans.add(bid)
-        wid_list = orphans
-    for wid in wid_list :
+        to_remove = orphans
+    
+    #handle points
+    for wid in to_remove :
         mesh.remove_wisp(0,wid)
 def merge_wisps (mesh, scale, wid1, wid2) :
     """
@@ -237,6 +245,7 @@ def collapse_edge (mesh, eid, protected_edges) :
     mesh.remove_wisp(0,pid2)
     #return
     return pid1,pid2
+
 ###########################################################
 #
 #       remove unwanted elements
