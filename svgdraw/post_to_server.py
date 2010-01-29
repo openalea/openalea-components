@@ -21,7 +21,7 @@ print filename
 kwds = {}
 kwds['project'] = "openalea"
 kwds['package'] = "VPlants"
-kwds['release'] = "0.7"
+kwds['release'] = "0.8"
 kwds['directory'] = "dist/"
 kwds['simulate'] = False
 kwds['login'] = "chopard"

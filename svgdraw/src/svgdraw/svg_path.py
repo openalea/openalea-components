@@ -21,21 +21,19 @@ __license__= "Cecill-C"
 __revision__=" $Id: $ "
 
 import re
-from svg_element import SVGElement,read_float
+from svg_element import SVGElement,sep,digit,read_float
 
 #to read svg paths
 #norm : http://www.w3.org/TR/SVG/paths.html
-sep = r"\s*,?\s*"
-coord = r"([-]?\d+[.]?\d*)"
-point = coord + sep + coord
+point = digit + sep + digit
 remaining = r"(.*)$"
 
 mM_data = re.compile(sep + point + remaining)
 
 #staight lines
 lL_data = re.compile(sep + point + remaining)
-hH_data = re.compile(sep + coord + remaining)
-vV_data = re.compile(sep + coord + remaining)
+hH_data = re.compile(sep + digit + remaining)
+vV_data = re.compile(sep + digit + remaining)
 
 #curves
 cC_data = re.compile(sep + point
@@ -46,7 +44,7 @@ cC_data = re.compile(sep + point
 sS=sep+"([sS])"+sep+point+sep+point
 qQ=sep+"([qQ])"+sep+point+sep+point
 tT=sep+"([tT])"+sep+point
-aA=sep+"([aA])"+sep+point+sep+coord+sep+"([01])"+sep+"([01])"+sep+point
+aA=sep+"([aA])"+sep+point+sep+digit+sep+"([01])"+sep+"([01])"+sep+point
 
 cmd_typ = re.compile(sep + "([mMzZlLhHvVcC])" + remaining)
 
@@ -547,7 +545,10 @@ class SVGPath (SVGElement) :
 				cmd = cmd_factory(typ)
 			
 			#fill command with parameters
-			txt = cmd.from_string(txt)
+			try :
+				txt = cmd.from_string(txt)
+			except UserWarning,e :
+				raise UserWarning("path read fail for %s,\n %s" % (self.id(),e.message) )
 			self._commands.append(cmd)
 			
 			last_cmd = cmd
