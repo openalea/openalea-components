@@ -24,8 +24,9 @@ __revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
 class Quantity (object) :
 	"""Associate some semantic and unit to a value
 	"""
+	
 	def __init__ (self, value, unit = "", type = "", description = "") :
-		"""Constructor.
+		"""Constructor
 		
 		value: the actual value of the quantity
 		       may be a single value or a map of values
