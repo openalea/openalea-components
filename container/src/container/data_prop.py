@@ -134,6 +134,9 @@ class Quantity (object) :
 	#		dict interface for dict quantities
 	#
 	##########################################################
+	def clear (self) :
+		self._value.clear()
+	
 	def __len__ (self) :
 		return len(self._value)
 	
@@ -152,8 +155,14 @@ class Quantity (object) :
 	def __setitem__ (self, key, val) :
 		self._value[key] = val
 	
-	def pop (self, key) :
-		return self._value.pop(key)
+	def get (self, *args, **kwds) :
+		return self._value.get(*args,**kwds)
+	
+	def pop (self, *args, **kwds) :
+		return self._value.pop(*args,**kwds)
+	
+	def update (self, *args, **kwds) :
+		self._value.update(*args,**kwds)
 
 class DataProp (dict) :
 	"""
