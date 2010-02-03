@@ -155,6 +155,9 @@ class Quantity (object) :
 	def __setitem__ (self, key, val) :
 		self._value[key] = val
 	
+	def __delitem__ (self, key) :
+		del self._value[key]
+	
 	def get (self, *args, **kwds) :
 		return self._value.get(*args,**kwds)
 	

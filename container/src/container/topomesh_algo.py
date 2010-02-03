@@ -246,6 +246,121 @@ def collapse_edge (mesh, eid, protected_edges) :
     #return
     return pid1,pid2
 
+def clean_duplicated_edges (mesh, eid1, eid2) :
+	"""Remove a duplicated edge
+	
+	Remove eid2 and reconnect all faces
+	to eid1. If a face is not geometrically
+	defined (less than 3 edges) remove it
+	too.
+	
+	.. warning:: eid1 and eid2 must have
+	  the same borders
+	
+	.. warning:: do not test for cells
+	
+	:Returns Type: None
+	"""
+	faces = set(mesh.regions(1,eid2) )
+	faces.discard(mesh.regions(1,eid2) )
+	
+	mesh.remove_wisp(1,eid2)
+	
+	for fid in faces :
+		mesh.link(2,fid,eid1)
+	
+	for fid in tuple(mesh.regions(1,eid1) ) :
+		if mesh.nb_borders(2,fid) < 3 :
+			clean_remove(mesh,2,fid)
+
+def collapse_edge (mesh, eid) :
+	"""Collapse an edge
+	
+	Collapse and remove an edge
+	Remove adjacent faces and
+	duplicated edges if necessary
+	
+	.. warning::
+	 - edge eid has only two borders pid1
+	   and pid2
+	 - there is no other edge between
+	   pid1 and pid2
+	
+	.. warning:: do not test for cells
+	
+	:Parameters:
+	 - `mesh` (:class:`Topomesh`)
+	 - `eid` (eid) - id of edge
+	    to collapse
+	
+	:Return:
+	 - pid1, id of remaining point
+	 - pid2, id of point that have been removed
+	
+	:Returns Type: (pid,pid)
+	"""
+	pid1,pid2 = mesh.borders(1,eid)
+	
+	#remove eid
+	mesh.remove_wisp(1,eid)
+	
+	#relink edges connected to pid2
+	for eid in tuple(mesh.regions(0,pid2) ) :
+		mesh.unlink(1,eid,pid2)
+		mesh.link(1,eid,pid1)
+	
+	mesh.remove_wisp(0,pid2)
+	
+	#test for duplicated edges
+	edge = {}
+	for eid in tuple(mesh.regions(0,pid1) ) :
+		pids = tuple(mesh.borders(1,eid) )
+		key = (min(pids),max(pids) )
+		try :
+			other_eid = edge[key]
+			#edge is duplicated
+			clean_duplicated_edges(mesh,other_eid,eid)
+		except KeyError :
+			#edge is alone for the moment
+			edge[key] = eid
+	
+	#return
+	return pid1,pid2
+
+def collapse_face (mesh, fid) :
+	"""Collapse a face
+	
+	remove the face and call :func:`collapse_edge`
+	on all border of the face
+	
+	:Parameters:
+	 - `mesh` (:class:`Topomesh`)
+	 - `fid` (fid) - id of face
+	    to collapse
+	
+	:Return:
+	 - pid0, id of the point that stands for
+	   the face
+	 - pids, list of points that have been
+	   removed
+	
+	:Returns Type: pid,list of pid
+	"""
+	edges = tuple(mesh.borders(2,fid) )
+	
+	mesh.remove_wisp(2,fid)
+	
+	pid0 = None
+	removed_pids = []
+	
+	for eid in edges :
+		if mesh.has_wisp(1,eid) :
+			pid1,pid2 = collapse_edge(mesh,eid)
+			removed_pids.append(pid2)
+			pid0 = pid1
+	
+	return pid0,removed_pids
+
 ###########################################################
 #
 #       remove unwanted elements
