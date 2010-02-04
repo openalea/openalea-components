@@ -21,6 +21,7 @@ __license__= "Cecill-C"
 __revision__=" $Id: $ "
 
 import re
+from math import sin,cos
 
 #to read svg transformations or values
 #norm : http://www.w3.org/TR/SVG/coords.html#TransformAttribute
