@@ -22,7 +22,7 @@ implemented :class:`openalea.container.interface.tree` interface.
 
 __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 from random import randint
 from collections import deque

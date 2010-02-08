@@ -20,7 +20,7 @@ for a topomesh interface
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
+__revision__=" $Id$ "
 
 from array import array
 from interface.topomesh import TopomeshError,InvalidWisp,InvalidDegree,\

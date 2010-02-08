@@ -20,7 +20,7 @@ This module provide a set of tree concepts to form a tree interface.
 """
 
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 class ITree(object):
     """Rooted Tree interface.

@@ -4,7 +4,7 @@ from openalea.container import Topomesh,\
                                 is_collapse_topo_allowed,collapse_edge
 
 m = Topomesh(3)
-
+protected = [1]
 ##########################
 #
 #       single triangle
@@ -28,7 +28,7 @@ for eid in m.wisps(1) :
 
 #collapse
 for eid in m.wisps(1) :
-    assert not is_collapse_topo_allowed(m,eid)
+    assert not is_collapse_topo_allowed(m,eid, protected)
 
 ##########################
 #
@@ -56,10 +56,10 @@ for eid in (0,) :
 
 #collapse
 for eid in (1,2,3,4) :
-    assert is_collapse_topo_allowed(m,eid)
+    assert is_collapse_topo_allowed(m,eid, protected)
 
 for eid in (0,) :
-    assert not is_collapse_topo_allowed(m,eid)
+    assert not is_collapse_topo_allowed(m,eid, protected)
 
 ##########################
 #
@@ -80,10 +80,10 @@ for eid in m.wisps(2) :
 
 #collapse
 for eid in (0,2,3) :
-    assert is_collapse_topo_allowed(m,eid)
+    assert is_collapse_topo_allowed(m,eid, protected)
 
 for eid in (1,4,5) :
-    assert not is_collapse_topo_allowed(m,eid)
+    assert not is_collapse_topo_allowed(m,eid, protected)
 
 ##########################
 #
@@ -101,4 +101,4 @@ for eid in m.wisps(2) :
 
 #collapse
 for eid in m.wisps(2) :
-    assert not is_collapse_topo_allowed(m,eid)
+    assert not is_collapse_topo_allowed(m,eid, protected)

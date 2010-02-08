@@ -19,7 +19,7 @@ This module provide a topological relation interface
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
+__revision__=" $Id$ "
 
 class RelationError (Exception) :
     """

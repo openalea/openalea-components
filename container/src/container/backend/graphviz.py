@@ -22,7 +22,7 @@ Display a graph with the graphviz package by using the pydot module.
 
 __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 import pydot
 from openalea.container.traversal.tree import pre_order
