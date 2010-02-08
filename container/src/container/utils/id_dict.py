@@ -19,7 +19,7 @@ This module provide a dictionnary that create keys when needed
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: graph.py 116 2007-02-07 17:44:59Z tyvokka $ "
+__revision__=" $Id$ "
 
 from id_generator import IdMaxGenerator,IdSetGenerator,IdListGenerator
 

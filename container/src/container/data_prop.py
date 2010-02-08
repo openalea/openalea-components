@@ -19,7 +19,7 @@ This module provide a python definition of a property
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
+__revision__=" $Id$ "
 
 class Quantity (object) :
 	"""Associate some semantic and unit to a value

@@ -18,7 +18,7 @@ node definition for container.mesh package
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from openalea.vmanalysis.serial.mesh_read import read
 from openalea.container import topomesh_algo as algo

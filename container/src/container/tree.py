@@ -22,7 +22,7 @@ For interface definition, see :mod:`openalea.container.interface.tree`.
 
 __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 from copy import deepcopy
 
@@ -405,6 +405,8 @@ class Tree(IRootedGraph,
 
         # pre_order traversal from root and renumbering
         for vtx_id in pre_order(tree, root):
+            if vtx_id == root:
+               continue 
             parent = treeid_id[tree.parent(vtx_id)]
             vid = self.add_child(parent)
             treeid_id[vtx_id] = vid

@@ -23,7 +23,7 @@ in different graph libraries, and to compare algorithms and graph implementation
 
 __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 import networkx as nx
 from openalea.container import Graph

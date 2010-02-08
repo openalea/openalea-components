@@ -19,7 +19,7 @@ This module provide a simple way to serialize elements in a txt file
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: grid.py 116 2007-02-07 17:44:59Z tyvokka $ "
+__revision__=" $Id$ "
 
 def write_description (f, description) :
     """Add a description paragraph to a given stream
