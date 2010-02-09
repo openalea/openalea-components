@@ -42,7 +42,7 @@ This module defines a svg element to store stacks of images
 #TODO
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from os.path import join,normpath
 from openalea.plantgl.math import Vector3,Matrix4,scaling

@@ -18,7 +18,7 @@ This module defines a special top level layer
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from svg_group import SVGGroup,SVGLayer
 

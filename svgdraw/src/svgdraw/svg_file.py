@@ -18,7 +18,7 @@ This module defines read an write functions
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from xml.dom.minidom import parse,parseString,Document
 from xml_element import XMLElement

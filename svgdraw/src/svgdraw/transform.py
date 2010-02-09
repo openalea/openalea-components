@@ -18,7 +18,7 @@ This module defines an svg transformation
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 import re
 from math import sin,cos

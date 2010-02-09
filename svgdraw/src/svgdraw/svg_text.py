@@ -18,7 +18,7 @@ This module defines SVG text related elements
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from svg_element import SVGElement,read_float,write_float
 from xml_element import XMLElement,ELEMENT_TYPE,TEXT_TYPE

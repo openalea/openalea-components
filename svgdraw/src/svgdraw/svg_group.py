@@ -18,7 +18,7 @@ This module defines a group svg element
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from svg_element import SVGElement,read_float,write_float
 

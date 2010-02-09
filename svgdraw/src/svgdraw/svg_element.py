@@ -18,7 +18,7 @@ This module defines an abstract svg element
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 import re
 from os.path import join,dirname

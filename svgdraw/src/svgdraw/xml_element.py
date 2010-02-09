@@ -18,7 +18,7 @@ This module defines an abstract xml element
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from xml.dom.minidom import Document
 

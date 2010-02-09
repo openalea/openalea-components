@@ -18,7 +18,7 @@ This module defines a set of algorithms for svg elements
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 from math import sqrt
 from svg_primitive import SVGCenteredElement,SVGSphere

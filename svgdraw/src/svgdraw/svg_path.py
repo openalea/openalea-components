@@ -18,7 +18,7 @@ This module defines a path svg element
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 import re
 from svg_element import SVGElement,sep,digit,read_float
