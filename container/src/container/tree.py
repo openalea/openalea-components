@@ -303,12 +303,14 @@ class Tree(IRootedGraph,
             parent_id = self._id
 
         old_parent = self.parent(vtx_id)
-        children = self._children[old_parent]
+        if old_parent is not None:
+            children = self._children[old_parent]
 
         self.add_child(parent_id, vtx_id)
         # replace vtx_id by parent_id in children of old_parent
-        index = children.index(vtx_id)
-        children[index] = parent_id
+        if old_parent is not None:
+            index = children.index(vtx_id)
+            children[index] = parent_id
         return parent_id
 
 
