@@ -8,3 +8,7 @@ from svg_text import SVGText
 
 from svg_algo import expand_path
 
+try :
+	from qtview import display,save_png
+except ImportError :
+	"Qt not installed"
