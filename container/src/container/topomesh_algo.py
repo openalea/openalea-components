@@ -361,6 +361,44 @@ def collapse_face (mesh, fid) :
 	
 	return pid0,removed_pids
 
+def clone_mesh (mesh, wids) :
+	"""Clone a mesh around a set of elements
+	
+	Create a new mesh with the same ids
+	than the old one where all wisps not
+	connected to the given one are ommited.
+	
+	:Parameters:
+	 - `mesh` (:class:`Topomesh`) - the master
+	            mesh to clone
+	 - `wids` (list of wid) - a list of top
+	    wisps id that will remain in the clone
+	
+	:Returns Type: :class:`Topomesh`
+	"""
+	deg_max = mesh.degree()
+	
+	cmesh = Topomesh(deg_max,"max")
+	
+	#find local wisps
+	loc_wisps = [(deg,tuple(mesh.borders(deg_max,wid,deg_max - deg) ) ) \
+	              for deg in xrange(deg_max)] \
+	           + [(deg_max,wids)]
+	
+	#copy wisps
+	for deg,wids in loc_wisps :
+		for wid in wids :
+			cmesh.add_wisp(deg,wid)
+	
+	#copy links between wisps
+	for deg,wids in loc_wisps[-1:0:-1] :
+		for wid in wids :
+			for bid in mesh.borders(deg,wid) :
+				cmesh.link(deg,wid,bid)
+	
+	#return
+	return cmesh
+
 ###########################################################
 #
 #       remove unwanted elements

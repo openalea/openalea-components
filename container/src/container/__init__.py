@@ -22,4 +22,4 @@ from topomesh_algo import clean_remove,clean_geometry, clean_orphans,\
                           expand, border, shrink,\
                           expand_to_border, expand_to_region, external_border,\
                           clean_duplicated_borders, merge_wisps,\
-                          find_cycles
+                          find_cycles,clone_mesh
