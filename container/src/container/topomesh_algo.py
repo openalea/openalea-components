@@ -381,9 +381,14 @@ def clone_mesh (mesh, wids) :
 	cmesh = Topomesh(deg_max,"max")
 	
 	#find local wisps
-	loc_wisps = [(deg,tuple(mesh.borders(deg_max,wid,deg_max - deg) ) ) \
-	              for deg in xrange(deg_max)] \
-	           + [(deg_max,wids)]
+	loc_wisps = []
+	for deg in xrange(deg_max) :
+		wisps = set()
+		for wid in wids :
+			wisps.update(mesh.borders(deg_max,wid,deg_max - deg) )
+		loc_wisps.append( (deg,wisps) )
+	
+	loc_wisps.append( (deg_max,wids) )
 	
 	#copy wisps
 	for deg,wids in loc_wisps :
