@@ -571,6 +571,45 @@ def topo_divide_cell (mesh, cid, eids) :
 	#separated by edges in eids
 	faces = set(mesh.borders(3,cid) )
 	
+	#create front
+	#order edges
+	eid = eids[0]
+	edges = set(eids)
+	edges.discard(eid)
+	pid1,pid2 = mesh.borders(1,eid)
+	edge_list = [eid]
+	front = [pid2]
+	while front[-1] != pid1 :
+		eid,pid = _next_point(mesh,edges,front[-1])
+		edge_list.append(eid)
+		edges.discard(eid)
+		front.append(pid)
+	
+	start_fid = (set(mesh.regions(1,edge_list[0]) ) & faces).pop()
+	front = [start_fid]
+	for eid in edge_list[1:] :
+		fid, = set(mesh.regions(1,eid) ) \
+		     & set(mesh.border_neighbors(2,front[-1]) )
+		front.append(fid)
+	
+	faces1 = set(front)
+	faces -= faces1
+	edges = set(eids)
+	while len(front) > 0 :
+		fid = front.pop(0)
+		for eid in set(mesh.borders(2,fid) ) - edges :
+			for bid in set(mesh.regions(1,eid) ) & faces :
+				faces.discard(bid)
+				faces1.add(bid)
+				front.append(bid)
+	
+	#link faces
+	for fid in faces1 :
+		mesh.link(3,cid1,fid)
+	
+	for fid in faces :
+		mesh.link(3,cid2,fid)
+	
 	#create separating face
 	fid = mesh.add_wisp(2)
 	for eid in eids :
