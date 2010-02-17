@@ -32,7 +32,7 @@ __all__ = ["clean_remove","clean_geometry","clean_orphans",
            "expand_to_border","expand_to_region","external_border",
            "clean_duplicated_borders","merge_wisps",
            "find_cycles","clone_mesh",
-           "topo_divide_face","topo_divide_cell"]
+           "topo_divide_edge","topo_divide_face","topo_divide_cell"]
 ###########################################################
 #
 #       mesh edition
@@ -469,6 +469,51 @@ def _next_point (mesh, eids, pid) :
 			new_pid,  = set(mesh.borders(1,eid) ) - set([pid])
 			return eid,new_pid
 
+def topo_divide_edge (mesh, eid) :
+	"""Divide an edge into two edges
+	
+	remove eid and replace it by two
+	edges connected by a new point
+	
+	.. warning:: the edge has only two
+	   points as borders
+	
+	Modify mesh in place
+	
+	:Parameters:
+	 - `mesh` (:class:`Topomesh`)
+	 - `eid` (eid) - edge to divide
+	
+	:Return:
+	 - eid1,eid2 - the 2 new edges
+	 - pid - id of the new separating point
+	
+	:Returns Type: eid,eid,pid
+	"""
+	#create daughter edges
+	eid1 = mesh.add_wisp(1)
+	eid2 = mesh.add_wisp(1)
+	if mesh.degree() > 1 :
+		for fid in mesh.regions(1,eid) :
+			mesh.link(2,fid,eid1)
+			mesh.link(2,fid,eid2)
+	
+	#associate with old points
+	pid1,pid2 = mesh.borders(1,eid)
+	mesh.link(1,eid1,pid1)
+	mesh.link(1,eid2,pid2)
+	
+	#create separating point
+	pid = mesh.add_wisp(0)
+	mesh.link(1,eid1,pid)
+	mesh.link(1,eid2,pid)
+	
+	#remove old edge
+	mesh.remove_wisp(1,eid)
+	
+	#return
+	return eid1,eid2,pid
+
 def topo_divide_face (mesh, fid, pid1, pid2) :
 	"""Divide a face into two faces
 	
@@ -494,7 +539,7 @@ def topo_divide_face (mesh, fid, pid1, pid2) :
 	 - fid1,fid2 - the 2 new faces
 	 - eid - id of the new separating edge
 	
-	;Returns Type: fid,fid,eid
+	:Returns Type: fid,fid,eid
 	"""
 	#create daughter faces
 	fid1 = mesh.add_wisp(2)
@@ -557,7 +602,7 @@ def topo_divide_cell (mesh, cid, eids) :
 	 - cid1,cid2 - the 2 new cells
 	 - fid - id of the new separating face
 	
-	;Returns Type: cid,cid,fid
+	:Returns Type: cid,cid,fid
 	"""
 	#create daughter cells
 	cid1 = mesh.add_wisp(3)
