@@ -24,6 +24,15 @@ __revision__=" $Id$ "
 
 from topomesh import Topomesh
 
+__all__ = ["clean_remove","clean_geometry","clean_orphans",
+           "is_flip_topo_allowed","flip_edge",
+           "is_collapse_topo_allowed","clean_duplicated_edges",
+           "collapse_edge","collapse_face",
+           "expand","border","shrink",
+           "expand_to_border","expand_to_region","external_border",
+           "clean_duplicated_borders","merge_wisps",
+           "find_cycles","clone_mesh",
+           "topo_divide_face","topo_divide_cell"]
 ###########################################################
 #
 #       mesh edition
@@ -201,50 +210,6 @@ def is_collapse_topo_allowed (mesh, eid, protected_edges) :
                     return False
     #return
     return True
-
-def collapse_edge (mesh, eid, protected_edges) :
-    """Collapse an edge.
-
-    collapse an edge and remove adjacent faces
-    face of the mesh must be triangles or quadrangles only
-    return pid1, the point where edges have been reconnected
-           pid2, the point that have been removed
-    """
-    pid1,pid2 = mesh.borders(1,eid)
-    #remove face adjacents to eid
-    for fid in tuple(mesh.regions(1,eid) ) :
-        if mesh.nb_borders(2,fid) == 3 : #triangle to remove
-            #find edge opposite to pid1
-            eid1, = set(mesh.borders(2,fid)) - set(mesh.regions(0,pid1))
-            #find edge opposite to pid2
-            eid2, = set(mesh.borders(2,fid)) - set(mesh.regions(0,pid2))
-            #test for edge protected
-            if eid1 in protected_edges :
-            	if eid2 in protected_edges :
-            		raise UserWarning("unable to collapse edge %d on edge %d" % (eid1,eid2) )
-            	else :
-            		eid1,eid2 = eid2,eid1
-            #remove face
-            mesh.remove_wisp(2,fid)
-            #relink faces connected to eid1 with eid2
-            for nfid in tuple(mesh.regions(1,eid1)) :
-                mesh.unlink(2,nfid,eid1)
-                mesh.link(2,nfid,eid2)
-            #remove eid1
-            mesh.remove_wisp(1,eid1)
-            #remove eid2 if necessary TODO remove lonely point too
-            #if mesh.nb_regions(1,eid2) == 0 :
-            #       mesh.remove_wisp(1,eid2)
-    #remove eid
-    mesh.remove_wisp(1,eid)
-    #relink edges connected to pid2
-    for neid in tuple(mesh.regions(0,pid2)) :
-        mesh.unlink(1,neid,pid2)
-        mesh.link(1,neid,pid1)
-    #remove pid2
-    mesh.remove_wisp(0,pid2)
-    #return
-    return pid1,pid2
 
 def clean_duplicated_edges (mesh, eid1, eid2) :
 	"""Remove a duplicated edge
@@ -465,43 +430,6 @@ def clean_duplicated_borders (mesh, outer = True) :
     if outer is True, then even elements that share
     only one region are simplified
     """
-    for scale in xrange(1,mesh.degree()) :
-        #find duplicated borders
-        bd = {}
-        for wid in mesh.wisps(scale) :
-            rids = list(mesh.regions(scale,wid))
-            rids.sort()
-            key = tuple(rids)
-            try :
-                bd[key].append(wid)
-            except KeyError :
-                bd[key] = [wid]
-        if outer :
-            duplicated = [v for k,v in bd.iteritems() if len(v) > 1]
-        else :
-            duplicated = [v for k,v in bd.iteritems() if len(k) > 1 and len(v) > 1]
-        #merge duplicates
-        for wids in duplicated :
-            wid1 = wids.pop(0)
-            while len(wids) > 0 :
-                try :
-                    #find a neighbor of wid
-                    ind = _find_neighbor(mesh,scale,wid1,wids)
-                    wid2 = wids.pop(ind)
-                    #merge wid1 and wid2
-                    wid1 = merge_wisps(mesh,scale,wid1,wid2)
-                except ValueError :
-                    print "pb"
-                    wid1 = wids.pop(0)
-
-def clean_duplicated_borders (mesh, outer = True) :
-    """
-    replace all wisps that account for the same
-    border between two regions by a unique wisp
-
-    if outer is True, then even elements that share
-    only one region are simplified
-    """
     for deg in xrange(mesh.degree()-1,mesh.degree()-2,-1) :
         #find duplicated borders
         bd = {}
@@ -529,6 +457,133 @@ def clean_duplicated_borders (mesh, outer = True) :
             #remove duplicates
             for wid in wids :
                 clean_remove(mesh,deg,wid)
+
+###########################################################
+#
+#       mesh division
+#
+###########################################################
+def _next_point (mesh, eids, pid) :
+	for eid in eids :
+		if pid in mesh.borders(1,eid) :
+			new_pid,  = set(mesh.borders(1,eid) ) - set([pid])
+			return eid,new_pid
+
+def topo_divide_face (mesh, fid, pid1, pid2) :
+	"""Divide a face into two faces
+	
+	Remove fid from the mesh and replace it
+	by two faces divided along an edge
+	that join pid1 and pid2
+	
+	Modify mesh in place.
+	
+	.. warning:: pid1 and pid2 must be
+	  linkked through a path of edges
+	  and not directly
+	
+	:Parameters:
+	 - `mesh` (:class:`Topomesh`)
+	 - `fid` (fid) - face to divide
+	 - `pid1` (pid) - first extremity
+	   of the dividing segment
+	 - `pid2` (pid) - second extremity
+	   of the dividing segment
+	
+	:Return:
+	 - fid1,fid2 - the 2 new faces
+	 - eid - id of the new separating edge
+	
+	;Returns Type: fid,fid,eid
+	"""
+	#create daughter faces
+	fid1 = mesh.add_wisp(2)
+	fid2 = mesh.add_wisp(2)
+	if mesh.degree() > 2 :
+		for cid in mesh.regions(2,fid) :
+			mesh.link(3,cid,fid1)
+			mesh.link(3,cid,fid2)
+	
+	#sort edges in two sets
+	#separated by pid1 and pid2
+	edges = set(mesh.borders(2,fid) )
+	edges1 = set()
+	front = [pid1]
+	while front[-1] != pid2 :
+		eid,pid = _next_point(mesh,edges,front[-1])
+		edges.discard(eid)
+		edges1.add(eid)
+		front.append(pid)
+	
+	#link edges
+	for eid in edges1 :
+		mesh.link(2,fid1,eid)
+	
+	for eid in edges :
+		mesh.link(2,fid2,eid)
+	
+	#create separating edge
+	eid = mesh.add_wisp(1)
+	mesh.link(1,eid,pid1)
+	mesh.link(1,eid,pid2)
+	mesh.link(2,fid1,eid)
+	mesh.link(2,fid2,eid)
+	
+	#remove old face
+	mesh.remove_wisp(2,fid)
+	
+	#return
+	return fid1,fid2,eid
+
+def topo_divide_cell (mesh, cid, eids) :
+	"""Divide a cell into two cells
+	
+	Remove cid from the mesh and replace it
+	by two cells divided by a face bordered
+	by edges in eids
+	
+	Modify mesh in place.
+	
+	.. warning:: eids must form a closed path
+	
+	:Parameters:
+	 - `mesh` (:class:`Topomesh`)
+	 - `cid` (cid) - cell to divide
+	 - `eids` (list of eid) - list of id
+	   of the edges of the future separating
+	   face
+	
+	:Return:
+	 - cid1,cid2 - the 2 new cells
+	 - fid - id of the new separating face
+	
+	;Returns Type: cid,cid,fid
+	"""
+	#create daughter cells
+	cid1 = mesh.add_wisp(3)
+	cid2 = mesh.add_wisp(3)
+	if mesh.degree() > 3 :
+		for wid in mesh.regions(3,cid) :
+			mesh.link(4,wid,cid1)
+			mesh.link(4,wid,cid2)
+	
+	#sort faces in two sets
+	#separated by edges in eids
+	faces = set(mesh.borders(3,cid) )
+	
+	#create separating face
+	fid = mesh.add_wisp(2)
+	for eid in eids :
+		mesh.link(2,fid,eid)
+	
+	mesh.link(3,cid1,fid)
+	mesh.link(3,cid2,fid)
+	
+	#remove old cell
+	mesh.remove_wisp(3,cid)
+	
+	#return
+	return cid1,cid2,fid
 
 ###########################################################
 #
