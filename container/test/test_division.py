@@ -1,4 +1,4 @@
-from openalea.container import Topomesh,topo_divide_face
+from openalea.container import Topomesh,topo_divide_face,topo_divide_cell
 
 #############################################
 #
@@ -48,91 +48,119 @@ assert set(m.borders(2,fid2) ) == set([1,2,3,eid])
 #############################################
 
 #top
-#	0----0----1----1----2
-#	|                   |
-#	5         0         2
-#	|                   |
-#	5----4----4----3----3
-
-#bottom
-#	6----6----7----7----8
-#	|                   |
-#	11        1         8
-#	|                   |
-#	11---10---10---9----9
-
-#back
-#	0----0----1----1----2
-#	|                   |
-#	13        2         12
-#	|                   |
-#	6----6----7----7----8
+#	0----12---4----16---8
+#	|         |         |
+#	0    0    4    4    8
+#	|         |         |
+#	1----13---5----17---9
 
 #front
-#	5----4----4----3----3
-#	|                   |
-#	15        3         14
-#	|                   |
-#	11---10---10---9----9
+#	1----13---5----17---9
+#	|         |         |
+#	1    1    5    5    9
+#	|         |         |
+#	2----14---6----18---10
+
+#bottom
+#	3----15---7----19---11
+#	|         |         |
+#	2    2    6    6    10
+#	|         |         |
+#	2----14---6----18---10
+
+#back
+#	0----12---4----16---8
+#	|         |         |
+#	3    3    7    7    11
+#	|         |         |
+#	3----15---7----19---11
 
 #left
-#	0----5----5
+#	0----0----1
 #	|         |
-#	13   4    15
+#	3    8    1
 #	|         |
-#	6----11---11
+#	3----2----2
+
+#middle (no face)
+#	4----4----5
+#	|         |
+#	7         5
+#	|         |
+#	7----6----6
 
 #right
-#	2----2----3
-#	|         |
-#	12   5    14
-#	|         |
 #	8----8----9
+#	|         |
+#	11   9    9
+#	|         |
+#	11---10---10
 
 m = Topomesh(3)
 
+#points
 for i in xrange(12) :
 	m.add_wisp(0,i)
 
-for i in xrange(16) :
+#edges
+for i in xrange(20) :
 	m.add_wisp(1,i)
 
-for i in xrange(6) :
+for i in xrange(4) :
+	m.link(1,i,i)
+	m.link(1,i,(i + 1) % 4)
+	
+	m.link(1,4 + i,4 + i)
+	m.link(1,4 + i,4 + (i + 1) % 4)
+	
+	m.link(1,8 + i,8 + i)
+	m.link(1,8 + i,8 + (i + 1) % 4)
+	
+	m.link(1,12 + i,i)
+	m.link(1,12 + i,4 + i)
+	
+	m.link(1,16 + i,4 + i)
+	m.link(1,16 + i,8 + i)
+
+#faces
+for i in xrange(10) :
 	m.add_wisp(2,i)
 
+for i in xrange(4) :
+	m.link(2,8,i)
+	m.link(2,9,8 + i)
+
+for eid in (0,4,12,13) :
+	for i in xrange(3) :
+		m.link(2,i,i + eid)
+		m.link(2,4 + i,4 + i + eid)
+
+for eid in (3,12,7,15) :
+	m.link(2,3,eid)
+	m.link(2,7,4 + eid)
+
+#cell
 cid = m.add_wisp(3)
-
-for i in xrange(6) :
-	m.link(1,i,i)
-	m.link(1,i,(i + 1) % 6)
-
-for i in xrange(6) :
-	m.link(1,6 + i,6 + i)
-	m.link(1,6 + i,6 + (i + 1) % 6)
-
-for eid,pid1,pid2 in [(12,2,8),
-                      (13,0,6),
-                      (14,3,9),
-                      (15,5,11)] :
-	m.link(1,eid,pid1)
-	m.link(1,eid,pid2)
-
-for i in xrange(6) :
-	m.link(2,0,i)
-	m.link(2,1,6 + i)
-
-for fid,eids in [(2,(0,1,12,7,6,13) ),
-                 (3,(4,3,14,9,10,15) ),
-                 (4,(5,15,11,13) ),
-                 (5,(2,14,8,12) )] :
-	for eid in eids :
-		m.link(2,fid,eid)
-
-for i in xrange(6) :
+for i in xrange(10) :
 	m.link(3,cid,i)
 
+#divide
+cid1,cid2,fid = topo_divide_cell(m,cid,(4,5,6,7) )
 
 
+#middle (no face)
+#	4----4----5
+#	|         |
+#	7   fid   5
+#	|         |
+#	7----6----6
+
+assert set(m.borders(2,fid) ) == set([4,5,6,7])
+assert set(m.regions(2,fid) ) == set([cid1,cid2])
+cid1, = m.regions(2,8)
+cid2, = m.regions(2,9)
+assert set(m.borders(3,cid1) ) == set([0,1,2,3,8,fid])
+assert set(m.borders(3,cid2) ) == set([4,5,6,7,9,fid])
 
 
 
