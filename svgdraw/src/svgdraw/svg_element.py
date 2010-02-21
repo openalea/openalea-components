@@ -75,6 +75,28 @@ def write_color (color) :
 	else :
 		return "#%.2x%.2x%.2x" % color
 
+def read_dash (dash_str) :
+	"""Read an str repr of dashing
+	
+	:Parameters:
+	 - `dash_str` - string representation
+	   of dash information int,int
+	
+	:Returns Type: int,int
+	"""
+	dash_length,void_length = (int(v) for v in dash_str.split(",") )
+	return dash_length,void_length
+
+def write_dash (dash) :
+	"""Write a dash representation
+	
+	:Parameters:
+	 - `dash` (int,int) - tuple dash_length,void_length
+	
+	:Returns Type: str
+	"""
+	return "%d, %d" % dash
+
 def read_float (val_str) :
 	"""Read a float string
 	
@@ -213,6 +235,33 @@ class SVGElement (XMLElement) :
 		"""
 		self._style["fill"] = write_color(color)
 	
+	def opacity (self) :
+		"""Return opacity of filling
+		
+		0. means transparent and 1. opaque
+		
+		Return None if element is not filled
+		
+		.. seealso: :func:fill
+		
+		:Returns Type: float
+		"""
+		if "fill-opacity" in self._style :
+			return read_float(self._style["fill-opacity"])
+		else :
+			return None
+	
+	def set_opacity (self, opacity) :
+		"""Set the opacity of filling
+		
+		.. seealso: :func:set_fill
+		
+		:Parameters:
+		 - `opacity` (float) - 0. means transparent
+		    and 1. opaque
+		"""
+		self._style["fill-opacity"] = write_float(opacity)
+	
 	def stroke (self) :
 		"""Return color used to paint border of the element
 		
@@ -263,6 +312,35 @@ class SVGElement (XMLElement) :
 		   the border in pixels
 		"""
 		self._style["stroke-width"] = write_float(width)
+	
+	def stroke_dash (self) :
+		"""Return dashing type for stroke
+		
+		:Return:
+		 - dash length, void length in pix
+		 - None if continuous
+		
+		:Returns Type:
+		 - int,int
+		 - None
+		"""
+		if "stroke-dasharray" in self._style :
+			return read_dash(self._style["stroke-dasharray"])
+		else :
+			return None
+	
+	def set_stroke_dash (self, dash_length, void_length = 1) :
+		"""Set dashing for this stroke
+		
+		:Parameters:
+		 - `dash_length` (int) - length of dash in pixel
+		    if None, no dashing
+		 - `void_length` (int) - length of void in pixel
+		"""
+		if dash_length is None :
+			self._style.pop("stroke-dasharray",None)
+		else :
+			self._style["stroke-dasharray"] = write_dash( (dash_length,void_length) )
 	
 	##############################################
 	#
