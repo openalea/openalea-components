@@ -32,7 +32,8 @@ __all__ = ["clean_remove","clean_geometry","clean_orphans",
            "expand_to_border","expand_to_region","external_border",
            "clean_duplicated_borders","merge_wisps",
            "find_cycles","clone_mesh",
-           "topo_divide_edge","topo_divide_face","topo_divide_cell"]
+           "topo_divide_edge","topo_divide_face","topo_divide_cell",
+           "ordered_pids","triangulate_polygon","triangulate_face"]
 ###########################################################
 #
 #       mesh edition
@@ -368,6 +369,84 @@ def clone_mesh (mesh, wids) :
 	
 	#return
 	return cmesh
+
+###############################################
+#
+#		triangulation
+#
+###############################################
+def _next_point (mesh, eids, pid) :
+	for eid in eids :
+		if pid in mesh.borders(1,eid) :
+			new_pid,  = set(mesh.borders(1,eid) ) - set([pid])
+			return eid,new_pid
+
+def ordered_pids (mesh, fid) :
+	"""Return the list of points that
+	border this face ordered along edges
+	
+	:Parameters:
+	 - `mesh` (:class:`Topomesh`)
+	 - `fid` (fid) : id of the face
+	
+	:Returns Type: list of pid
+	"""
+	eids = set(mesh.borders(2,fid) )
+	eid = eids.pop()
+	pids = list(mesh.borders(1,eid) )
+	
+	while len(eids) > 1 :
+		eid,pid = _next_point(mesh,eids,pids[-1])
+		eids.discard(eid)
+		pids.append(pid)
+	
+	assert len(set(mesh.borders(1,eids.pop() ) ) \
+	         - set([pids[0],pids[-1] ]) ) == 0
+	return pids
+
+def triangulate_polygon (pids) :
+	"""Sort pids in tuples of 3 points
+	
+	:Parameters:
+	 - `pids` (list of pid) - ordered list
+	    of points that form a closed polygon
+	
+	:Returns Type: list of (pid,pid,pid)
+	"""
+	if len(pids) < 3 :
+		raise UserWarning("unable to triangulate polygon with less than 3 points")
+	elif len(pids) == 3 :
+		return [pids]
+	else :
+		polygons = [pids]
+		triangles = []
+		while len(polygons) > 0 :
+			polygon = polygons.pop(0)
+			mid = len(polygon) / 2
+			p1 = polygon[:(mid + 1)]
+			p2 = polygon[mid:] + polygon[:1]
+			for p in (p1,p2) :
+				if len(p) == 3 :
+					triangles.append(p)
+				else :
+					polygons.append(p)
+		
+		return triangles
+
+def triangulate_face (mesh, fid) :
+	"""Triangulate a face of a mesh
+	
+	Return a list of triangles for
+	this face.
+	
+	:Parameters:
+	 - `mesh` (:class:`openalea.container.Topomesh`)
+	 - `fid` (fid) - id of the face to triangulate
+	
+	:Returns Type: list of (pid,pid,pid)
+	"""
+	pids = ordered_pids(mesh,fid)
+	return triangulate_polygon(pids)
 
 ###########################################################
 #
