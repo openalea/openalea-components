@@ -54,6 +54,13 @@ class IdDict (dict) :
         except IndexError :
             raise KeyError(key)
 
+    def __deepcopy__(self, memo):
+        from copy import deepcopy
+        newval = IdDict()
+        for key,val in self.iteritems():
+            dict.__setitem__(newval,deepcopy(key,memo),deepcopy(val,memo))
+        newval._id_generator = deepcopy(self._id_generator,memo)
+        return newval
     ################################################
     #
     #               dict interface
