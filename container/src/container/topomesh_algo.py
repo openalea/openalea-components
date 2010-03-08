@@ -842,43 +842,43 @@ def external_border (mesh, scale, wids) :
     return border
 
 def find_cycles (mesh, scale, length_max) :
-	"""Find all cycles in the mesh.
-	
-	Compute the list of cycles in the mesh
-	whose length is less than length_max.
-	A cycle is a list of elements at the given scale
-	connected by borders such as the first element
-	of the cycle is connected to the last element
-	
-	Brut force algorithm.
-	
-	mesh : a container.topomesh instance
-	scale : the scale to consider for cycles
-	length_max : maximum number of elements in a cycle
-	"""
-	cycles = {}
-	
-	for wid in mesh.wisps(scale) :#compute all cycles from each point
-		paths = [([wid],bid) for bid in mesh.borders(scale,wid)]
-		for i in xrange(length_max) :#increase the size of each path
-		                             #up to length_max
-		    for j in xrange(len(paths) ) :#walk trough each path
-				path,extr = paths.pop(0)
-				neighbors = set(mesh.regions(scale - 1,extr) ) \
-				            - set(path[1:])
-				if len(path) == 1 :
-					neighbors.remove(path[-1])
-				for nid in neighbors :
-					if nid == path[0] :#closed path
-						pth = list(path)
-						pth.sort()
-						cycles[tuple(pth)] = path#necessary to not duplicate paths
-					else :
-						extrs = set(mesh.borders(scale,nid) )
-						extrs.remove(extr)
-						for bid in extrs :
-							paths.append( (path + [nid],bid) )#increase the size of the path
-	
-	#drop keys to return only ordered paths
-	return cycles.values()
+    """Find all cycles in the mesh.
+
+    Compute the list of cycles in the mesh
+    whose length is less than length_max.
+    A cycle is a list of elements at the given scale
+    connected by borders such as the first element
+    of the cycle is connected to the last element
+
+    Brut force algorithm.
+
+    mesh : a container.topomesh instance
+    scale : the scale to consider for cycles
+    length_max : maximum number of elements in a cycle
+    """
+    cycles = {}
+
+    for wid in mesh.wisps(scale) :#compute all cycles from each point
+        paths = [([wid],bid) for bid in mesh.borders(scale,wid)]
+        for i in xrange(length_max) :#increase the size of each path
+                                     #up to length_max
+            for j in xrange(len(paths) ) :#walk trough each path
+                path,extr = paths.pop(0)
+                neighbors = set(mesh.regions(scale - 1,extr) ) \
+                                - set(path[1:])
+                if len(path) == 1 :
+                    neighbors.remove(path[-1])
+                for nid in neighbors :
+                    if nid == path[0] :#closed path
+                        pth = list(path)
+                        pth.sort()
+                        cycles[tuple(pth)] = path#necessary to not duplicate paths
+                    else :
+                        extrs = set(mesh.borders(scale,nid) )
+                        extrs.remove(extr)
+                        for bid in extrs :
+                            paths.append( (path + [nid],bid) )#increase the size of the path
+
+    #drop keys to return only ordered paths
+    return cycles.values()
 
