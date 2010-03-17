@@ -194,6 +194,14 @@ class SVGSphere (SVGCenteredElement) :
 		                      self.get_default("sodipodi:cx","0") ) )
 		self._cy = read_float(self.get_default("cy",
 		                      self.get_default("sodipodi:cy","0") ) )
+		self.set_nodename("svg:ellipse")
+		for key in ("r","sodipodi:rx","sodipodi:ry",
+		            "sodipodi:cx","sodipodi:cy",
+		            "sodipodi:type","d") :
+			try :
+				self.remove_attribute(key)
+			except KeyError :
+				pass
 	
 	def save (self) :
 		"""Save SVG attributes as XML attributes

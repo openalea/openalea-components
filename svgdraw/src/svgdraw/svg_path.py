@@ -551,7 +551,11 @@ class SVGPath (SVGElement) :
 				raise UserWarning("path read fail for %s,\n %s" % (self.id(),e.message) )
 			self._commands.append(cmd)
 			
-			last_cmd = cmd
+			if isinstance(cmd,_SVGPathMoveToCommand) :
+				last_cmd = cmd_factory("l")
+				last_cmd.set_relative(cmd.is_relative() )
+			else :
+				last_cmd = cmd
 	
 	def to_string (self) :
 		"""Construct the string representation
