@@ -398,7 +398,7 @@ class SVGElement (XMLElement) :
 		:Parameters:
 		 - `transfo` (:class:`SVGTransform`)
 		"""
-		self._transform = self._transform * transfo
+		self._transform = transfo * self._transform
 	
 	def translate (self, dx, dy) :
 		"""Combine a translation
@@ -409,7 +409,7 @@ class SVGElement (XMLElement) :
 		 - `dx` (float) - x displacement
 		 - `dy` (float) - y displacement
 		"""
-		self._transform = self._transform * translation(dx,dy)
+		self._transform = translation(dx,dy) * self._transform
 	
 	def rotate (self, angle) :
 		"""Combine a rotation
@@ -421,7 +421,7 @@ class SVGElement (XMLElement) :
 		   the rotation around Oz in
 		   direct orientation.
 		"""
-		self._transform = self._transform * rotation(angle)
+		self._transform = rotation(angle) * self._transform
 	
 	def scale (self, sx, sy) :
 		"""Combine a scaling
@@ -432,7 +432,7 @@ class SVGElement (XMLElement) :
 		 - `sx` (float) - x scaling
 		 - `sy` (float) - y scaling
 		"""
-		self._transform = self._transform * scaling(sx,sy)
+		self._transform = scaling(sx,sy) * self._transform
 	
 	##############################################
 	#
