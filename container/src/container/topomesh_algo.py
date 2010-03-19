@@ -442,9 +442,6 @@ def triangle_quality (pt1, pt2, pt3) :
 def triangulate_polygon (pids, pos = None) :
 	"""Sort pids in tuples of 3 points
 	
-	.. warning:: if `pos` is not None, this function depends
-	             on PlantGL
-	
 	:Parameters:
 	 - `pids` (list of pid) - ordered list
 	    of points that form a closed polygon
@@ -497,8 +494,6 @@ def triangulate_polygon (pids, pos = None) :
 				mesh.link(2,tid,eid)
 		
 		#flip edges
-		from vplants.plantgl.math import norm
-		
 		test = True
 		while test :
 			test = False
@@ -525,9 +520,6 @@ def triangulate_face (mesh, fid, pos = None) :
 	
 	Return a list of triangles for
 	this face.
-	
-	.. warning:: if `pos` is not None, this function depends
-	             on PlantGL
 	
 	:Parameters:
 	 - `mesh` (:class:`openalea.container.Topomesh`)
