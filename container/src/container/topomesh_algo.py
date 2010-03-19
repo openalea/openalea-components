@@ -22,6 +22,7 @@ for a some topomesh algorithms
 __license__= "Cecill-C"
 __revision__=" $Id$ "
 
+from math import sqrt
 from topomesh import Topomesh
 
 __all__ = ["clean_remove","clean_geometry","clean_orphans",
@@ -404,12 +405,54 @@ def ordered_pids (mesh, fid) :
 	         - set([pids[0],pids[-1] ]) ) == 0
 	return pids
 
-def triangulate_polygon (pids) :
+def triangle_quality (pt1, pt2, pt3) :
+	"""Construct a quality index for a triangle
+	
+	The value of the index varie between 1 and infinity,
+	1 being an equilateral triangle.
+	
+	Q = hmax P / (4 sqrt(3) S)
+	where :
+	 - hmax, length of longest edge
+	 - P, perimeter
+	 - S, surface
+	
+	:Parameters:
+	 - `pt1` (Vector) - corner
+	 - `pt2` (Vector) - corner
+	 - `pt3` (Vector) - corner
+	
+	:Returns Type: float
+	"""
+	def norm (a) :
+		return sqrt(a * a)
+	
+	e1 = norm(pt3 - pt2)
+	e2 = norm(pt3 - pt1)
+	e3 = norm(pt2 - pt1)
+	
+	P = (e1 + e2 + e3) / 2.
+	hmax = max(e1,e2,e3)
+	S = sqrt(P * (P - e1) * (P- e2) * (P - e3) )
+	if S == 0 :
+		return 1e6
+	else :
+		return hmax * P / 2. / sqrt(3.) / S
+
+def triangulate_polygon (pids, pos = None) :
 	"""Sort pids in tuples of 3 points
+	
+	.. warning:: if `pos` is not None, this function depends
+	             on PlantGL
 	
 	:Parameters:
 	 - `pids` (list of pid) - ordered list
 	    of points that form a closed polygon
+	 - `pos` (dict of (pid|Vector) ) - position
+	    of points in the mesh. If pos is None, will
+	    use a topological algorithm to create triangles
+	    otherwise, will use geometrical positions to create
+	    nice triangles
 	
 	:Returns Type: list of (pid,pid,pid)
 	"""
@@ -431,22 +474,74 @@ def triangulate_polygon (pids) :
 				else :
 					polygons.append(p)
 		
-		return triangles
+		if pos is None :
+			return triangles
+		
+		#change triangles to tends towards equilateral one
+		#local triangulated mesh
+		mesh = Topomesh(2)
+		for pid in pids :
+			mesh.add_wisp(0,pid)
+		edge = {}
+		for pid1,pid2,pid3 in triangles :
+			tid = mesh.add_wisp(2)
+			for pida,pidb in [(pid1,pid2),(pid2,pid3),(pid3,pid1)] :
+				key = (min(pida,pidb),max(pida,pidb) )
+				try :
+					eid = edge[key]
+				except KeyError :
+					eid = mesh.add_wisp(1)
+					mesh.link(1,eid,pida)
+					mesh.link(1,eid,pidb)
+					edge[key] = eid
+				mesh.link(2,tid,eid)
+		
+		#flip edges
+		from vplants.plantgl.math import norm
+		
+		test = True
+		while test :
+			test = False
+			for eid in tuple(mesh.wisps(1) ) :
+				if mesh.nb_regions(1,eid) > 1 :
+					lpids = set()
+					for fid in mesh.regions(1,eid) :
+						lpids.update(mesh.borders(2,fid,2) )
+					pt1,pt2 = (pos[pid] for pid in mesh.borders(1,eid) )
+					pta,ptb = (pos[pid] for pid in (lpids \
+					                      - set(mesh.borders(1,eid) ) ) )
+					cur_shape_qual = triangle_quality(pt1,pt2,pta) \
+					               + triangle_quality(pt1,pt2,ptb)
+					flp_shape_qual = triangle_quality(pta,ptb,pt1) \
+					               + triangle_quality(pta,ptb,pt2)
+					if flp_shape_qual < cur_shape_qual :
+						flip_edge(mesh,eid)
+						test = True
+		
+		return [tuple(mesh.borders(2,fid,2) ) for fid in mesh.wisps(2)]
 
-def triangulate_face (mesh, fid) :
+def triangulate_face (mesh, fid, pos = None) :
 	"""Triangulate a face of a mesh
 	
 	Return a list of triangles for
 	this face.
 	
+	.. warning:: if `pos` is not None, this function depends
+	             on PlantGL
+	
 	:Parameters:
 	 - `mesh` (:class:`openalea.container.Topomesh`)
 	 - `fid` (fid) - id of the face to triangulate
+	 - `pos` (dict of (pid|Vector) ) - position
+	    of points in the mesh. If pos is None, will
+	    use a topological algorithm to create triangles
+	    otherwise, will use geometrical positions to create
+	    nice triangles
 	
 	:Returns Type: list of (pid,pid,pid)
 	"""
 	pids = ordered_pids(mesh,fid)
-	return triangulate_polygon(pids)
+	return triangulate_polygon(pids,pos)
 
 ###########################################################
 #
