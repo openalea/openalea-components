@@ -26,7 +26,7 @@ from math import sqrt
 from topomesh import Topomesh
 
 __all__ = ["clean_remove","clean_geometry","clean_orphans",
-           "is_flip_topo_allowed","flip_edge",
+           "is_flip_topo_allowed","flip_edge","flip_necessary",
            "is_collapse_topo_allowed","clean_duplicated_edges",
            "collapse_edge","collapse_face",
            "expand","border","shrink",
@@ -117,6 +117,82 @@ def is_flip_topo_allowed (mesh, eid) :
         return False
     #return
     return True
+
+def triangle_quality (pt1, pt2, pt3) :
+	"""Construct a quality index for a triangle
+	
+	The value of the index varie between 1 and infinity,
+	1 being an equilateral triangle.
+	
+	Q = hmax P / (4 sqrt(3) S)
+	where :
+	 - hmax, length of longest edge
+	 - P, perimeter
+	 - S, surface
+	
+	:Parameters:
+	 - `pt1` (Vector) - corner
+	 - `pt2` (Vector) - corner
+	 - `pt3` (Vector) - corner
+	
+	:Returns Type: float
+	"""
+	def norm (a) :
+		return sqrt(a * a)
+	
+	e1 = norm(pt3 - pt2)
+	e2 = norm(pt3 - pt1)
+	e3 = norm(pt2 - pt1)
+	
+	P = (e1 + e2 + e3) / 2.
+	hmax = max(e1,e2,e3)
+	S2 = P * (P - e1) * (P- e2) * (P - e3)
+	if S2 <= 0 :
+		return 1e6
+	else :
+		return hmax * P / 2. / sqrt(3.) / sqrt(S2)
+
+def flip_necessary (mesh, eid, pos) :
+	"""Test wether flipping the edge gain something
+	in terms of triangles quality.
+	
+	.. warning:: mesh must be planar with triangle faces only
+	
+	:Parameters:
+	 - `mesh` (Topomesh)
+	 - `eid` (eid) - id of edge to test
+	 - `pos` (dict of (pid|Vector) ) - position of points
+	
+	:Returns Type: bool
+	"""
+	#test wether edge is between two triangles
+	if mesh.nb_regions(1,eid) != 2 :
+		return False
+	
+	#find points
+	lpids = set()
+	for fid in mesh.regions(1,eid) :
+		lpids.update(mesh.borders(2,fid,2) )
+	
+	pt1,pt2 = (pos[pid] for pid in mesh.borders(1,eid) )
+	pta,ptb = (pos[pid] for pid in (lpids - set(mesh.borders(1,eid) ) ) )
+	
+	#test wether flipped edge is inside the quadrangle
+	if ( (pt2 - pt1) ^ (pta - pt1) ) \
+	 * ( (pt2 - pt1) ^ (ptb - pt1) ) > 0 :
+		return False
+	
+	if ( (ptb - pta) ^ (pt1 - pta) ) \
+	 * ( (ptb - pta) ^ (pt2 - pta) ) > 0 :
+		return False
+	
+	#test the quality of triangles
+	cur_shape_qual = triangle_quality(pt1,pt2,pta) \
+	               + triangle_quality(pt1,pt2,ptb)
+	flp_shape_qual = triangle_quality(pta,ptb,pt1) \
+	               + triangle_quality(pta,ptb,pt2)
+	
+	return flp_shape_qual < cur_shape_qual
 
 def flip_edge (mesh, eid) :
     """Flip the orientation of an edge.
@@ -405,40 +481,6 @@ def ordered_pids (mesh, fid) :
 	         - set([pids[0],pids[-1] ]) ) == 0
 	return pids
 
-def triangle_quality (pt1, pt2, pt3) :
-	"""Construct a quality index for a triangle
-	
-	The value of the index varie between 1 and infinity,
-	1 being an equilateral triangle.
-	
-	Q = hmax P / (4 sqrt(3) S)
-	where :
-	 - hmax, length of longest edge
-	 - P, perimeter
-	 - S, surface
-	
-	:Parameters:
-	 - `pt1` (Vector) - corner
-	 - `pt2` (Vector) - corner
-	 - `pt3` (Vector) - corner
-	
-	:Returns Type: float
-	"""
-	def norm (a) :
-		return sqrt(a * a)
-	
-	e1 = norm(pt3 - pt2)
-	e2 = norm(pt3 - pt1)
-	e3 = norm(pt2 - pt1)
-	
-	P = (e1 + e2 + e3) / 2.
-	hmax = max(e1,e2,e3)
-	S = sqrt(P * (P - e1) * (P- e2) * (P - e3) )
-	if S == 0 :
-		return 1e6
-	else :
-		return hmax * P / 2. / sqrt(3.) / S
-
 def triangulate_polygon (pids, pos = None) :
 	"""Sort pids in tuples of 3 points
 	
@@ -498,20 +540,9 @@ def triangulate_polygon (pids, pos = None) :
 		while test :
 			test = False
 			for eid in tuple(mesh.wisps(1) ) :
-				if mesh.nb_regions(1,eid) > 1 :
-					lpids = set()
-					for fid in mesh.regions(1,eid) :
-						lpids.update(mesh.borders(2,fid,2) )
-					pt1,pt2 = (pos[pid] for pid in mesh.borders(1,eid) )
-					pta,ptb = (pos[pid] for pid in (lpids \
-					                      - set(mesh.borders(1,eid) ) ) )
-					cur_shape_qual = triangle_quality(pt1,pt2,pta) \
-					               + triangle_quality(pt1,pt2,ptb)
-					flp_shape_qual = triangle_quality(pta,ptb,pt1) \
-					               + triangle_quality(pta,ptb,pt2)
-					if flp_shape_qual < cur_shape_qual :
-						flip_edge(mesh,eid)
-						test = True
+				if flip_necessary(mesh,eid,pos) :
+					flip_edge(mesh,eid)
+					test = True
 		
 		return [tuple(mesh.borders(2,fid,2) ) for fid in mesh.wisps(2)]
 
