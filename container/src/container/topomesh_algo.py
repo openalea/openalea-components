@@ -27,14 +27,16 @@ from topomesh import Topomesh
 
 __all__ = ["clean_remove","clean_geometry","clean_orphans",
            "is_flip_topo_allowed","flip_edge","flip_necessary",
-           "is_collapse_topo_allowed","clean_duplicated_edges",
+           "is_collapse_topo_allowed",
+           "clean_duplicated_wisps",
            "collapse_edge","collapse_face",
            "expand","border","shrink",
            "expand_to_border","expand_to_region","external_border",
            "clean_duplicated_borders","merge_wisps",
            "find_cycles","clone_mesh",
            "topo_divide_edge","topo_divide_face","topo_divide_cell",
-           "ordered_pids","triangulate_polygon","triangulate_face"]
+           "ordered_pids","triangulate_polygon","triangulate_face",
+           "find_connex_parts"]
 ###########################################################
 #
 #       mesh edition
@@ -289,32 +291,65 @@ def is_collapse_topo_allowed (mesh, eid, protected_edges) :
     #return
     return True
 
-def clean_duplicated_edges (mesh, eid1, eid2) :
-	"""Remove a duplicated edge
+#def clean_duplicated_edges (mesh, eid1, eid2) :
+#	"""Remove a duplicated edge
+#	
+#	Remove eid2 and reconnect all faces
+#	to eid1. If a face is not geometrically
+#	defined (less than 3 edges) remove it
+#	too.
+#	
+#	.. warning:: eid1 and eid2 must have
+#	  the same borders
+#	
+#	.. warning:: do not test for cells
+#	
+#	:Returns Type: None
+#	"""
+#	faces = set(mesh.regions(1,eid2) )
+#	faces.discard(mesh.regions(1,eid1) )
+#	
+#	mesh.remove_wisp(1,eid2)
+#	
+#	for fid in faces :
+#		mesh.link(2,fid,eid1)
+#	
+#	for fid in tuple(mesh.regions(1,eid1) ) :
+#		if mesh.nb_borders(2,fid) < 3 :
+#			clean_remove(mesh,2,fid)
+
+def clean_duplicated_wisps (mesh, deg, wid1, wid2) :
+	"""Remove a duplicated wisp
 	
-	Remove eid2 and reconnect all faces
-	to eid1. If a face is not geometrically
-	defined (less than 3 edges) remove it
-	too.
+	Remove wid2 and reconnect all regions to wid1.
 	
-	.. warning:: eid1 and eid2 must have
-	  the same borders
+	.. warning:: assert the mesh degree is higher than deg. Otherwise
+	             a simple call to remove_wisp is sufficient
 	
-	.. warning:: do not test for cells
+	.. warning:: wid1 and wid2 must have the same borders
+	
+	.. warning:: this method remove all wisps no longer geometrically
+	   defined created in the process.
+	
+	:Parameters:
+	 - `mesh` (Topomesh)
+	 - `deg` (int) - degree of the wisp
+	 - `wid1` (wid) - id of the duplicated wisp to keep
+	 - `wid2` (wid) - id of the duplicated wisp to remove
 	
 	:Returns Type: None
 	"""
-	faces = set(mesh.regions(1,eid2) )
-	faces.discard(mesh.regions(1,eid2) )
+	regions = set(mesh.regions(deg,wid2) )
+	regions.discard(mesh.regions(deg,wid1) )
 	
-	mesh.remove_wisp(1,eid2)
+	mesh.remove_wisp(deg,wid2)
 	
-	for fid in faces :
-		mesh.link(2,fid,eid1)
+	for rid in regions :
+		mesh.link(deg + 1,rid,wid1)
 	
-	for fid in tuple(mesh.regions(1,eid1) ) :
-		if mesh.nb_borders(2,fid) < 3 :
-			clean_remove(mesh,2,fid)
+	for rid in tuple(mesh.regions(deg,wid1) ) :
+		if mesh.nb_borders(deg + 1,rid) < (deg + 2) :
+			clean_remove(mesh,deg + 1,rid)
 
 def collapse_edge (mesh, eid) :
 	"""Collapse an edge
@@ -356,13 +391,14 @@ def collapse_edge (mesh, eid) :
 	
 	#test for duplicated edges
 	edge = {}
+	
 	for eid in tuple(mesh.regions(0,pid1) ) :
 		pids = tuple(mesh.borders(1,eid) )
 		key = (min(pids),max(pids) )
 		try :
 			other_eid = edge[key]
 			#edge is duplicated
-			clean_duplicated_edges(mesh,other_eid,eid)
+			clean_duplicated_wisps(mesh,1,other_eid,eid)
 		except KeyError :
 			#edge is alone for the moment
 			edge[key] = eid
@@ -472,10 +508,13 @@ def ordered_pids (mesh, fid) :
 	eid = eids.pop()
 	pids = list(mesh.borders(1,eid) )
 	
-	while len(eids) > 1 :
-		eid,pid = _next_point(mesh,eids,pids[-1])
-		eids.discard(eid)
-		pids.append(pid)
+	try :
+		while len(eids) > 1 :
+			eid,pid = _next_point(mesh,eids,pids[-1])
+			eids.discard(eid)
+			pids.append(pid)
+	except TypeError :
+		raise AssertionError("unable to order")
 	
 	assert len(set(mesh.borders(1,eids.pop() ) ) \
 	         - set([pids[0],pids[-1] ]) ) == 0
@@ -660,12 +699,6 @@ def clean_duplicated_borders (mesh, outer = True) :
 #       mesh division
 #
 ###########################################################
-def _next_point (mesh, eids, pid) :
-	for eid in eids :
-		if pid in mesh.borders(1,eid) :
-			new_pid,  = set(mesh.borders(1,eid) ) - set([pid])
-			return eid,new_pid
-
 def topo_divide_edge (mesh, eid) :
 	"""Divide an edge into two edges
 	
@@ -999,4 +1032,38 @@ def find_cycles (mesh, scale, length_max) :
 
     #drop keys to return only ordered paths
     return cycles.values()
+
+def find_connex_parts (mesh, deg, wids) :
+	"""Breaks wids into parts connected by borders
+	
+	:Parameters:
+	 - `mesh` (Topomesh)
+	 - `deg` (int) - degree of wisps, must be bigger than 0
+	 - `wids` (list of wid)
+	
+	:Returns: a list of subparts of wids. Each subpart contains elements
+	          linked by at least one border
+	
+	:Returns Type: iter of (list of wid)
+	"""
+	remaining = set(wids)
+	
+	while len(remaining) > 0 :
+		wid = remaining.pop()
+		front = list(mesh.borders(deg,wid) )
+		part = [wid]
+		for bid in front :
+			for rid in set(mesh.regions(deg - 1,bid) ) & remaining :
+				part.append(rid)
+				remaining.remove(rid)
+				for wid in mesh.borders(deg,rid) :
+					front.append(wid)
+		
+		yield part
+
+
+
+
+
+
 
