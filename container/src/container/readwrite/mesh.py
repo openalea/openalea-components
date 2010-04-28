@@ -15,6 +15,9 @@
 #
 """
 This module provide a function to read .mesh files
+
+see http://www.ann.jussieu.fr/~frey/publications/RT-0253.pdf
+for a rought description of this format.
 """
 
 __license__= "Cecill-C"
