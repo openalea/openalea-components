@@ -656,10 +656,13 @@ class PropertyTree(Tree):
     def _add_vertex_properties(self, vid, properties):
         """
         Add a set of properties for a vertex identifier.
+        For properties that do not belong to the graph, 
+        create a new property.
         """
         for name in properties:
-            if name in self._properties:
-                self._properties[name][vid] = properties[name]
+            if name not in self._properties:
+                self.add_property(name)
+            self._properties[name][vid] = properties[name]
 
     def _remove_vertex_properties(self, vid):
         """
