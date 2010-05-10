@@ -16,3 +16,4 @@ from relation import Relation
 from topomesh import Topomesh
 from topomesh_txt import write_topomesh,read_topomesh
 from topomesh_algo import *
+from topomesh_geom_algo import *
