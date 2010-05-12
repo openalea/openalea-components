@@ -22,7 +22,7 @@ __revision__=" $Id: svg_factory.py 8503 2010-03-18 13:10:32Z chopard $ "
 
 from svg_primitive import SVGBox,SVGSphere,SVGImage
 from svg_path import SVGPath,SVGConnector
-from svg_stack import SVGStack
+#from svg_stack import SVGStack
 from svg_text import SVGText
 from svg_group import SVGGroup,SVGLayer
 

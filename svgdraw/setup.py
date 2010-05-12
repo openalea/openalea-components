@@ -55,9 +55,9 @@ setup(
     # postinstall_scripts = ['',],
 
     # Declare scripts and wralea as entry_points (extensions) of your package 
-#    entry_points = {
-#            'wralea': ['celltissue = openalea.celltissue_wralea']
-#        },
+    entry_points = {
+            'wralea': ['svgdraw = openalea.svgdraw_wralea']
+        },
 
     )
 
