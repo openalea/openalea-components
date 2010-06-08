@@ -395,10 +395,15 @@ class Tree(IRootedGraph,
     def add_child_tree(self, parent, tree):
         """
         Add a tree after the children of the parent vertex.
-        Complexity have to be O(1) if tree == sub_tree()
+        Complexity has to be O(1) if tree == sub_tree()
+	This method copies the tree and renumbers its vertices.
+
+	Returns a map between original tree vids and the newly added vids.
 
         :param parent: vertex identifier
         :param tree: a rooted tree
+
+	:returns: dict (original tree id -> new id)
         """
         treeid_id = {}
         root = tree.root
@@ -430,6 +435,8 @@ class Tree(IRootedGraph,
             vertices.append(vtx_id)
 
         return vertices
+            
+
 
     def copy(self):
         """ Deep copy of the tree.
