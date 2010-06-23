@@ -10,7 +10,7 @@ Instead, it introduces the main common features of the package,
 and will give you a good idea of the library.
 
 .. toctree::
-
+    
     graph_tutorial.rst
     tree_tutorial.rst
 
@@ -61,12 +61,12 @@ Random Graph
     g.write_png('graph_neato.png', prog='neato')
     g.write_png('graph_circo.png', prog='circo')
 
-.. image:: graph_dot.png  
+.. image:: graph_dot.png
     :width: 100%
 
-.. image:: graph_neato.png  
+.. image:: graph_neato.png
     :width: 100%
 
-.. image:: graph_circo.png  
+.. image:: graph_circo.png
     :width: 100%
 

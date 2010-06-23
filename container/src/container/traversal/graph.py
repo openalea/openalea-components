@@ -33,6 +33,7 @@ def topological_sort(graph, vtx_id, visited = None):
     :Parameters:
         - `graph`: a directed graph
         - vtx_id: a vertex_identifier
+    
     .. note :: This is a non recursive implementation.
     '''
     if visited is None:
@@ -56,6 +57,7 @@ def breadth_first_search(graph, vtx_id):
     :Parameters:
         - `graph`: a directed graph
         - vtx_id: a vertex_identifier
+    
     .. note :: This is a non recursive implementation.
     '''
     visited = {}
