@@ -44,6 +44,7 @@ class Tree(IRootedGraph,
         Tree constructor.
         :Parameters:
             - `root` is the root id which is by default 0
+        
         :Returns:
             - `tree` : a tree with one node.
         '''
