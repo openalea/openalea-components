@@ -32,6 +32,8 @@ class IdMaxGenerator(object) :
             self._id_max += 1
             return ret
         else :
+            if id < self._id_max :
+                raise IndexError("id %d already used" % id)
             self._id_max = max(self._id_max,id+1)
             return id
 
