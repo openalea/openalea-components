@@ -80,8 +80,7 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
     has_wisp.__doc__=ITopomesh.has_wisp.__doc__
 
     def _iter_borders (self, degree, wid) :
-        """
-        internal function to access borders of an element
+        """Internal function to access borders of an element
         """
         return iter(self._borders[degree][wid])
 
@@ -94,10 +93,10 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
                 ret |= set(self._borders_with_offset(degree-1,self._iter_borders(degree,wid),offset-1))
             return iter(ret)
 
-    def borders (self, degree, wid, offset=1) :
+    def borders (self, degree, wid, offset = 1) :
         if degree - offset < 0 :
             raise InvalidDegree ("smallest wisps have no borders")
-        return self._borders_with_offset(degree-1,self._iter_borders(degree,wid),offset-1)
+        return self._borders_with_offset(degree,[wid],offset)
     borders.__doc__=ITopomesh.borders.__doc__
 
     def nb_borders (self, degree, wid) :
@@ -106,10 +105,26 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
         return len(self._borders[degree][wid])
     nb_borders.__doc__=ITopomesh.nb_borders.__doc__
 
-    def regions (self, degree, wid) :
-        if degree >= self.degree() :
-            raise InvalidDegree ("biggest wisps do not separate regions")
+    def _iter_regions (self, degree, wid) :
+        """Internal function to access regions of an element
+        """
         return iter(self._regions[degree][wid])
+    
+    def _regions_with_offset (self, degree, wids, offset) :
+        if offset == 0 :
+            return wids
+        else :
+            ret = set()
+            for wid in wids :
+                ret |= set(self._regions_with_offset(degree + 1,
+                                          self._iter_regions(degree,wid),
+                                          offset - 1) )
+            return iter(ret)
+    
+    def regions (self, degree, wid, offset = 1) :
+        if (degree + offset) > self.degree() :
+            raise InvalidDegree ("biggest wisps do not separate regions")
+        return self._regions_with_offset(degree,[wid],offset)
     regions.__doc__=ITopomesh.regions.__doc__
 
     def nb_regions (self, degree, wid) :
