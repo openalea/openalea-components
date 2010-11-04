@@ -18,7 +18,7 @@ __revision__ = " $Id: __wralea__.py 2245 2010-02-08 17:11:34Z cokelaer $ "
 
 from openalea.core import Factory
 from openalea.core.interface import *
-from openalea.image.interface import IPix
+from openalea.image_wralea.image_interface import IImage
 
 __name__ = "openalea.image.svg"
 __alias__ = ["image.svg"]
@@ -76,10 +76,10 @@ img = Factory( name= "image",
                category = "Image,svg", 
                nodemodule = "svg_inout",
                nodeclass = "svg_image",
-               inputs=(dict(name="id", interface=IStr),
-                       dict(name="image", interface=IPix),
-                          dict(name="filename", interface=IStr,),),
-               outputs=(dict(name="elm", interface=ISvgElm),),
+               inputs=(dict(name="id", interface="IStr"),
+                       dict(name="image", interface="IImage"),
+                          dict(name="filename", interface="IStr",),),
+               outputs=(dict(name="elm", interface="ISvgElm"),),
                )
 
 __all__.append('img')
