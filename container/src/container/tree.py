@@ -593,6 +593,7 @@ class PropertyTree(Tree):
                 tree.add_property(name)
             
             treeid_id[vtx_id] = tree.root
+            tree._add_vertex_properties(tree.root, self.get_vertex_property(vtx_id))
             subtree = pre_order(self, vtx_id)
             subtree.next()
             for vid in subtree:
