@@ -22,8 +22,9 @@ for a IRelation interface
 __license__= "Cecill-C"
 __revision__=" $Id$ "
 
-from interface.relation import InvalidLeft,InvalidRight,InvalidLink,\
-                                IRelation,ILeftListRelation,IRightListRelation,ILinkRelation,IMutableRelation
+from interface.relation import (InvalidLeft,InvalidRight,InvalidLink,
+                                IRelation,ILeftListRelation,IRightListRelation,
+                                ILinkRelation,IMutableRelation)
 from utils import IdDict
 
 class StrInvalidLeft (InvalidLeft) :
@@ -51,7 +52,6 @@ class Relation (IRelation,ILeftListRelation,IRightListRelation,ILinkRelation,IMu
     """
     implementation of a relation
     """
-    __doc__+=IRelation.__doc__
     def __init__ (self, idgenerator = "set") :
         """
         constructor of an empty relation
@@ -195,3 +195,5 @@ class Relation (IRelation,ILeftListRelation,IRightListRelation,ILinkRelation,IMu
         self._right_links[self.right(lid)].remove(lid)
         del self._link_extremities[lid]
     remove_link.__doc__=IMutableRelation.remove_link.__doc__
+
+
