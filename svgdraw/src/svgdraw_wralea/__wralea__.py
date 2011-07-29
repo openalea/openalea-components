@@ -2,12 +2,12 @@
 #
 #       OpenAlea.svgdraw
 #
-#       Copyright 2006 - 2008 INRIA - CIRAD - INRA  
+#       Copyright 2006 - 2008 INRIA - CIRAD - INRA
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
 #           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
-# 
+#
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 ################################################################################
@@ -36,9 +36,9 @@ class ISvgElm(IInterface):
     """ Image interface """
     __metaclass__ = IInterfaceMetaClass
 
-loadsc = Factory( name= "loadSC", 
-                  description= "load an svg file and convert it to svg scene", 
-                  category = "Image,svg", 
+loadsc = Factory( name= "loadSC",
+                  description= "load an svg file and convert it to svg scene",
+                  category = "Image,svg",
                   nodemodule = "svg_inout",
                   nodeclass = "loadsc",
                   inputs=(dict(name="Filename", interface=IFileStr,),),
@@ -47,9 +47,9 @@ loadsc = Factory( name= "loadSC",
 
 __all__.append('loadsc')
 
-writesc = Factory( name= "writeSC", 
-                   description= "write an svg scene into a file", 
-                   category = "Image,svg", 
+writesc = Factory( name= "writeSC",
+                   description= "write an svg scene into a file",
+                   category = "Image,svg",
                    nodemodule = "svg_inout",
                    nodeclass = "writesc",
                    inputs=(dict(name="scene", interface=ISvgElm),
@@ -59,9 +59,9 @@ writesc = Factory( name= "writeSC",
 
 __all__.append('writesc')
 
-getelm = Factory( name= "get elm", 
-                  description= "retrieve an element from a group", 
-                  category = "Image,svg", 
+getelm = Factory( name= "get elm",
+                  description= "retrieve an element from a group",
+                  category = "Image,svg",
                   nodemodule = "svg_inout",
                   nodeclass = "get_elm",
                   inputs=(dict(name="scene", interface=ISvgElm),
@@ -71,22 +71,22 @@ getelm = Factory( name= "get elm",
 
 __all__.append('getelm')
 
-img = Factory( name= "image", 
-               description= "create an svg image", 
-               category = "Image,svg", 
+img = Factory( name= "image",
+               description= "create an svg image",
+               category = "Image,svg",
                nodemodule = "svg_inout",
                nodeclass = "svg_image",
                inputs=(dict(name="id", interface="IStr"),
-                       dict(name="image", interface="IImage"),
+                       dict(name="image", interface=IImage),
                           dict(name="filename", interface="IStr",),),
-               outputs=(dict(name="elm", interface="ISvgElm"),),
+               outputs=(dict(name="elm", interface=ISvgElm),),
                )
 
 __all__.append('img')
 
-point = Factory( name= "point", 
-                 description= "create an svg point", 
-                 category = "Image,svg", 
+point = Factory( name= "point",
+                 description= "create an svg point",
+                 category = "Image,svg",
                  nodemodule = "svg_inout",
                  nodeclass = "svg_point",
                  inputs=(dict(name="id", interface=IStr),
@@ -99,9 +99,9 @@ point = Factory( name= "point",
 
 __all__.append('point')
 
-group = Factory( name= "group", 
-                 description= "create an svg group", 
-                 category = "Image,svg", 
+group = Factory( name= "group",
+                 description= "create an svg group",
+                 category = "Image,svg",
                  nodemodule = "svg_inout",
                  nodeclass = "svg_group",
                  inputs=(dict(name="id", interface=IStr),
@@ -111,9 +111,9 @@ group = Factory( name= "group",
 
 __all__.append('group')
 
-layer = Factory( name= "layer", 
-                  description= "create an svg layer", 
-                  category = "Image,svg", 
+layer = Factory( name= "layer",
+                  description= "create an svg layer",
+                  category = "Image,svg",
                   nodemodule = "svg_inout",
                   nodeclass = "svg_layer",
                   inputs=(dict(name="id", interface=IStr),
@@ -124,9 +124,9 @@ layer = Factory( name= "layer",
 
 __all__.append('layer')
 
-scene = Factory( name= "scene", 
-                 description= "create an svg scene", 
-                 category = "Image,svg", 
+scene = Factory( name= "scene",
+                 description= "create an svg scene",
+                 category = "Image,svg",
                  nodemodule = "svg_inout",
                  nodeclass = "svg_scene",
                  inputs=(dict(name="width", interface=IFloat),
@@ -137,9 +137,9 @@ scene = Factory( name= "scene",
 
 __all__.append('scene')
 
-elements = Factory( name= "elements", 
-                    description= "list of elements of a group", 
-                    category = "Image,svg", 
+elements = Factory( name= "elements",
+                    description= "list of elements of a group",
+                    category = "Image,svg",
                     nodemodule = "svg_inout",
                     nodeclass = "svg_elements",
                     inputs=(dict(name="group", interface=ISvgElm),),
@@ -148,9 +148,9 @@ elements = Factory( name= "elements",
 
 __all__.append('elements')
 
-positions = Factory( name= "positions", 
-                     description= "list of coordinates from pts", 
-                     category = "Image,svg", 
+positions = Factory( name= "positions",
+                     description= "list of coordinates from pts",
+                     category = "Image,svg",
                      nodemodule = "svg_inout",
                      nodeclass = "svg_positions",
                      inputs=(dict(name="pts", interface=ISequence),),
