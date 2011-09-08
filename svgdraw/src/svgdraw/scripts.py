@@ -18,7 +18,7 @@ Set of scripts to work around SVGScenes
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: $ "
+__revision__=" $Id$ "
 
 def to_svg_namespace (node) :
 	"""	add 'svg:' to all nodenames
