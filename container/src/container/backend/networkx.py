@@ -43,11 +43,12 @@ def to_networkx(g):
     graph.add_edge_from(( (g.source(eid), g.target(eid)) for eid in g.edges()))
     return graph
 
-def from_networkx(graph):
+def from_networkx(graph, klass=Graph):
     """ Return a Graph from a NetworkX Directed graph.
 
     :Parameters: 
         - `graph` : A NetworkX graph.
+        - `klass` : 
 
     :Returns: 
         - `g`: a :class:`~openalea.container.interface.Graph`.
@@ -56,7 +57,7 @@ def from_networkx(graph):
     if not graph.directed:
         graph = graph.to_directed()
 
-    g = Graph()
+    g = klass()
     for vid in graph.nodes_iter():
         g.add_vertex(vid)
 
