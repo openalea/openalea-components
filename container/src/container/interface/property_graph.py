@@ -64,6 +64,14 @@ class IPropertyGraph (object):
         """
         raise NotImplementedError
 
+    def graph_property (self) :
+        """
+        return a dict containing the graph properties/
+
+        :rtype: dict of ``{property_name:data}``
+        """
+        raise NotImplementedError
+
     ###########################################################
     #
     #        mutable property concept
@@ -95,3 +103,5 @@ class IPropertyGraph (object):
         remove the map called property_name from the graph
         """
         raise NotImplementedError
+
+

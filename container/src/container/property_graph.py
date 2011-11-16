@@ -28,10 +28,11 @@ class PropertyGraph(IPropertyGraph, Graph):
     dict as properties and two dictionaries to
     maintain these properties
     """
-    def __init__(self, graph=None):
+    def __init__(self, graph=None, **kwds):
         self._vertex_property = {}
         self._edge_property = {}
-        Graph.__init__(self, graph)
+        self._graph_property = {}
+        Graph.__init__(self, graph, **kwds)
 
     def vertex_property_names(self):
         """todo"""
@@ -60,6 +61,11 @@ class PropertyGraph(IPropertyGraph, Graph):
             raise PropertyError("property %s is undefined on edges"
                                 % property_name)
     edge_property.__doc__ = IPropertyGraph.edge_property.__doc__
+
+    def graph_property(self):
+        """todo"""
+        return self._graph_property
+    graph_property.__doc__ = IPropertyGraph.graph_property.__doc__
 
     def add_vertex_property(self, property_name):
         """todo"""
@@ -145,5 +151,10 @@ class PropertyGraph(IPropertyGraph, Graph):
             for eid, val in graph.edge_property(prop_name).iteritems():
                 prop[trans_eid[eid]] = val
 
+        # update properties on graph
+        prop = self.graph_property()
+        prop.update(graph.graph_property())
+
         return trans_vid, trans_eid
     extend.__doc__ = Graph.extend.__doc__
+
