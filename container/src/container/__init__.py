@@ -4,6 +4,7 @@ from utils import IdDict
 from data_prop import Quantity,DataProp
 from graph import Graph
 from property_graph import PropertyGraph
+from dynamic_property_graph import DynamicPropertyGraph
 from tree import Tree, PropertyTree
 from grid import Grid
 from relation import Relation
