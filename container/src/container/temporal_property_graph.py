@@ -20,6 +20,8 @@ __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
 from property_graph import *
+import networkx as nx
+
 
 class TemporalPropertyGraph(PropertyGraph):
     """
@@ -119,7 +121,6 @@ class TemporalPropertyGraph(PropertyGraph):
             - A NetworkX graph.
 
         """
-        import networkx as nx
         
         g = self
 
@@ -186,7 +187,7 @@ class TemporalPropertyGraph(PropertyGraph):
 
         return g
 
-def test():
+def test(display=False):
     import random
     g = TemporalPropertyGraph()
 
@@ -212,4 +213,10 @@ def test():
     nxg = g.to_networkx()
 
     gg = TemporalPropertyGraph().from_networkx(nxg)
+    
+    if display:
+			import matplotlib.pyplot as plt
+			nx.draw(nxg)
+			plt.show()
+
     return g, gg, nxg
