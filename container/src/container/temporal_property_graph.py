@@ -4,8 +4,7 @@
 #
 #       Copyright 2011 INRIA - CIRAD - INRA
 #
-#       File author(s): Jonathan 
-#                       Vincent
+#       File author(s): Jonathan Legrand
 #                       Christophe Pradal
 #
 #       Distributed under the Cecill-C License.
