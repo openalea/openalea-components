@@ -1,10 +1,27 @@
+# -*- python -*-
+#
+#       OpenAlea.Container
+#
+#       Copyright 2011 INRIA - CIRAD - INRA
+#
+#       File author(s): Jonathan Legrand
+#                       Vincent Mirabet
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+#
+#       OpenAlea WebSite: http://openalea.gforge.inria.fr
+#
+################################################################################
+"""This module helps to create TemporalPropertyGraph from Spatial Images."""
+
+__license__ = "Cecill-C"
+__revision__ = " $Id: $ "
 import numpy as np
 from scipy import ndimage
 
-from openalea.image.spatial_image import SpatialImage
-from openalea.image.serial.basics import imread
-from openalea.container import TemporalPropertyGraph
-
+from openalea.container import PropertyGraph
 
 def cellNeighbours(im, real=False, surf=False):
 	"""
@@ -12,23 +29,27 @@ def cellNeighbours(im, real=False, surf=False):
 	real let you choose between values in voxels or values in um
 	"""
 	cell_cell={}
-	sl=ndimage.find_objects(im2)
-	xmax,ymax,zmax=im2.shape
+	sl=ndimage.find_objects(im)
+	xmax,ymax,zmax=im.shape
 	surface={}
 	for i,j in enumerate(sl):
+		if i%20==0:
+			print i,'/',len(sl)
 		if j:
 			x,y,z=j
+			# On dilate la slice d'un voxel (si on touche pas le bord).
 			xd=[x.start-1,x.start][x.start==0]
 			xf=[x.stop+1,x.stop][x.stop==xmax-1]
 			yd=[y.start-1,y.start][y.start==0]
 			yf=[y.stop+1,y.stop][y.stop==ymax-1]
 			zd=[z.start-1,z.start][z.start==0]
 			zf=[z.stop+1,z.stop][z.stop==zmax-1]
-			mlabel=im2[xd:xf,yd:yf,zd:zf].copy()
+			# On récupére l'info de la SpatialImage contenu dans la slice (création d'une sous-SpImg)
+			mlabel=im[xd:xf,yd:yf,zd:zf].copy()
 			mlabel[mlabel!=i+1]=0
 			mlabel[mlabel==i+1]=1
 			m=ndimage.binary_dilation(mlabel)-mlabel
-			res=m*im2[xd:xf,yd:yf,zd:zf]
+			res=m*im[xd:xf,yd:yf,zd:zf]
 			l=list(np.unique(res))
 			l.remove(0)
 			cell_cell[i+1]=l
@@ -43,7 +64,7 @@ def cellNeighbours(im, real=False, surf=False):
 	if surface:
 		return cell_cell, surface
 	else:
-		return cell_cell, None
+		return cell_cell
 
 
 
