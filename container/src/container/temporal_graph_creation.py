@@ -18,6 +18,7 @@
 
 __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
+
 import numpy as np
 from scipy import ndimage
 
@@ -44,7 +45,7 @@ def cellNeighbours(im, real=False, surf=False):
 			yf=[y.stop+1,y.stop][y.stop==ymax-1]
 			zd=[z.start-1,z.start][z.start==0]
 			zf=[z.stop+1,z.stop][z.stop==zmax-1]
-			# On récupére l'info de la SpatialImage contenu dans la slice (création d'une sous-SpImg)
+			# On recupere l'info de la SpatialImage contenu dans la slice (creation d'une sous-SpImg)
 			mlabel=im[xd:xf,yd:yf,zd:zf].copy()
 			mlabel[mlabel!=i+1]=0
 			mlabel[mlabel==i+1]=1
@@ -65,7 +66,6 @@ def cellNeighbours(im, real=False, surf=False):
 		return cell_cell, surface
 	else:
 		return cell_cell
-
 
 
 def toPropertyGraph(self, cell_cell=None):
@@ -116,5 +116,3 @@ def createTemporalGraph(pgs, links):
 			p.vertex_property("time_point")[i]=k			
 	return g.extend(pgs,links)
 	
-
-
