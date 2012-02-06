@@ -89,16 +89,22 @@ def toPropertyGraph(self, cell_cell=None, labels=None):
 	"""
 	p=PropertyGraph()
 	p.add_edge_property("source-target")
+	# -- If the cell neighbours dictionnary is not provided, we create it.
 	if not cell_cell:
 		cell_cell=cellNeighbours(self, labels=labels)
-	for c in cell_cell.keys():
+	
+	if labels!=None:
+		l=labels
+	else:
+		l=cell_cell.keys()
+	for c in l:
 		if not p.has_vertex(c):
 			p.add_vertex(c)
 		for cv in cell_cell[c]:
-			if not p.has_vertex(cv):
+			if (not p.has_vertex(cv)) and (cv in l):
 				p.add_vertex(cv)
-			eid=p.add_edge(c,cv)
-			p.edge_property("source-target")[eid]=(c,cv)
+				eid=p.add_edge(c,cv)
+				p.edge_property("source-target")[eid]=(c,cv)
 	return p
 
 
@@ -114,6 +120,22 @@ def display_NXgraph(graph):
 	import matplotlib.pyplot as plt
 	nx.draw(nxGraph)
 	plt.show()
+
+
+def add_prop2vrtx(graph, dic, prop_name=""):
+	"""
+	Add a property to graph vertices.
+	"""
+	if (prop_name=="") or ('old_label' not in graph.vertex_property_names()):
+		import sys
+		sys.exit(1)
+	if prop_name not in graph.vertex_property_names():
+		graph.add_vertex_property(str(prop_name))
+	for k,v in graph.vertex_property('old_label').iteritems():
+		if (v in dic.keys()) and (v!=1):
+			graph.vertex_property(str(prop_name))[k]=dic[v]
+	
+	return graph
 
 
 #~ def SegmentedImagetoPropertyGraph(cell_cell):
