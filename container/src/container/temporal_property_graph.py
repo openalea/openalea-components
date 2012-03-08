@@ -189,7 +189,7 @@ class TemporalPropertyGraph(PropertyGraph):
     
     def to_set(s):
         if not isinstance(s, set):
-            if is instance(s, list):
+            if is_instance(s, list):
                 s=set(s)
             else:
                 s=set([s])
