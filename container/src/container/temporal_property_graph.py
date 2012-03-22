@@ -211,11 +211,9 @@ class TemporalPropertyGraph(PropertyGraph):
         if edge_type==None:
             neighbors_list=set([self.source(eid) for eid in self._vertices[vid][0] ])
         else:
-            neighbors_list=set()
             edge_type=self.__to_set(edge_type) 
-            for eid in self._vertices[vid][0]:
-                if self._edge_property['edge_type'][eid] in edge_type:
-                    neighbors_list.add(self.source(eid))
+            edge_type_property = self._edge_property['edge_type']
+            neighbors_list=set([self.source(eid) for eid in self._vertices[vid][0] if edge_type_property[eid] in edge_type])
         return neighbors_list
   
     def iter_in_neighbors(self, vid, edge_type=None):
@@ -226,7 +224,7 @@ class TemporalPropertyGraph(PropertyGraph):
         - `edges_type` : type of edges we want to consider (can be a set)
 
         :Returns:
-        - `iterartor` : an iterator on the set of parent vertices of the vertex vid
+        - `iterator` : an iterator on the set of parent vertices of the vertex vid
         """
         return iter(self.in_neighbors(vid, edge_type))
   
@@ -247,10 +245,8 @@ class TemporalPropertyGraph(PropertyGraph):
             neighbors_list=set([self.target(eid) for eid in self._vertices[vid][1] ])
         else:
             edge_type=self.__to_set(edge_type) 
-            neighbors_list=set()
-            for eid in self._vertices[vid][1]:
-                if self._edge_property['edge_type'][eid] in edge_type:
-                    neighbors_list.add(self.target(eid))
+            edge_type_property = self._edge_property['edge_type']
+            neighbors_list=set([self.target(eid) for eid in self._vertices[vid][1] if edge_type_property[eid] in edge_type])
         return neighbors_list
         
                     
@@ -262,7 +258,7 @@ class TemporalPropertyGraph(PropertyGraph):
         - `edges_type` : type of edges we want to consider (can be a set)
 
         :Returns:
-        - `iterartor` : an iterator on the set of child vertices of the vertex vid
+        - `iterator` : an iterator on the set of child vertices of the vertex vid
         """
         return iter(self.out_neighbors(vid, edge_type))
   
@@ -308,10 +304,8 @@ class TemporalPropertyGraph(PropertyGraph):
             edge_list=set([eid for eid in self._vertices[vid][0]])
         else:
             edge_type=self.__to_set(edge_type)
-            edge_list=set()
-            for eid in self._vertices[vid][0]:
-                if self._edge_property['edge_type'][eid] in edge_type:
-                    edge_list.add(eid)
+            edge_type_property = self._edge_property['edge_type']
+            edge_list=set([eid for eid in self._vertices[vid][0] if edge_type_property[eid] in edge_type])
         return  edge_list
         
     def iter_in_edges(self, vid, edge_type=None):
@@ -344,10 +338,8 @@ class TemporalPropertyGraph(PropertyGraph):
             edge_list=set([eid for eid in self._vertices[vid][1]])
         else:
             edge_type=self.__to_set(edge_type)
-            edge_list=set()
-            for eid in self._vertices[vid][1]:
-                if self._edge_property['edge_type'][eid] in edge_type:
-                    edge_list.add(eid)
+            edge_type_property = self._edge_property['edge_type']
+            edge_list=set([eid for eid in self._vertices[vid][1] if edge_type_property[eid] in edge_type])
         return  edge_list
 
     def iter_out_edges(self, vid, edge_type=None):
@@ -570,13 +562,15 @@ class TemporalPropertyGraph(PropertyGraph):
         reduced_dist={}
         reduced_dist[vid]=0
         untreated=set()
+        infinity = float('inf')
         for k in self._vertices.iterkeys():
-            dist[k]=float('inf')
+            dist[k] = infinity
             untreated.add(k)
-        #untreated-=set([vid]).
+
         treated=set()
         dist[vid]=0
         modif=True
+        
         while (len(untreated)>0 & modif):
             tmpDist=dist.copy()
             for k in treated:
@@ -592,25 +586,20 @@ class TemporalPropertyGraph(PropertyGraph):
             modif=tmpDist!=dist
         return (reduced_dist, dist)[full_dict]
         
-
-    def sub_graph(self, vids):
-        """
-        """
-                
-
-    def group_by(self, func):
-        """ Return a cluster of the vertices according a function
+    
+    # def group_by(self, func):
+        # """ Return a cluster of the vertices according a function
         
-        :Parameters:
-        - `fund` : the function to make the clusters
+        # :Parameters:
+        # - `fund` : the function to make the clusters
 
-        :Returns:
-        - `cluster_dict` : a dictionary of the clusters, key : cluster, value : set of vid in this cluster
-        """
-        ret={}
-        for k in self._vertices.keys():
-            ret.setdefault(func(k)).append(k)
-        return ret
+        # :Returns:
+        # - `cluster_dict` : a dictionary of the clusters, key : cluster, value : set of vid in this cluster
+        # """
+        # ret={}
+        # for k in self._vertices.keys():
+            # ret.setdefault(func(k)).append(k)
+        # return ret
 
 def test(display=False):
     import random

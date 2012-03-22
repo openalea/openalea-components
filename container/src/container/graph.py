@@ -71,6 +71,13 @@ class Graph (IGraph,\
             raise InvalidEdge(eid)
     target.__doc__=IGraph.target.__doc__
 
+    def edge_vertices(self, eid):
+        try :
+            return self._edges[eid]
+        except KeyError :
+            raise InvalidEdge(eid)
+    edge_vertices.__doc__=IGraph.edge_vertices.__doc__
+
     def __contains__(self, vid):
         return self.has_vertex(vid)
     __contains__.__doc__=IGraph.__contains__.__doc__
@@ -250,7 +257,7 @@ class Graph (IGraph,\
             in_edges.clear()
             out_edges.clear()
     clear_edges.__doc__=IMutableEdgeGraph.clear_edges.__doc__
-
+    
     # ##########################################################
     #
     # Extend Graph concept
@@ -271,3 +278,24 @@ class Graph (IGraph,\
 
         return trans_vid,trans_eid
     extend.__doc__=IExtendGraph.extend.__doc__
+    
+    def sub_graph(self, vids):
+        """
+        """
+        from copy import deepcopy
+        vids = set(vids)
+        
+        result = deepcopy(self)
+        result._vertices.clear()
+        result._edges.clear()
+        
+        for key, edges in self._vertices:
+            if key in vids:
+                inedges, outedges = edges
+                sortedinedges = set([eid for eid in inedges if self.source(eid) in vids])
+                sortedoutedges = set([eid for eid in outedges if self.target(eid) in vids])
+                result._vertices.add((sortedinedges,sortedoutedges), key)
+                for eid in sortedoutedges:
+                    result._edges.add(self._edges[eid], eid)
+        
+        return result
