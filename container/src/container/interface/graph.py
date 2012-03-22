@@ -60,6 +60,16 @@ class IGraph (object):
         """
         raise NotImplementedError
 
+    def edge_vertices(self, eid):
+        """
+        retrieve the target and source of an edge
+
+        :param eid: id of the edge
+        :type eid: eid
+        :rtype: (vid,vid)
+        """
+        raise NotImplementedError
+
     def edge(self, source, target) :
         """
         find the matching edges with same source and same target
@@ -75,6 +85,7 @@ class IGraph (object):
         """
         raise NotImplementedError
 
+        
     def __contains__(self, vid):
         """
         test wether a vertex belong to the graph, see `has_vertex`
