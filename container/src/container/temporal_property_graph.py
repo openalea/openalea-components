@@ -489,6 +489,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         edge_type='t'
         neighbs=set()
+        vid=self.__to_set(vid)
         if n==1 :
             for vid in vids:
                 neighbs |= (self.out_neighbors(vid, 't') | set([vid]))
@@ -523,6 +524,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         edge_type='t'
         neighbs=set()
+        vid=self.__to_set(vid)
         if n==1 :
             for vid in vids:
                 neighbs |= (self.in_neighbors(vid, 't') | set([vid]))
