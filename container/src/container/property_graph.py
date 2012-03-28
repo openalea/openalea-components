@@ -67,12 +67,13 @@ class PropertyGraph(IPropertyGraph, Graph):
         return self._graph_property
     graph_property.__doc__ = IPropertyGraph.graph_property.__doc__
 
-    def add_vertex_property(self, property_name):
+    def add_vertex_property(self, property_name, values = None):
         """todo"""
         if property_name in self._vertex_property:
             raise PropertyError("property %s is already defined on vertices"
                                 % property_name)
-        self._vertex_property[property_name] = {}
+        if values is None: values = {}                                
+        self._vertex_property[property_name] = values
     add_vertex_property.__doc__ = IPropertyGraph.add_vertex_property.__doc__
 
     def remove_vertex_property(self, property_name):
@@ -84,12 +85,13 @@ class PropertyGraph(IPropertyGraph, Graph):
                                 % property_name)
     remove_vertex_property.__doc__ = IPropertyGraph.remove_vertex_property.__doc__
 
-    def add_edge_property(self, property_name):
+    def add_edge_property(self, property_name, values =  None):
         """todo"""
         if property_name in self._edge_property:
             raise PropertyError("property %s is already defined on edges"
                                 % property_name)
-        self._edge_property[property_name] = {}
+        if values is None: values = {}                                
+        self._edge_property[property_name] = values
     add_edge_property.__doc__ = IPropertyGraph.add_edge_property.__doc__
 
     def remove_edge_property(self, property_name):
@@ -101,6 +103,22 @@ class PropertyGraph(IPropertyGraph, Graph):
                                 % property_name)
     remove_edge_property.__doc__ = IPropertyGraph.remove_edge_property.__doc__
 
+    def add_graph_property(self, property_name, values = None):
+        """todo"""
+        if property_name in self._graph_property:
+            raise PropertyError("property %s is already defined on graph"
+                                % property_name)
+        if values is None: values = {}                                
+        self._graph_property[property_name] = values
+    
+    def remove_graph_property(self, property_name):
+        """todo"""
+        try:
+            del self._graph_property[property_name]
+        except KeyError:
+            raise PropertyError("property %s is undefined on graph"
+                                % property_name)
+    
     def remove_vertex(self, vid):
         """todo"""
         for prop in self._vertex_property.itervalues():
@@ -113,6 +131,8 @@ class PropertyGraph(IPropertyGraph, Graph):
         for prop in self._vertex_property.itervalues():
             prop.clear()
         for prop in self._edge_property.itervalues():
+            prop.clear()
+        for prop in self._graph_property.itervalues():
             prop.clear()
         Graph.clear(self)
     clear.__doc__ = Graph.clear.__doc__

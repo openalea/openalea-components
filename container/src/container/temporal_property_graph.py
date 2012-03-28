@@ -470,7 +470,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """ Return the neighborhood of the vertex vid at distance n (the disc, not the circle)
         
         :Parameters:
-        - `vid` : a set of vertex id
+        - `vids` : a set of vertex id
 
         :Returns:
         - `iterator` : an iterator on the set of the vertices at distance n of the vertex vid
@@ -482,14 +482,14 @@ class TemporalPropertyGraph(PropertyGraph):
         """ Return the 0, 1, ..., nth descendants of the vertex vid
         
         :Parameters:
-        - `vid` : a set of vertex id
+        - `vids` : a set of vertex id
 
         :Returns:
         - `descendant_list` : the set of the 0, 1, ..., nth descendant of the vertex vid
         """
         edge_type='t'
         neighbs=set()
-        vid=self.__to_set(vid)
+        vids=self.__to_set(vids)
         if n==1 :
             for vid in vids:
                 neighbs |= (self.out_neighbors(vid, 't') | set([vid]))
@@ -505,7 +505,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """ Return the 0, 1, ..., nth descendants of the vertex vid
         
         :Parameters:
-        - `vid` : a set of vertex id
+        - `vids` : a set of vertex id
 
         :Returns:
         - `iterator` : an iterator on the set of the 0, 1, ..., nth descendants of the vertex vid
@@ -517,14 +517,14 @@ class TemporalPropertyGraph(PropertyGraph):
         """ Return the 0, 1, ..., nth ancestors of the vertex vid
         
         :Parameters:
-        - `vid` : a set of vertex id
+        - `vids` : a set of vertex id
 
         :Returns:
         - `anestors_list` : the set of the 0, 1, ..., nth ancestors of the vertex vid
         """
         edge_type='t'
         neighbs=set()
-        vid=self.__to_set(vid)
+        vids=self.__to_set(vids)
         if n==1 :
             for vid in vids:
                 neighbs |= (self.in_neighbors(vid, 't') | set([vid]))
@@ -540,7 +540,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """ Return the 0, 1, ..., nth ancestors of the vertex vid
         
         :Parameters:
-        - `vid` : a set of vertex id
+        - `vids` : a set of vertex id
 
         :Returns:
         - `iterator` : an iterator on the set of the 0, 1, ..., nth ancestors of the vertex vid
