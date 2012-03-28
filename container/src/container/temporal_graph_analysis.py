@@ -16,242 +16,206 @@
 """This module helps to analyse TemporalPropertyGraph from Spatial Images."""
  
 from interface.property_graph import IPropertyGraph, PropertyError
-import sys
 
-def differential(graph, vertex_property_name, func, vids=None, n=1):
-    """
-       
-    :Parameters:
-    - 'graph' : a TPG.
-    - 'vertex_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
-    - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
-    - 'n' : neighborhood at distance 'n' will be used.
-    - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
 
-    :Return:
-    - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= Mean absolute deviation
-    """
+def __normalized_parameters(func):
+    def wrapped_function(graph, vertex_property, vids = None, rank = 1, edge_type='s' , verbose = False):
+        """
+           
+        :Parameters:
+        - 'graph' : a TPG.
+        - 'vertex_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+        - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
+        - 'rank' : neighborhood at distance 'rank' will be used.
+        - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
 
-    # -- If no vids provided we compute the mean absolute deviation for all keys present in the graph_property_name:
-    try :
+        :Return:
+        - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= Mean absolute deviation
+        """
+        # if a name is given, we use vertex_property stored in the graph with this name.
+        if isinstance(vertex_property,str):
+            vertex_property = graph.vertex_property(vertex_property)
+        # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
-            vids=graph.vertex_property(vertex_property_name).keys()
-    except PropertyError as e:
-        print "Error", vertex_property_name, "is not a vertex_property of", graph
-        print e
-        sys.exit(0)
-    
-    
-    if type(vids)==int:
-        return func(graph, vertex_property_name, vids, n)
-    else:
-        l={}
-        for k in vids:
-            if k%10==0:
-                print k,'/',len(vids)
-            l[k]=func(graph, vertex_property_name, k, n)
-        return l
+            vids = vertex_property.keys()
+                
+        if type(vids)==int:
+            # for single id, compute single result
+            return func(graph, vertex_property, vids, rank, edge_type)
+        else:
+            # for set of ids, we compute a dictionary of resulting values.
+            l={}
+            for k in vids:
+                if verbose and k%10==0: print k,'/',len(vids)
+                l[k] = func(graph, vertex_property, k, rank, edge_type)
+            return l        
+    return  wrapped_function
 
 
-def mean_abs_dev(graph, vertex_property_name, vid, n=1):
+@__normalized_parameters
+def laplacian(graph, vertex_property, vid, rank=1, edge_type='s'):
     """
-    Sub-function computing the mean sum of absolute difference between ONE vertex ('vid') and its neighbors at rank 'n'.
+    Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
     :Parameters:
     - 'graph' : a TPG.
     - 'graph_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
     - 'vid' : a vertex id.
-    - 'n' : neighborhood at distance 'n' will be used.
+    - 'rank' : neighborhood at distance 'rank' will be used.
     - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
     
     :Return:
-    - a single value = the mean absolute deviation between vertex 'vid' and its neighbors at rank 'n'.
+    - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    tmp=0
-    nei=graph.neighborhood(vid,n,edge_type='s')
-    nei.remove(vid)
-    p=graph.vertex_property(vertex_property_name)
-    if len(nei)!=0: # if ==0 it's mean that there is no neighbors for the vertex vid.
-        for i in nei:
-            tmp=tmp+abs(p[vid]-p[i])
-    else:
-        print "No neighbors found for 'vid' =", vid, "..."
+    vid_neighborhood = graph.neighborhood(vid,rank,edge_type=edge_type)
+    vid_neighborhood.remove(vid)
+    nb_neighborhood = len(vid_neighborhood)
+
+    result = 0
+    ivalue = vertex_property[vid]
+    if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
+        for i in vid_neighborhood:
+            result = result + vertex_property[i]
     
-    return tmp/float(len(nei)-1)
+        return ivalue - (result / float(nb_neighborhood))
+    else:
+        return 0
 
-
-def laplacian(graph, vertex_property_name, vid, n=1):
+@__normalized_parameters
+def mean_abs_dev(graph, vertex_property, vid, rank=1, edge_type='s'):
     """
-    Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'n'.
+    Sub-function computing the mean sum of absolute difference between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
     :Parameters:
     - 'graph' : a TPG.
     - 'graph_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
     - 'vid' : a vertex id.
-    - 'n' : neighborhood at distance 'n' will be used.
+    - 'rank' : neighborhood at distance 'rank' will be used.
     - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
     
     :Return:
-    - a single value = laplacian between vertex 'vid' and its neighbors at rank 'n'.
+    - a single value = the mean absolute deviation between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    tmp=0
-    nei=graph.neighborhood(vid,n,edge_type='s')
-    nei.remove(vid)
-    p=graph.vertex_property(vertex_property_name)
-    if len(nei)!=0: # if ==0 it's mean that there is no neighbors for the vertex vid.
-        for i in nei:
-            tmp=tmp+p[i]
-    else:
-        print "No neighbors found for 'vid' =", vid, "..."
+    vid_neighborhood = graph.neighborhood(vid,rank,edge_type=edge_type)
+    vid_neighborhood.remove(vid)
+    nb_neighborhood = len(vid_neighborhood)
+
+    result = 0
+    ivalue = vertex_property[vid]
+    if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
+        for i in vid_neighborhood:
+            result = result + abs(ivalue - vertex_property[i])
     
-    return p[vid]-tmp/float(len(nei)-1)
+        return result / float(nb_neighborhood)
+    else:
+        return 0
 
-
-def temporal_change(graph, vertex_property_name, vid, n=1):
+@__normalized_parameters
+def change(graph, vertex_property, vid, rank=1, edge_type='t'):
     """
-    Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'n'.
+    Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
     :Parameters:
     - 'graph' : a TPG.
     - 'graph_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
     - 'vid' : a vertex id.
-    - 'n' : neighborhood at distance 'n' will be used.
+    - 'rank' : neighborhood at distance 'rank' will be used.
+    - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
     
     :Return:
-    - a single value = temporal change between vertex 'vid' and its neighbors at rank 'n'.
+    - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    tmp=0
-    nei=graph.neighborhood(vid,n,edge_type='t')
-    nei.remove(vid)
-    p=graph.vertex_property(vertex_property_name)
-    if len(nei)!=0: # if ==0 it's mean that there is no neighbors for the vertex vid.
-        for i in nei:
-            tmp=tmp+p[i]
-    else:
-        print "No neighbors found for 'vid' =", vid, "..."
+    vid_neighborhood = graph.neighborhood(vid,rank,edge_type=edge_type)
+    vid_neighborhood.remove(vid)
+    nb_neighborhood = len(vid_neighborhood)
+
+    result = 0
+    ivalue = vertex_property[vid]
+    if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
+        for i in vid_neighborhood:
+            result = result + vertex_property[i]
     
-    return tmp-p[vid]
+        return result - ivalue
+    else:
+        return 0
 
+def __normalized_temporal_parameters(func):
+    def wrapped_function(graph, vertex_property, vids = None, rank = 1, verbose = False):
+        """
+           
+        :Parameters:
+        - 'graph' : a TPG.
+        - 'vertex_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+        - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
+        - 'rank' : neighborhood at distance 'rank' will be used.
+        - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
 
-def relative_temporal_change(graph, vertex_property_name, vid, n=1):
+        :Return:
+        - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= Mean absolute deviation
+        """
+        # if a name is given, we use vertex_property stored in the graph with this name.
+        if isinstance(vertex_property,str):
+            vertex_property = graph.vertex_property(vertex_property)
+        # -- If no vids provided we compute the function for all keys present in the vertex_property
+        if vids==None:
+            vids = vertex_property.keys()
+                
+        if type(vids)==int:
+            # for single id, compute single result
+            return func(graph, vertex_property, vids, rank)
+        else:
+            # for set of ids, we compute a dictionary of resulting values.
+            l={}
+            for k in vids:
+                if verbose and k%10==0: print k,'/',len(vids)
+                l[k] = func(graph, vertex_property, k, rank )
+            return l        
+    return  wrapped_function
+    
+@__normalized_temporal_parameters
+def temporal_change(graph, vertex_property, vid, rank=1):
     """
-    Sub-function computing the relative temporal change between ONE vertex ('vid') and its descendants at rank 'n'.
+    Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
 
     :Parameters:
     - 'graph' : a TPG.
-    - 'graph_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest').
     - 'vid' : a vertex id.
-    - 'n' : neighborhood at distance 'n' will be used.
+    - 'rank' : neighborhood at distance 'rank' will be used.
     
     :Return:
-    - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'n'.
+    - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    p=graph.vertex_property(vertex_property_name)
-    return temporal_change(graph, vertex_property_name, vid, n)/p[vid]
+    vid_neighborhood = graph.descendants(vid,rank)
+    vid_neighborhood.remove(vid)
+    nb_neighborhood = len(vid_neighborhood)
 
-#~ def dev_abs(graph,graph_property,return_list=False):
-	#~ """
-	#~ Mean absolute deviation : sum of absolute difference between one cell and its neighbors.
-	#~ 
-	#~ :INPUTS:
-		#~ - dic: dictionnary of any values by cells (*keys= cell ids; *values= any float)
-		#~ - graph: temporal_property_graph related to the dic.
-	#~ """
-	#~ # -- If 'graph_property' is a string, we start by making sure that the graph property already exist!
-	#~ from vplants.tissue_analysis.mesh_computation import is_instance_method
-	#~ if is_instance_method(graph_property):
-		#~ tmp={}
-		#~ print 'creating dictionnary from instance method:'
-		#~ for i in graph.vertex_property('label'):
-			#~ if isinstance(graph_property(i),int):
-				#~ tmp[i]=graph_property(i)
-			#~ else:
-				#~ import sys
-				#~ print "Your instance method return ",str(type(graph_property(i)))," and I don't know what to do with that!! Interger needed :)..."
-				#~ sys.exit(1)
-		#~ graph_property=tmp
-#~ 
-	#~ if type(graph_property)==type(str('str')):
-		#~ if graph_property not in graph.vertex_property_name():
-			#~ import sys
-			#~ sys.exit(1)
-		#~ else:
-			#~ p=graph.vertex_property(str(graph_property))
-	#~ else:
-		#~ p=graph_property
-	#~ 
-	#~ # -- We compute the sum of absolute deviation:
-	#~ l={}
-	#~ for k in p:
-		#~ tmp=0
-		#~ if graph.nb_neighbors(k)!=0:
-			#~ n=0
-			#~ for i in graph.neighbors(k):
-				#~ if i in p.keys():
-					#~ n+=1 # We want to be sure that we normalise by the number of neighbors we used to compute the deviance.
-					#~ tmp=tmp+abs(p[k]-p[i])
-				#~ else:
-					#~ print 'The neighbours', str(i),'of the vertex',str(k),'is ignored while computing the sum of absolute deviation.'
-			#~ l[k]=tmp/float(n)
-	#~ 
-	#~ if return_list:
-		#~ return l.values()
-	#~ else:
-		#~ return l
-	
-#~ def laplacian(graph,graph_property,return_list=False,labels=None):
-	#~ """
-	#~ Calcul la somme des ecarts absolu a ses voisines pour chaque cellule.
-	#~ 
-	#~ :INPUTS:
-		#~ - dic: dictionnary of any values by cells (*keys= cell ids; *values= any float)
-		#~ - graph: temporal_property_graph related to the dic.
-	#~ """
-	#~ from vplants.tissue_analysis.mesh_computation import is_instance_method
-	#~ if labels==None:
-		#~ labels=graph.vertex_property('label').values()
-	#~ 
-	#~ if is_instance_method(graph_property):
-		#~ tmp={}
-		#~ print 'creating dictionnary from instance method:'
-		#~ for i in labels:
-			#~ if isinstance(graph_property(i),int):
-				#~ tmp[i]=graph_property(i)
-			#~ else:
-				#~ import sys
-				#~ print "Your instance method return ",str(type(graph_property(i)))," and I don't know what to do with that!! Interger needed :)..."
-				#~ sys.exit(1)
-		#~ graph_property=tmp
-#~ 
-	#~ import numpy as np
-	#~ # -- If 'graph_property' is a string, we start by making sure that the graph property already exist!
-	#~ p={}
-	#~ if type(graph_property)==type(str('str')):
-		#~ if graph_property not in graph.vertex_property_name():
-			#~ import sys
-			#~ sys.exit(1)
-		#~ else:
-			#~ for i in labels:
-				#~ p[i]=graph.vertex_property(str(graph_property))[i]
-	#~ elif type(graph_property)==type({}):
-		#~ p=graph_property
-	#~ 
-	#~ # -- We compute the sum of absolute deviation:
-	#~ l={}
-	#~ for k in p:
-		#~ tmp=[]
-		#~ if graph.nb_neighbors(k)!=0:
-			#~ for i in graph.neighbors(k):
-				#~ if i in p.keys():
-					#~ tmp.append(p[i])
-				#~ else:
-					#~ print 'The neighbours', str(i),'of the node',str(k),'is ignored while computing the sum of absolute deviation.'
-			#~ l[k]=p[k]-float(np.mean(tmp))
-			#~ 
-	#~ if return_list:
-		#~ return l.values()
-	#~ else:
-		#~ return l
+    result = 0
+    ivalue = vertex_property[vid]
+    if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
+        for i in vid_neighborhood:
+            result = result + vertex_property[i]
+    
+        return result - ivalue
+    else:
+        return 0
+
+@__normalized_temporal_parameters
+def relative_temporal_change(graph, vertex_property, vid, rank=1):
+    """
+    Sub-function computing the relative temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
+
+    :Parameters:
+    - 'graph' : a TPG.
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest').
+    - 'vid' : a vertex id.
+    - 'rank' : neighborhood at distance 'rank' will be used.
+    
+    :Return:
+    - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
+    """
+    return temporal_change(graph, vertex_property, vid, rank) / vertex_property[vid]
+
 
 
 
