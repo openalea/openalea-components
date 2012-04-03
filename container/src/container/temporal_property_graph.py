@@ -78,11 +78,27 @@ class TemporalPropertyGraph(PropertyGraph):
         old_vertex_labels = self.vertex_property('old_label')
         indices = self.vertex_property('index')
 
-        relabel_ids = PropertyGraph.extend(self,graph)
-        self._old_to_new_ids.append(relabel_ids)
+        # add and translate the vertex and edge ids of the second graph
+        relabel_ids = Graph.extend(self,graph)
+        old_to_new_vids, old_to_new_eids = relabel_ids
+        # relabel the edge and vertex property
+        self._relabel_and_add_vertex_edge_properties(graph, old_to_new_vids, old_to_new_eids)
+        
+        # update properties on graph
+        temporalgproperties = self.graph_property()
+        
+        # while on a property graph, graph_property are just dict of dict, 
+        # on a temporal property graph, graph_property are dict of list of dict
+        # to keep the different values for each time point.
 
-        old_to_new_vids = relabel_ids[0]
-        old_to_new_eids = relabel_ids[1]
+        for gname in graph.graph_property_names():
+            if gname in [metavidtypepropertyname,metavidtypepropertyname]:
+                temporalgproperties[gname].update(graph.graph_property(gname))
+            else:
+                newgproperty = graph.translate_graph_property(gname,trans_vid, trans_eid)            
+                temporalgproperties[gname] = temporalgproperties.get(gname,[])+[newgproperty]
+        
+        self._old_to_new_ids.append(relabel_ids)
 
         # set edge_type property for structural edges
         for old_eid, eid in old_to_new_eids.iteritems():
@@ -100,6 +116,7 @@ class TemporalPropertyGraph(PropertyGraph):
                     edge_types[eid] = self.TEMPORAL
 
         return relabel_ids
+    
 
 
     def clear(self):
