@@ -177,4 +177,365 @@ class PropertyGraph(IPropertyGraph, Graph):
 
         return trans_vid, trans_eid
     extend.__doc__ = Graph.extend.__doc__
+    
+    def __to_set(self, s):
+        if not isinstance(s, set):
+            if isinstance(s, list):
+                s=set(s)
+            else:
+                s=set([s])
+        return s
 
+    def in_neighbors(self, vid, edge_type=None):
+        """ Return the in vertices of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `neighbors_list` : the set of parent vertices of the vertex vid
+        """
+        
+        if vid not in self :
+            raise InvalidVertex(vid)
+        
+        if edge_type==None:
+            neighbors_list=set([self.source(eid) for eid in self._vertices[vid][0] ])
+        else:
+            edge_type=self.__to_set(edge_type) 
+            edge_type_property = self._edge_property['edge_type']
+            neighbors_list=set([self.source(eid) for eid in self._vertices[vid][0] if edge_type_property[eid] in edge_type])
+        return neighbors_list
+  
+    def iter_in_neighbors(self, vid, edge_type=None):
+        """ Return the in vertices of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `iterator` : an iterator on the set of parent vertices of the vertex vid
+        """
+        return iter(self.in_neighbors(vid, edge_type))
+  
+    def out_neighbors(self, vid, edge_type=None):
+        """ Return the out vertices of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `neighbors_list` : the set of child vertices of the vertex vid
+        """
+        if vid not in self :
+            raise InvalidVertex(vid)
+
+        if edge_type==None:
+            neighbors_list=set([self.target(eid) for eid in self._vertices[vid][1] ])
+        else:
+            edge_type=self.__to_set(edge_type) 
+            edge_type_property = self._edge_property['edge_type']
+            neighbors_list=set([self.target(eid) for eid in self._vertices[vid][1] if edge_type_property[eid] in edge_type])
+        return neighbors_list
+        
+                    
+    def iter_out_neighbors(self, vid, edge_type=None):
+        """ Return the out vertices of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `iterator` : an iterator on the set of child vertices of the vertex vid
+        """
+        return iter(self.out_neighbors(vid, edge_type))
+  
+    def neighbors(self, vid, edge_type=None):
+        """ Return the neighbors vertices of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `neighbors_list` : the set of neighobrs vertices of the vertex vid
+        """
+        return self.in_neighbors(vid, edge_type) | self.out_neighbors(vid, edge_type)
+
+    def iter_neighbors(self, vid, edge_type=None):
+        """ Return the neighbors vertices of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `iterartor` : iterator on the set of neighobrs vertices of the vertex vid
+        """
+        return iter(self.neighbors(vid, edge_type))
+  
+
+    def in_edges(self, vid, edge_type=None):
+        """ Return in edges of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `edge_list` : the set of the in edges of the vertex vid
+        """
+        if vid not in self :
+            raise InvalidVertex(vid)
+
+        if not edge_type:
+            edge_list=set([eid for eid in self._vertices[vid][0]])
+        else:
+            edge_type=self.__to_set(edge_type)
+            edge_type_property = self._edge_property['edge_type']
+            edge_list=set([eid for eid in self._vertices[vid][0] if edge_type_property[eid] in edge_type])
+        return  edge_list
+        
+    def iter_in_edges(self, vid, edge_type=None):
+        """ Return in edges of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `iterator` : an iterator on the set of the in edges of the vertex vid
+        """  
+        return iter(self.in_edges(vid, edge_type))
+
+
+    def out_edges(self, vid, edge_type=None):
+        """ Return out edges of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider (can be a set)
+
+        :Returns:
+        - `edge_list` : the set of the out edges of the vertex vid
+        """
+        if vid not in self :
+            raise InvalidVertex(vid)
+        
+        if edge_type==None:
+            edge_list=set([eid for eid in self._vertices[vid][1]])
+        else:
+            edge_type=self.__to_set(edge_type)
+            edge_type_property = self._edge_property['edge_type']
+            edge_list=set([eid for eid in self._vertices[vid][1] if edge_type_property[eid] in edge_type])
+        return  edge_list
+
+    def iter_out_edges(self, vid, edge_type=None):
+        """ Return in edges of the vertex vid
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider
+
+        :Returns:
+        - `iterator` : an iterator on the set of the in edges of the vertex vid
+        """  
+        return iter(self.out_edges(vid, edge_type))
+
+
+    def edges(self, vid=None, edge_type=None):
+        """ Return edges of the vertex vid
+        If vid=None, return all edges of the graph
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider
+
+        :Returns:
+        - `edge_list` : the set of the edges of the vertex vid
+        """
+        if vid==None:
+            return set(self._edges.keys())       
+        return self.out_edges(vid, edge_type) | self.in_edges(vid, edge_type)
+
+    def iter_edges(self, vid, edge_type=None):
+        """ Return in edges of the vertex vid
+        If vid=None, return all edges of the graph
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider
+
+        :Returns:
+        - `iterator` : an iterator on the set of the edges of the vertex vid
+        """  
+        return iter(self.edges(vid, edge_type))
+
+    def neighborhood(self, vid, max_distance=1, edge_type=None):
+        """ Return the neighborhood of the vertex vid at distance max_distance (the disc, not the circle)
+        
+        :Parameters:
+        - `vid` : vertex id
+
+        :Returns:
+        - `neighbors_list` : the set of the vertices at distance below max_distance of the vertex vid (including vid)
+        """
+        dist=self.topological_distance(vid, edge_type=edge_type, max_depth=max_distance, full_dict=False)
+        return set(dist.keys())
+
+    def iter_neighborhood(self, vid, n, edge_type=None):
+        """ Return the neighborhood of the vertex vid at distance n (the disc, not the circle)
+        
+        :Parameters:
+        - `vids` : a set of vertex id
+
+        :Returns:
+        - `iterator` : an iterator on the set of the vertices at distance n of the vertex vid
+        """
+        return iter(self.neighborhood(vid, n, edge_type))      
+
+    def topological_distance(self, vid, edge_type = None, edge_dist = lambda x,y : 1, max_depth=float('inf'), full_dict=True):
+        """ Return the distances of each vertices at the vertex vid according a cost function
+        
+        :Parameters:
+        - `vid` : a vertex id
+        - `edges_type` : type of edges we want to consider
+        - `edge_dist` : the cost function
+        - `max_depth` : the maximum depth that we want to reach
+        - `full_dict` : if True this function will return the entire dictionary (with inf values)
+
+        :Returns:
+        - `dist_dict` : a dictionary of the distances, key : vid, value : distance
+        """
+        import numpy as np
+        dist={}
+        reduced_dist={}
+        reduced_dist[vid]=0
+        untreated=set()
+        infinity = float('inf')
+        for k in self._vertices.iterkeys():
+            dist[k] = infinity
+            untreated.add(k)
+
+        treated=set()
+        dist[vid]=0
+        modif=True
+        
+        while (len(untreated)>0 & modif):
+            tmpDist=dist.copy()
+            for k in treated:
+                tmpDist.pop(k)
+            actualVid=[k for k in tmpDist.keys()][np.argmin(tmpDist.values())]
+            untreated-=set([actualVid])
+            treated|=set([actualVid])
+            for neighb in self.iter_neighbors(actualVid, edge_type):
+                if ((dist[neighb] > dist[actualVid] + edge_dist(neighb, actualVid))
+                    & (dist[actualVid] + edge_dist(neighb, actualVid) < max_depth+1 ) ):
+                    dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
+                    reduced_dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
+            modif=tmpDist!=dist
+        return (reduced_dist, dist)[full_dict]
+
+
+    def _add_vertex_to_region(self, vids, region_name):
+        """
+        add a set of vertices to a region
+        """
+        for vid in vids:
+            if self._vertex_property["regions"].has_key(vid):
+                self._vertex_property["regions"][vid].append(region_name)
+            else:
+                self._vertex_property["regions"][vid]=[region_name]
+
+            self._graph_property[region_name].append(vid)
+
+    def _remove_vertex_from_region(self, vids, region_name):
+        """
+        remove a set of vertices to a region
+        """
+        for vid in vids:
+            self._vertex_property["regions"][vid].remove(region_name)
+            if self._vertex_property["regions"][vid]==[]:
+                self._vertex_property["regions"].pop(vid)
+                
+            self._graph_property[region_name].remove(vid)
+        
+
+    def add_vertex_to_region(self, vids, region_name):
+        """
+        add a set of vertices to a region
+        """
+        if not region_name in self._graph_property:
+            raise PropertyError("property %s is not defined on graph"
+                                % region_name)
+        
+        self._add_vertex_to_region(self.__to_set(vids), region_name)
+
+    def remove_vertex_from_region(self, vids, region_name):
+        """
+        remove a set of vertices to a region
+        """
+        if not region_name in self._graph_property:
+            raise PropertyError("property %s is not defined on graph"
+                                % region_name)
+        self._remove_vertex_from_region(self.__to_set(vids), region_name)
+
+
+    def add_region(self, func, region_name):
+        """ Create a region of vertices according a function
+        
+        :Parameters:
+        - `func` : the function to make the region (might return True or False)
+        - `region_name` : the name of the region
+        
+        """
+        
+        if region_name in self._graph_property:
+            raise PropertyError("property %s is already defined on graph"
+                                % region_name)
+        self._graph_property[region_name]=[]
+        if not "regions" in self._vertex_property.keys():
+            self.add_vertex_property("regions")
+        for vid in self._vertices.keys():
+            if func(self, vid):
+                self._add_vertex_to_region(set([vid]), region_name)
+
+
+    def iter_region(self, region_name):
+        if not region_name in self._graph_property:
+            raise PropertyError("property %s is not defined on graph"
+                                % region_name)
+        return iter(self._graph_property[region_name])
+
+    def remove_region(self, region_name):
+        """ Remove a region 
+        
+        :Parameters:
+        - `region_name` : the name of the region
+        
+        """
+        if not region_name in self._graph_property:
+            raise PropertyError("property %s is not defined on graph"
+                                % region_name)
+
+        for vid in self.iter_region(region_name):
+            self._vertex_property["regions"][vid].remove(region_name)
+            if self._vertex_property["regions"][vid]==[]:
+                self._vertex_property["regions"].pop(vid)
+
+        return self._graph_property.pop(region_name)
+
+    def is_region_connected(self, region_name, edge_type=None):
+        """
+        Return True if a region is connected
+        """
+        if not region_name in self._graph_property:
+            raise PropertyError("property %s is not defined on graph"
+                                % region_name)
+        region_sub_graph=Graph.sub_graph(self, self._graph_property[region_name])
+        distances=region_sub_graph.topological_distance(region_sub_graph._vertices.keys()[0], edge_type=edge_type)
+        return not float('inf') in distances.values()

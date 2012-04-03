@@ -463,7 +463,7 @@ class TemporalPropertyGraph(PropertyGraph):
         :Returns:
         - `neighbors_list` : the set of the vertices at distance below max_distance of the vertex vid (including vid)
         """
-        dist=self.topo_dist(vid, edge_type=edge_type, max_depth=max_distance, full_dict=False)
+        dist=self.topological_distance(vid, edge_type=edge_type, max_depth=max_distance, full_dict=False)
         return set(dist.keys())
 
     def iter_neighborhood(self, vid, n, edge_type=None):
@@ -548,7 +548,7 @@ class TemporalPropertyGraph(PropertyGraph):
         return iter(self.ancestors(vids, n))
   
 
-    def topo_dist(self, vid, edge_type = None, edge_dist = lambda x,y : 1, max_depth=float('inf'), full_dict=True):
+    def topological_distance(self, vid, edge_type = None, edge_dist = lambda x,y : 1, max_depth=float('inf'), full_dict=True):
         """ Return the distances of each vertices at the vertex vid according a cost function
         
         :Parameters:
@@ -587,21 +587,6 @@ class TemporalPropertyGraph(PropertyGraph):
                     reduced_dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
             modif=tmpDist!=dist
         return (reduced_dist, dist)[full_dict]
-        
-    
-    # def group_by(self, func):
-        # """ Return a cluster of the vertices according a function
-        
-        # :Parameters:
-        # - `fund` : the function to make the clusters
-
-        # :Returns:
-        # - `cluster_dict` : a dictionary of the clusters, key : cluster, value : set of vid in this cluster
-        # """
-        # ret={}
-        # for k in self._vertices.keys():
-            # ret.setdefault(func(k)).append(k)
-        # return ret
 
 def test(display=False):
     import random

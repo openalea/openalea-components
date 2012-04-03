@@ -289,7 +289,7 @@ class Graph (IGraph,\
         result._vertices.clear()
         result._edges.clear()
         
-        for key, edges in self._vertices:
+        for key, edges in self._vertices.items():
             if key in vids:
                 inedges, outedges = edges
                 sortedinedges = set([eid for eid in inedges if self.source(eid) in vids])
