@@ -39,85 +39,125 @@ def test_temporalPropertyGraph():
     assert g.neighborhood(2, 2, 's')==set([2, 3, 4, 5])
 
     # ~ Topologic Distance
-    assert g.topo_dist(3)=={0: 1,
-                            1: 2,
-                            2: 1,
-                            3: 0,
-                            4: 1,
-                            5: 1,
-                            6: 2,
-                            7: 2,
-                            8: 2,
-                            9: 1,
-                            10: 2,
-                            11: 2,
-                            12: 2,
-                            13: 2,
-                            14: 2,
-                            15: 2,
-                            16: 3,
-                            17: 3,
-                            18: 3,
-                            19: 3}
+    assert g.topological_distance(3)=={0: 1,
+                                       1: 2,
+                                       2: 1,
+                                       3: 0,
+                                       4: 1,
+                                       5: 1,
+                                       6: 2,
+                                       7: 2,
+                                       8: 2,
+                                       9: 1,
+                                       10: 2,
+                                       11: 2,
+                                       12: 2,
+                                       13: 2,
+                                       14: 2,
+                                       15: 2,
+                                       16: 3,
+                                       17: 3,
+                                       18: 3,
+                                       19: 3}
                           
-    assert g.topo_dist(3, edge_type='t')=={0: 1,
-                                           1: inf,
-                                           2: 2,
-                                           3: 0,
-                                           4: 2,
-                                           5: inf,
-                                           6: inf,
-                                           7: 3,
-                                           8: 3,
-                                           9: 1,
-                                           10: 3,
-                                           11: 3,
-                                           12: 3,
-                                           13: 3,
-                                           14: inf,
-                                           15: inf,
-                                           16: inf,
-                                           17: inf,
-                                           18: inf,
-                                           19: inf}
-    assert g.topo_dist(3, edge_type='s')=={0: inf,
-                                           1: inf,
-                                           2: 1,
-                                           3: 0,
-                                           4: 1,
-                                           5: 1,
-                                           6: 2,
-                                           7: inf,
-                                           8: inf,
-                                           9: inf,
-                                           10: inf,
-                                           11: inf,
-                                           12: inf,
-                                           13: inf,
-                                           14: inf,
-                                           15: inf,
-                                           16: inf,
-                                           17: inf,
-                                           18: inf,
-                                           19: inf}
-    
-     assert g.topo_dist(3, edge_dist=lambda x,y: 2)=={0: 2,
-                                                      1: 4,
+    assert g.topological_distance(3, edge_type='t')=={0: 1,
+                                                      1: inf,
                                                       2: 2,
                                                       3: 0,
                                                       4: 2,
-                                                      5: 2,
-                                                      6: 4,
-                                                      7: 4,
-                                                      8: 4,
-                                                      9: 2,
-                                                      10: 4,
-                                                      11: 4,
-                                                      12: 4,
-                                                      13: 4,
-                                                      14: 4,
-                                                      15: 4,
-                                                      16: 6,
-                                                      17: 6,
-                                                      18: 6,
-                                                      19: 6}
+                                                      5: inf,
+                                                      6: inf,
+                                                      7: 3,
+                                                      8: 3,
+                                                      9: 1,
+                                                      10: 3,
+                                                      11: 3,
+                                                      12: 3,
+                                                      13: 3,
+                                                      14: inf,
+                                                      15: inf,
+                                                      16: inf,
+                                                      17: inf,
+                                                      18: inf,
+                                                      19: inf}
+    
+    assert g.topological_distance(3, edge_type='s')=={0: inf,
+                                                      1: inf,
+                                                      2: 1,
+                                                      3: 0,
+                                                      4: 1,
+                                                      5: 1,
+                                                      6: 2,
+                                                      7: inf,
+                                                      8: inf,
+                                                      9: inf,
+                                                      10: inf,
+                                                      11: inf,
+                                                      12: inf,
+                                                      13: inf,
+                                                      14: inf,
+                                                      15: inf,
+                                                      16: inf,
+                                                      17: inf,
+                                                      18: inf,
+                                                      19: inf}
+    
+    assert g.topological_distance(3, edge_dist=lambda x,y: 2)=={0: 2,
+                                                                1: 4,
+                                                                2: 2,
+                                                                3: 0,
+                                                                4: 2,
+                                                                5: 2,
+                                                                6: 4,
+                                                                7: 4,
+                                                                8: 4,
+                                                                9: 2,
+                                                                10: 4,
+                                                                11: 4,
+                                                                12: 4,
+                                                                13: 4,
+                                                                14: 4,
+                                                                15: 4,
+                                                                16: 6,
+                                                                17: 6,
+                                                                18: 6,
+                                                                19: 6}
+
+def func_test_regional_bin(graph, vid):
+    return (len(graph.neighborhood(vid))-1)==4
+
+def test_regionalisation():
+    g=create_TemporalGraph()
+    g.add_region(func_test_regional_bin, "dist4")
+    assert g._graph_property=={'dist4' : [0, 2, 9, 11, 15]}
+    assert g._vertex_property["regions"] == {0 : ['dist4'], 
+                                             2 : ['dist4'], 
+                                             9 : ['dist4'], 
+                                             11: ['dist4'], 
+                                             15: ['dist4']}
+    
+    g.add_vertex_to_region(1, "dist4")
+    assert 1 in g._graph_property["dist4"]
+    assert "dist4" in g._vertex_property["regions"][1]
+
+    g.remove_vertex_from_region(2, "dist4")
+    assert not 2 in g._graph_property["dist4"]
+    assert g._vertex_property["regions"].get(2) == None
+    
+    g.remove_vertex_from_region([0, 1], "dist4")
+    assert not 0 in g._graph_property["dist4"]
+    assert g._vertex_property["regions"].get(0) == None
+    assert not 1 in g._graph_property["dist4"]
+    assert g._vertex_property["regions"].get(1) == None
+
+    assert not g.is_region_connected("dist4")
+    
+    g.add_vertex_to_region(3, "dist4")
+    g.add_vertex_to_region([4, 5], "dist4")
+    
+    assert g.is_region_connected("dist4")
+    assert not g.is_region_connected("dist4", "s")
+
+    g.remove_region("dist4")
+    assert g._graph_property.get("dist4") == None
+    assert g._vertex_property["regions"] == {}
