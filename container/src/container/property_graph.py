@@ -22,12 +22,19 @@ __revision__ = " $Id$ "
 from interface.property_graph import IPropertyGraph, PropertyError
 from graph import Graph, InvalidVertex, InvalidEdge
 
+
 class PropertyGraph(IPropertyGraph, Graph):
     """
     Simple implementation of IPropertyGraph using
     dict as properties and two dictionaries to
     maintain these properties
     """
+    
+    VertexProperty, EdgeProperty, GraphProperty = range(3)
+    VertexIdType, EdgeIdType, ValueType = range(3)
+    metavidtypepropertyname = "valueproperty_as_vid"
+    metaeidtypepropertyname = "valueproperty_as_eid"
+    
     def __init__(self, graph=None, **kwds):
         self._vertex_property = {}
         self._edge_property = {}
@@ -38,6 +45,11 @@ class PropertyGraph(IPropertyGraph, Graph):
         """todo"""
         return self._vertex_property.iterkeys()
     vertex_property_names.__doc__ = IPropertyGraph.vertex_property_names.__doc__
+
+    def vertex_properties(self):
+        """todo"""
+        return self._vertex_property
+    # vertex_properties.__doc__ = IPropertyGraph.vertex_properties.__doc__
 
     def vertex_property(self, property_name):
         """todo"""
@@ -53,6 +65,11 @@ class PropertyGraph(IPropertyGraph, Graph):
         return self._edge_property.iterkeys()
     edge_property_names.__doc__ = IPropertyGraph.edge_property_names.__doc__
 
+    def edge_properties(self):
+        """todo"""
+        return self._edge_property
+    #  edge_properties.__doc__ = IPropertyGraph. edge_properties.__doc__
+
     def edge_property(self, property_name):
         """todo"""
         try:
@@ -62,10 +79,22 @@ class PropertyGraph(IPropertyGraph, Graph):
                                 % property_name)
     edge_property.__doc__ = IPropertyGraph.edge_property.__doc__
 
-    def graph_property(self):
+    def graph_property(self, property_name):
         """todo"""
-        return self._graph_property
+        try:
+            return self._graph_property[property_name]
+        except KeyError:
+            raise PropertyError("property %s is undefined on graph"
+                                % property_name)
     graph_property.__doc__ = IPropertyGraph.graph_property.__doc__
+                                
+    def graph_properties(self):
+        return self._graph_property
+    
+    
+    def graph_property_names(self):
+        """todo"""
+        return self._graph_property.iterkeys()
 
     def add_vertex_property(self, property_name, values = None):
         """todo"""
@@ -151,32 +180,122 @@ class PropertyGraph(IPropertyGraph, Graph):
         Graph.clear_edges(self)
     clear_edges.__doc__ = Graph.clear_edges.__doc__
 
-    def extend(self, graph):
-        """todo"""
-        trans_vid, trans_eid = Graph.extend(self,graph)
+    def _translate_property(values, trans_vid, trans_eid, key_translation = ValueType, value_translation = ValueType):
+        # translation function
+        def translate_vid(vid): 
+            if isinstance(vid, list): return [trans_vid[i]  for i in vid]
+            return trans_vid[vid]
+        def id_value(value): return value
+        def translate_eid(eid):
+            if isinstance(eid, list): return [trans_eid[i]  for i in eid]
+            return trans_vid[eid]
+        translator = { ValueType : id_value, VertexIdType :  translate_vid, EdgeIdType : translate_eid }
+        
+        key_translator = translator[key_translation]
+        value_translator = translator[value_translation]
+
+        # translate vid and value
+        return dict([(key_translator[vid],value_translator[val]) for vid, val in values.iteritems()])
+        
+    
+    def _relabel_and_add_vertex_edge_properties(self,graph, trans_vid, trans_eid):
+        
         # update properties on vertices
         for prop_name in graph.vertex_property_names():
             if prop_name not in self._vertex_property:
                 self.add_vertex_property(prop_name)
-            prop = self.vertex_property(prop_name)
-
-            for vid, val in graph.vertex_property(prop_name).iteritems():
-                prop[trans_vid[vid]] = val
+            
+            value_translator = graph.get_property_value_type(prop_name,VertexProperty)
+            
+            # import property into self. translate vid and value
+            self.vertex_property(prop_name, self._translate_property(graph.vertex_property(prop_name),trans_vid, trans_eid, VertexIdType, value_translator))
+        
         # update properties on edges
         for prop_name in graph.edge_property_names():
             if prop_name not in self._edge_property:
                 self.add_edge_property(prop_name)
-            prop = self.edge_property(prop_name)
-
-            for eid, val in graph.edge_property(prop_name).iteritems():
-                prop[trans_eid[eid]] = val
-
+            #prop = self.edge_property(prop_name)
+            
+            # Check what type of translation is required for value of the property
+            value_translator = graph.get_property_value_type(prop_name,EdgeProperty)
+            
+            # import property into self. translate vid and value
+            self.edge_property(prop_name, _translate_property(graph.edge_property(prop_name),trans_vid, trans_eid, EdgeIdType, value_translator))
+    
+    def translate_graph_property(self, prop_name, trans_vid, trans_eid):
+        """ Translate a graph property according to meta info """
+        old_prop = self.graph_property(prop_name)
+        
+        key_translator = self.get_graph_property_key_type(prop_name)
+        value_translator = self.get_property_value_type(prop_name, GraphProperty)        
+        
+        return _translate_property(old_prop,trans_vid, trans_eid, key_translator, value_translator)
+    
+    
+    def extend(self, graph):
+        """todo"""
+        
+        # add and translate the vertex and edge ids of the second graph
+        trans_vid, trans_eid = Graph.extend(self,graph)
+        
+        # relabel the edge and vertex property
+        self.__relabel_and_add_vertex_edge_properties(graph, trans_vid, trans_eid)
+        
         # update properties on graph
-        prop = self.graph_property()
-        prop.update(graph.graph_property())
+        gproperties = self.graph_property()
+        newgproperties = {}
+        for pname, prop in graph.graph_property_names():
+            newgproperty = graph.translate_graph_property(pname,trans_vid, trans_eid)
+            newgproperties[pname] = newgproperty
+            
+        prop.update(newgproperties)
 
         return trans_vid, trans_eid
+        
     extend.__doc__ = Graph.extend.__doc__
+    
+    
+    def set_property_value_to_vid_type(self, propertyname, property_type = VertexProperty):
+        """ Give meta info on property value type. Associate it to Vertex Id type """
+        if not self._graph_property.has_key(metavidtypepropertyname):
+            self.add_graph_property(metavidtypepropertyname,([],[],[],[]))
+        prop = self.graph_property(metavidtypepropertyname)[property_type]
+        prop.append(propertyname)
+    
+    def set_property_value_to_eid_type(self, propertyname,  property_type = VertexProperty):
+        """ Give meta info on property value type. Associate it to Edge Id type """
+        if not self._graph_property.has_key(metaeidtypepropertyname):
+            self.add_graph_property(metaeidtypepropertyname,([],[],[],[]))
+        prop = self.graph_property(metaeidtypepropertyname)[property_type]
+        prop.append(propertyname)
+        
+    
+    def set_graph_property_key_to_vid_type(self, propertyname):
+        """ Give meta info on graph property key type. Associate it to Vertex Id type"""
+        self.set_property_value_to_vid_type(propertyname, 4)
+    
+    def set_graph_property_key_to_eid_type(self, propertyname):
+        """ Give meta info on graph property key type.  Associate it to Edge Id type """
+        self.set_property_value_to_eid_type(propertyname, 4)
+    
+    def get_property_value_type(self, propertyname, property_type = VertexProperty):
+        """ Return meta info on property value type. Associate it to Edge Id type """
+        try:
+            prop = self.graph_property(metavidtypepropertyname)[property_type]
+            if propertyname in prop : return VertexIdType
+        except:
+            pass
+        try:
+            prop = self.graph_property(metaeidtypepropertyname)[property_type]
+            if propertyname in prop : return EdgeIdType
+        except:
+            return ValueType
+    
+    def get_graph_property_key_type(self, propertyname):
+        """ Return meta info on graph property key type. Associate it to Vertex Id type"""
+        return self.get_property_value_type(propertyname, 4)
+    
+    
     
     def __to_set(self, s):
         if not isinstance(s, set):
@@ -529,7 +648,7 @@ class PropertyGraph(IPropertyGraph, Graph):
 
         return self._graph_property.pop(region_name)
 
-    def is_region_connected(self, region_name, edge_type=None):
+    def is_connected_region(self, region_name, edge_type=None):
         """
         Return True if a region is connected
         """
