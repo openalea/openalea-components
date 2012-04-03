@@ -4,7 +4,8 @@
 #
 #       Copyright 2012 INRIA - CIRAD - INRA
 #
-#       File author(s): Jonathan Legrand
+#       File author(s):  Jonathan Legrand
+#                        Frederic Boudon
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -24,7 +25,7 @@ def __normalized_parameters(func):
            
         :Parameters:
         - 'graph' : a TPG.
-        - 'vertex_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+        - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
         - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
         - 'rank' : neighborhood at distance 'rank' will be used.
         - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
@@ -59,7 +60,7 @@ def laplacian(graph, vertex_property, vid, rank=1, edge_type='s'):
 
     :Parameters:
     - 'graph' : a TPG.
-    - 'graph_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
     - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
@@ -88,7 +89,7 @@ def mean_abs_dev(graph, vertex_property, vid, rank=1, edge_type='s'):
 
     :Parameters:
     - 'graph' : a TPG.
-    - 'graph_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
     - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
@@ -117,7 +118,7 @@ def change(graph, vertex_property, vid, rank=1, edge_type='t'):
 
     :Parameters:
     - 'graph' : a TPG.
-    - 'graph_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
     - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
@@ -145,7 +146,7 @@ def __normalized_temporal_parameters(func):
            
         :Parameters:
         - 'graph' : a TPG.
-        - 'vertex_property_name' : the dictionnary TPG.vertex_property('property-of-interest').
+        - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
         - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
         - 'rank' : neighborhood at distance 'rank' will be used.
         - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
@@ -179,7 +180,7 @@ def temporal_change(graph, vertex_property, vid, rank=1):
 
     :Parameters:
     - 'graph' : a TPG.
-    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest').
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
     
@@ -207,7 +208,7 @@ def relative_temporal_change(graph, vertex_property, vid, rank=1):
 
     :Parameters:
     - 'graph' : a TPG.
-    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest').
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
     
@@ -216,6 +217,122 @@ def relative_temporal_change(graph, vertex_property, vid, rank=1):
     """
     return temporal_change(graph, vertex_property, vid, rank) / vertex_property[vid]
 
+
+def time_point_property(graph,time_point,vertex_property):
+    """
+    Allow to extract a property 'vertex_property' from the temporal graph for one time-point.
+    
+    :Parameters:
+    - `graph` TPG to browse;
+    - `time_point` integer defining the time-point to consider;
+    - `vertex_property` vertex property to extract;
+    :Return:
+    - dictionnary of vertex property extracted from the time-point 'time_point';
+    """
+    # if a name is given, we use vertex_property stored in the graph with this name.
+    if isinstance(vertex_property,str):
+        vertex_property = graph.vertex_property(vertex_property)
+        
+    if time_point not in graph.vertex_property('index').values():
+        print time_point,"not in ",graph
+
+    k=[i for i in graph.vertex_property('index') if graph.vertex_property('index')[i]==time_point]
+    tmp={}
+    for i in k:
+        tmp[i]=vertex_property[i]
+    
+    return tmp
+
+
+def strain2D(graph, tp_1, tp_2):
+    	"""
+	Strain computation based on the 3D->2D->3D GOODALL method.
+	
+	:INPUTS:
+		.t1: t_n Spatial Image containing cells (segmented image)
+		.t2: t_n+1 Spatial Image containing cells (segmented image)
+		.l12: lineage between t_n & t_n+1;
+		.l21: INVERTED lineage between t_n & t_n+1;
+		.deltaT: time interval between two time points;
+		
+	:Variables:
+		.v2v_21: vertex (keys=t_n+1) to vertex (values=t_n) association.
+		.c2v_1: cells 2 vertex @ t_n
+		.v2b_1: vextex 2 barycenters @ t_n
+		.v2b_2: vextex 2 barycenters @ t_n+1
+	
+	:OUTPUTS: (c= keys= mother cell number)
+		.sr[c]: Strain Rate = np.log(D_A[0])/deltaT , np.log(D_A[1])/deltaT
+		.asr[c]: Areal Strain Rate = (sr1+sr2)
+		.anisotropy[c]: Growth Anisotropy = (sr1-sr2)/(sr1+sr2)
+		.s_t1[c]: t_n strain cross in 3D (tensor)
+		.s_t2[c]: t_n+1 strain cross in 3D (tensor)
+	
+	########## Relationship between least-squares method and principal components: ##########
+	## The first principal component about the mean of a set of points can be represented by that line which most closely approaches the data points 
+	#(as measured by squared distance of closest approach, i.e. perpendicular to the line).
+	## In contrast, linear least squares tries to minimize the distance in the y direction only.
+	## Thus, although the two use a similar error metric, linear least squares is a method that treats one dimension of the data preferentially, while PCA treats all dimensions equally.
+	#########################################################################################
+	"""
+    ## Extract infos form t1:
+	v2c_1, c2v_1, v2b_1 = dictionaries(time_point_property(graph,tp1,'cell_vertices'))
+	## Extract infos form t2:
+	v2c_2, c2v_2, v2b_2 = dictionaries(time_point_property(graph,tp2,'cell_vertices'))
+
+	v2v_21=V2V(l21,v2c_1,v2c_2)
+	v2map=V2MAP(l12,v2c_1)
+	print 'Percentage of associated Vertex :',float(len(v2v_21))/len(v2map)*100.,'%'
+
+	## Variable creation used to comput the strain.
+	v2v_12 = dict((v,k) for k, v in v2v_21.items())
+	lsq={}
+	s_t1,s_t2={},{}
+	sr={}
+	asr={}
+	anisotropy={}
+
+	for c in l12.keys():
+		if c in c2v_1.keys():
+			if sum([(c2v_1[c][k] in v2v_12.keys()) for k in range(len(c2v_1[c]))])==len(c2v_1[c]):
+				N = len(c2v_1[c])
+				if N>2:
+					## Retreive positions of the vertices belonging to cell 'c':
+					xyz_t1=np.array([v2b_1[c2v_1[c][k]] for k in range(N)])
+					xyz_t2=np.array([v2b_2[v2v_12[c2v_1[c][k]]] for k in range(N)])
+					## Compute the centroids:
+					c_t1=np.array((np.mean(xyz_t1[:,0]),np.mean(xyz_t1[:,1]),np.mean(xyz_t1[:,2])))
+					c_t2=np.array((np.mean(xyz_t2[:,0]),np.mean(xyz_t2[:,1]),np.mean(xyz_t2[:,2])))
+					## Compute the centered matrix:
+					c_xyz_t1=np.array(xyz_t1-c_t1)
+					c_xyz_t2=np.array(xyz_t2-c_t2)
+					## Compute the Singular Value Decomposition (SVD) of centered coordinates:
+					U_t1,D_t1,V_t1=svd(c_xyz_t1, full_matrices=False)
+					U_t2,D_t2,V_t2=svd(c_xyz_t2, full_matrices=False)
+					V_t1=V_t1.T ; V_t2=V_t2.T
+					## Projection of the vertices' xyz 3D co-ordinate into the 2D subspace defined by the 2 first eigenvector
+					#(the third eigenvalue is really close from zero confirming the fact that all the vertices are close from the plane -true for external part of L1, not for inner parts of the tissue).
+					c_xy_t1=np.array([np.dot(U_t1[k,0:2],np.diag(D_t1)[0:2,0:2]) for k in range(N)])
+					c_xy_t2=np.array([np.dot(U_t2[k,0:2],np.diag(D_t2)[0:2,0:2]) for k in range(N)])
+					## Compute the Singular Value Decomposition (SVD) of the least-square estimation of A.
+					#A is the (linear) transformation matrix in the regression equation between the centered vertices position of two time points:
+					lsq[c]=lstsq(c_xy_t1,c_xy_t2)
+					##  Singular Value Decomposition (SVD) of A.
+					R,D_A,Q=svd(lsq[c][0])
+					Q=Q.T
+					# Compute Strain Rates and Areal Strain Rate:
+					sr[c] = np.log(D_A)/deltaT
+					asr[c] = sum(sr[c])
+					anisotropy[c]=((sr[c][0]-sr[c][1])/asr[c])
+					##  Getting back in 3D: manually adding an extra dimension.
+					R=np.hstack([np.vstack([R,[0,0]]),[[0],[0],[1]]])
+					D_A=np.hstack([np.vstack([np.diag(D_A),[0,0]]),[[0],[0],[0]]])
+					Q=np.hstack([np.vstack([Q,[0,0]]),[[0],[0],[1]]])
+					##  Getting back in 3D: strain of cell c represented at each time point.
+					s_t1[c] = np.dot(np.dot(np.dot(np.dot(V_t1, R), D_A), R.T), V_t1.T)
+					s_t2[c] = np.dot(np.dot(np.dot(np.dot(V_t2, Q), D_A), Q.T), V_t2.T)
+
+	return sr,asr,anisotropy,s_t1,s_t2
 
 
 
