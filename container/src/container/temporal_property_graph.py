@@ -85,7 +85,7 @@ class TemporalPropertyGraph(PropertyGraph):
         self._relabel_and_add_vertex_edge_properties(graph, old_to_new_vids, old_to_new_eids)
         
         # update properties on graph
-        temporalgproperties = self.graph_property()
+        temporalgproperties = self.graph_properties()
         
         # while on a property graph, graph_property are just dict of dict, 
         # on a temporal property graph, graph_property are dict of list of dict
