@@ -271,11 +271,11 @@ class PropertyGraph(IPropertyGraph, Graph):
     
     def set_graph_property_key_to_vid_type(self, propertyname):
         """ Give meta info on graph property key type. Associate it to Vertex Id type"""
-        self.set_property_value_to_vid_type(propertyname, 4)
+        self.set_property_value_to_vid_type(propertyname, 3)
     
     def set_graph_property_key_to_eid_type(self, propertyname):
         """ Give meta info on graph property key type.  Associate it to Edge Id type """
-        self.set_property_value_to_eid_type(propertyname, 4)
+        self.set_property_value_to_eid_type(propertyname, 3)
     
     def get_property_value_type(self, propertyname, property_type = VertexProperty):
         """ Return meta info on property value type. Associate it to Edge Id type """
