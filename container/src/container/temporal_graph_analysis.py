@@ -17,12 +17,11 @@
 """This module helps to analyse TemporalPropertyGraph from Spatial Images."""
  
 from interface.property_graph import IPropertyGraph, PropertyError
-
+import numpy as np
 
 def __normalized_parameters(func):
     def wrapped_function(graph, vertex_property, vids = None, rank = 1, edge_type='s' , verbose = False):
         """
-           
         :Parameters:
         - 'graph' : a TPG.
         - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
@@ -39,7 +38,7 @@ def __normalized_parameters(func):
         # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
             vids = vertex_property.keys()
-                
+
         if type(vids)==int:
             # for single id, compute single result
             return func(graph, vertex_property, vids, rank, edge_type)
@@ -49,7 +48,8 @@ def __normalized_parameters(func):
             for k in vids:
                 if verbose and k%10==0: print k,'/',len(vids)
                 l[k] = func(graph, vertex_property, k, rank, edge_type)
-            return l        
+            return l
+
     return  wrapped_function
 
 
@@ -143,7 +143,6 @@ def change(graph, vertex_property, vid, rank=1, edge_type='t'):
 def __normalized_temporal_parameters(func):
     def wrapped_function(graph, vertex_property, vids = None, rank = 1, verbose = False):
         """
-           
         :Parameters:
         - 'graph' : a TPG.
         - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
@@ -157,6 +156,7 @@ def __normalized_temporal_parameters(func):
         # if a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
+
         # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
             vids = vertex_property.keys()
@@ -234,7 +234,8 @@ def time_point_property(graph,time_point,vertex_property):
         vertex_property = graph.vertex_property(vertex_property)
         
     if time_point not in graph.vertex_property('index').values():
-        print time_point,"not in ",graph
+        import warnings
+        warnings.warn(str(time_point)+"not in"+str(graph))
 
     k=[i for i in graph.vertex_property('index') if graph.vertex_property('index')[i]==time_point]
     tmp={}
@@ -244,95 +245,298 @@ def time_point_property(graph,time_point,vertex_property):
     return tmp
 
 
-def strain2D(graph, tp_1, tp_2):
+def cell_vtx_time_association(graph, return_cell2vertex_relations = False ):
     """
-    Strain computation based on the 3D->2D->3D GOODALL method.
+    Creates vrtx2vrtx dictionnary (v2v): associate the corresponding cell vertex over time.
     
     :INPUTS:
-        .t1: t_n Spatial Image containing cells (segmented image)
-        .t2: t_n+1 Spatial Image containing cells (segmented image)
-        .l12: lineage between t_n & t_n+1;
-        .l21: INVERTED lineage between t_n & t_n+1;
-        .deltaT: time interval between two time points;
-        
-    :Variables:
-        .v2v_21: vertex (keys=t_n+1) to vertex (values=t_n) association.
-        .c2v_1: cells 2 vertex @ t_n
-        .v2b_1: vextex 2 barycenters @ t_n
-        .v2b_2: vextex 2 barycenters @ t_n+1
+        .l21: t_n+1-> t_n (LienTissuTXT) cells lineage
+        .vrtx2cell_1: dict at t_n *keys=vertex id ; *values=ids of the 4 associated cells
+        .vrtx2cell_2: dict at t_n+1 *keys=vertex id ; *values=ids of the 4 associated cells
     
-    :OUTPUTS: (c= keys= mother cell number)
-        .sr[c]: Strain Rate = np.log(D_A[0])/deltaT , np.log(D_A[1])/deltaT
-        .asr[c]: Areal Strain Rate = (sr1+sr2)
-        .anisotropy[c]: Growth Anisotropy = (sr1-sr2)/(sr1+sr2)
-        .s_t1[c]: t_n strain cross in 3D (tensor)
-        .s_t2[c]: t_n+1 strain cross in 3D (tensor)
-    
-    ########## Relationship between least-squares method and principal components: ##########
-    ## The first principal component about the mean of a set of points can be represented by that line which most closely approaches the data points 
-    #(as measured by squared distance of closest approach, i.e. perpendicular to the line).
-    ## In contrast, linear least squares tries to minimize the distance in the y direction only.
-    ## Thus, although the two use a similar error metric, linear least squares is a method that treats one dimension of the data preferentially, while PCA treats all dimensions equally.
-    #########################################################################################
+    :OUPTUT:
+        .v2v: dict *keys=t_n+1 vertex number; *values=associated t_n vertex.
     """
-    ## Extract infos form t1:
-    v2c_1, c2v_1, v2b_1 = dictionaries(time_point_property(graph,tp1,'cell_vertices'))
-    ## Extract infos form t2:
-    v2c_2, c2v_2, v2b_2 = dictionaries(time_point_property(graph,tp2,'cell_vertices'))
+    from openalea.image.algo.analysis import cell2vertex_relations
+    
+    cell2vtx, vtx2coords, vtx2cells = [],[],[]
+    for t in xrange( len(graph.graph_property('cell_vertices_coord')) ):
+        tmp_1,tmp_2,tmp_3 = cell2vertex_relations(graph.graph_property('cell_vertices_coord')[t])
+        cell2vtx.append( tmp_1 )
+        vtx2coords.append( tmp_2 )
+        vtx2cells.append( tmp_3 )
+    
+    vtx_time_association = []
+    for t in xrange( len(graph.graph_property('cell_vertices_coord'))-1 ):
+        v2v = {} ##vertex t_n vers t_n+1
+        ## Loop on the vertices label of t_n+1:
+        for vtx in vtx2cells[t+1].keys():
+            associated_cells = list( vtx2cells[t+1][vtx] )
+            ## For the 4 (daugthers) cells associated to this vertex, we temporary replace it by it's mother label:
+            for n,cell in enumerate(associated_cells):
+                if cell == None: # Mean background...
+                    associated_cells.remove(None)
+                else:
+                    ancestors = graph.ancestors(cell,1)
+                    if len(ancestors) != 1: ## if the cell has ancestors (ancestor return a set containing the vertex you ask for)...
+                        associated_cells[n] = list(ancestors-set([cell]))[0] ## ...we replace the daughters' label by the one from its mother.
+                    else:
+                        associated_cells[n] = 0 ## ...else we code by a 0 the absence of a mother in the lineage file (for one -or more- of the 4 daugthers)
+            if 0 not in associated_cells: ## If the full topology around the vertex is known:
+                associated_cells.sort()
+                for k in vtx2cells[t].keys(): 
+                    if len(set(vtx2cells[t][k])&set(associated_cells)) == len(associated_cells):
+                        v2v[k] = vtx
+        vtx_time_association.append(v2v)
+    
+    if return_cell2vertex_relations:
+        return vtx_time_association, cell2vtx, vtx2coords, vtx2cells
+    else:
+        return vtx_time_association
 
-    v2v_21=V2V(l21,v2c_1,v2c_2)
-    v2map=V2MAP(l12,v2c_1)
-    print 'Percentage of associated Vertex :',float(len(v2v_21))/len(v2map)*100.,'%'
 
-    ## Variable creation used to comput the strain.
-    v2v_12 = dict((v,k) for k, v in v2v_21.items())
-    lsq={}
-    s_t1,s_t2={},{}
-    sr={}
-    asr={}
-    anisotropy={}
+def __strain_parameters(func):
+    def wrapped_function(graph, vids = None, verbose = False):
+        """
+        :Parameters:
+        - 'graph' : a TPG.
+        - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
+        """
+        # Check if cell vertices have been recovered and associated.
+        try :
+            graph.graph_property('cell_vertices_coord')
+        except:
+            import warnings
+            warnings.warn("It seems that you don't have detected cell vertices...")
+            return 0
+        else:
+            from openalea.container.temporal_graph_analysis import cell_vtx_time_association
+            vtx_time_association, cell2vtx, vtx2coords, vtx2cells = cell_vtx_time_association(graph, return_cell2vertex_relations = True)
 
-    for c in l12.keys():
-        if c in c2v_1.keys():
-            if sum([(c2v_1[c][k] in v2v_12.keys()) for k in range(len(c2v_1[c]))])==len(c2v_1[c]):
-                N = len(c2v_1[c])
-                if N>2:
-                    ## Retreive positions of the vertices belonging to cell 'c':
-                    xyz_t1=np.array([v2b_1[c2v_1[c][k]] for k in range(N)])
-                    xyz_t2=np.array([v2b_2[v2v_12[c2v_1[c][k]]] for k in range(N)])
-                    ## Compute the centroids:
-                    c_t1=np.array((np.mean(xyz_t1[:,0]),np.mean(xyz_t1[:,1]),np.mean(xyz_t1[:,2])))
-                    c_t2=np.array((np.mean(xyz_t2[:,0]),np.mean(xyz_t2[:,1]),np.mean(xyz_t2[:,2])))
-                    ## Compute the centered matrix:
-                    c_xyz_t1=np.array(xyz_t1-c_t1)
-                    c_xyz_t2=np.array(xyz_t2-c_t2)
-                    ## Compute the Singular Value Decomposition (SVD) of centered coordinates:
-                    U_t1,D_t1,V_t1=svd(c_xyz_t1, full_matrices=False)
-                    U_t2,D_t2,V_t2=svd(c_xyz_t2, full_matrices=False)
-                    V_t1=V_t1.T ; V_t2=V_t2.T
-                    ## Projection of the vertices' xyz 3D co-ordinate into the 2D subspace defined by the 2 first eigenvector
-                    #(the third eigenvalue is really close from zero confirming the fact that all the vertices are close from the plane -true for external part of L1, not for inner parts of the tissue).
-                    c_xy_t1=np.array([np.dot(U_t1[k,0:2],np.diag(D_t1)[0:2,0:2]) for k in range(N)])
-                    c_xy_t2=np.array([np.dot(U_t2[k,0:2],np.diag(D_t2)[0:2,0:2]) for k in range(N)])
-                    ## Compute the Singular Value Decomposition (SVD) of the least-square estimation of A.
-                    #A is the (linear) transformation matrix in the regression equation between the centered vertices position of two time points:
-                    lsq[c]=lstsq(c_xy_t1,c_xy_t2)
-                    ##  Singular Value Decomposition (SVD) of A.
-                    R,D_A,Q=svd(lsq[c][0])
-                    Q=Q.T
-                    # Compute Strain Rates and Areal Strain Rate:
-                    sr[c] = np.log(D_A)/deltaT
-                    asr[c] = sum(sr[c])
-                    anisotropy[c]=((sr[c][0]-sr[c][1])/asr[c])
-                    ##  Getting back in 3D: manually adding an extra dimension.
-                    R=np.hstack([np.vstack([R,[0,0]]),[[0],[0],[1]]])
-                    D_A=np.hstack([np.vstack([np.diag(D_A),[0,0]]),[[0],[0],[0]]])
-                    Q=np.hstack([np.vstack([Q,[0,0]]),[[0],[0],[1]]])
-                    ##  Getting back in 3D: strain of cell c represented at each time point.
-                    s_t1[c] = np.dot(np.dot(np.dot(np.dot(V_t1, R), D_A), R.T), V_t1.T)
-                    s_t2[c] = np.dot(np.dot(np.dot(np.dot(V_t2, Q), D_A), Q.T), V_t2.T)
+        strain_matrix = {}
+        if vids == None:
+            #~ for t in xrange(max(g.vertex_property('index').values())+1):
+            for t in xrange( len(cell2vtx)-1 ):
+                for n, cell in enumerate( cell2vtx[t] ):
+                    N = len( cell2vtx[t][cell] )
+                    # - We make sure that all vertex of the cell 'cell' have been associtates over time.
+                    if sum( [(cell2vtx[t][cell][k] in vtx_time_association[t].keys()) for k in xrange(N)] ) == N :
+                        # - Now we recover the coordinates @t_n and @t_n+1
+                        xyz_t1 = np.array( [vtx2coords[t][cell2vtx[t][cell][k]] for k in xrange(N)] )
+                        xyz_t2 = np.array( [vtx2coords[t][vtx_time_association[t][cell2vtx[t][cell][k]]] for k in xrange(N)] )
+                        strain_matrix[cell] = func(graph, xyz_t1, xyz_t2, N)
+        return strain_matrix
 
-    return sr,asr,anisotropy,s_t1,s_t2
+    return  wrapped_function
+
+
+@__strain_parameters
+def strain_matrix(graph, xyz_t1, xyz_t2, N, dimension = 2):
+    """
+    Suppose that you made sure vid has descendants.
+    """
+    from numpy.linalg import svd, lstsq
+
+    # -- We start by making sure we can compute the strain matrix in the dimensionnality provided.
+    if (dimension > 3) or (dimension < 1) :
+        import warnings
+        warnings.warn("You can only compute the strain in 1D, 2D or 3D!")
+        return None
+
+    ## Compute the centroids:
+    c_t1=np.array((np.mean(xyz_t1[:,0]),np.mean(xyz_t1[:,1]),np.mean(xyz_t1[:,2])))
+    c_t2=np.array((np.mean(xyz_t2[:,0]),np.mean(xyz_t2[:,1]),np.mean(xyz_t2[:,2])))
+    ## Compute the centered matrix:
+    c_xyz_t1=np.array(xyz_t1-c_t1)
+    c_xyz_t2=np.array(xyz_t2-c_t2)
+    ## Compute the Singular Value Decomposition (SVD) of centered coordinates:
+    U_t1,D_t1,V_t1=svd(c_xyz_t1, full_matrices=False)
+    U_t2,D_t2,V_t2=svd(c_xyz_t2, full_matrices=False)
+    V_t1=V_t1.T ; V_t2=V_t2.T
+    ## Projection of the vertices' xyz 3D co-ordinate into the 2D subspace defined by the 2 first eigenvector
+    #(the third eigenvalue is really close from zero confirming the fact that all the vertices are close from the plane -true for external part of L1, not for inner parts of the tissue).
+    c_xy_t1=np.array([np.dot(U_t1[k,0:dimension],np.diag(D_t1)[0:dimension,0:dimension]) for k in range(N)])
+    c_xy_t2=np.array([np.dot(U_t2[k,0:dimension],np.diag(D_t2)[0:dimension,0:dimension]) for k in range(N)])
+    ## Least-square estimation of A.
+    #A is the transformation matrix in the regression equation between the centered vertices position of two time points:
+    lsq=lstsq(c_xy_t1,c_xy_t2)
+    A=lsq[0]
+
+    return A
+
+
+def strain_rate(strain_matrix, deltaT = 24):
+    """
+    Compute the strain rate: sr[c] = np.log(D_A[0])/deltaT , np.log(D_A[1])/deltaT
+    Dimensionnality is imposed by the one of the strain matrix.
+    """
+    from numpy.linalg import svd
+    sr = {}
+    for c in strain_matrix:
+        ##  Singular Value Decomposition (SVD) of A.
+        R,D_A,Q=svd(strain_matrix[c])
+        # Compute Strain Rates :
+        sr[c] = np.log(D_A)/deltaT
+
+    return sr
+
+
+def areal_strain_rate(strain_matrix, deltaT = 24):
+    """
+    Compute the areal strain rate: asr[c] = sum(np.log(D_A[0])/deltaT , np.log(D_A[1])/deltaT
+    Dimensionnality is imposed by the one of the strain matrix.
+    """
+    from numpy.linalg import svd
+    asr = {}
+    for c in strain_matrix:
+        ##  Singular Value Decomposition (SVD) of A.
+        R,D_A,Q=svd(strain_matrix[c])
+        # Compute Strain Rates and Areal Strain Rate:
+        asr[c] = sum(np.log(D_A)/deltaT)
+
+    return asr
+
+def anisotropy(strain_matrix, deltaT = 24):
+    """
+    Compute the "Growth" Anisotropy = (sr1-sr2)/(sr1+sr2)
+    Dimensionnality is imposed by the one of the strain matrix.
+    """
+    from numpy.linalg import svd
+    anisotropy = {}
+    for c in strain_matrix:
+        ##  Singular Value Decomposition (SVD) of A.
+        R,D_A,Q=svd(strain_matrix[c])
+        # Compute Strain Rates :
+        strain_rate = np.log(D_A)/deltaT
+        anisotropy[c] = (strain_rate[0]-strain_rate[1])/(strain_rate[0]+strain_rate[1])
+
+    return anisotropy
+
+@__strain_parameters
+def strain_cross(graph, xyz_t1, xyz_t2, N, dimension = 2):
+    """
+    Suppose that you made sure vid has descendants.
+    """
+    from numpy.linalg import svd, lstsq
+
+    # -- We start by making sure we can compute the strain matrix in the dimensionnality provided.
+    if (dimension > 3) or (dimension < 1) :
+        import warnings
+        warnings.warn("You can only compute the strain in 1D, 2D or 3D!")
+        return None
+
+    ## Compute the centroids:
+    c_t1=np.array((np.mean(xyz_t1[:,0]),np.mean(xyz_t1[:,1]),np.mean(xyz_t1[:,2])))
+    c_t2=np.array((np.mean(xyz_t2[:,0]),np.mean(xyz_t2[:,1]),np.mean(xyz_t2[:,2])))
+    ## Compute the centered matrix:
+    c_xyz_t1=np.array(xyz_t1-c_t1)
+    c_xyz_t2=np.array(xyz_t2-c_t2)
+    ## Compute the Singular Value Decomposition (SVD) of centered coordinates:
+    U_t1,D_t1,V_t1=svd(c_xyz_t1, full_matrices=False)
+    U_t2,D_t2,V_t2=svd(c_xyz_t2, full_matrices=False)
+    V_t1=V_t1.T ; V_t2=V_t2.T
+    ## Projection of the vertices' xyz 3D co-ordinate into the 2D subspace defined by the 2 first eigenvector
+    #(the third eigenvalue is really close from zero confirming the fact that all the vertices are close from the plane -true for external part of L1, not for inner parts of the tissue).
+    c_xy_t1=np.array([np.dot(U_t1[k,0:dimension],np.diag(D_t1)[0:dimension,0:dimension]) for k in range(N)])
+    c_xy_t2=np.array([np.dot(U_t2[k,0:dimension],np.diag(D_t2)[0:dimension,0:dimension]) for k in range(N)])
+    ## Compute the Singular Value Decomposition (SVD) of the least-square estimation of A.
+    #A is the (linear) transformation matrix in the regression equation between the centered vertices position of two time points:
+    lsq=lstsq(c_xy_t1,c_xy_t2)
+    ##  Singular Value Decomposition (SVD) of A.
+    R,D_A,Q=svd(lsq[0])
+    Q=Q.T
+    ##  Getting back in 3D: manually adding an extra dimension.
+    R=np.hstack([np.vstack([R,[0,0]]),[[0],[0],[1]]])
+    D_A=np.hstack([np.vstack([np.diag(D_A),[0,0]]),[[0],[0],[0]]])
+    Q=np.hstack([np.vstack([Q,[0,0]]),[[0],[0],[1]]])
+    ##  Getting back in 3D: strain of cell c represented at each time point.
+    s_t1 = np.dot(np.dot(np.dot(np.dot(V_t1, R), D_A), R.T), V_t1.T)
+    s_t2 = np.dot(np.dot(np.dot(np.dot(V_t2, Q), D_A), Q.T), V_t2.T)
+
+    return s_t1,s_t2
+
+#~ def strain2D(graph, tp_1, tp_2):
+    #~ """
+    #~ Strain computation based on the 3D->2D->3D GOODALL method.
+    #~ 
+    #~ :INPUTS:
+        #~ .t1: t_n Spatial Image containing cells (segmented image)
+        #~ .t2: t_n+1 Spatial Image containing cells (segmented image)
+        #~ .l12: lineage between t_n & t_n+1;
+        #~ .l21: INVERTED lineage between t_n & t_n+1;
+        #~ .deltaT: time interval between two time points;
+        #~ 
+    #~ :Variables:
+        #~ .v2v_21: vertex (keys=t_n+1) to vertex (values=t_n) association.
+        #~ .c2v_1: cells 2 vertex @ t_n
+        #~ .v2b_1: vextex 2 barycenters @ t_n
+        #~ .v2b_2: vextex 2 barycenters @ t_n+1
+    #~ 
+    #~ :OUTPUTS: (c= keys= mother cell number)
+        #~ .sr[c]: Strain Rate = np.log(D_A[0])/deltaT , np.log(D_A[1])/deltaT
+        #~ .asr[c]: Areal Strain Rate = (sr1+sr2)
+        #~ .anisotropy[c]: Growth Anisotropy = (sr1-sr2)/(sr1+sr2)
+        #~ .s_t1[c]: t_n strain cross in 3D (tensor)
+        #~ .s_t2[c]: t_n+1 strain cross in 3D (tensor)
+    #~ 
+    #~ ########## Relationship between least-squares method and principal components: ##########
+    #~ ## The first principal component about the mean of a set of points can be represented by that line which most closely approaches the data points 
+    #~ #(as measured by squared distance of closest approach, i.e. perpendicular to the line).
+    #~ ## In contrast, linear least squares tries to minimize the distance in the y direction only.
+    #~ ## Thus, although the two use a similar error metric, linear least squares is a method that treats one dimension of the data preferentially, while PCA treats all dimensions equally.
+    #~ #########################################################################################
+    #~ """
+    #~ from numpy.linalg import svd, lstsq
+#~ 
+    #~ ## Variable creation used to comput the strain.
+    #~ v2v_12 = dict((v,k) for k, v in v2v_21.items())
+    #~ lsq={}
+    #~ s_t1,s_t2={},{}
+    #~ sr={}
+    #~ asr={}
+    #~ anisotropy={}
+#~ 
+    #~ for c in l12.keys():
+        #~ if c in c2v_1.keys():
+            #~ if sum([(c2v_1[c][k] in v2v_12.keys()) for k in range(len(c2v_1[c]))])==len(c2v_1[c]):
+                #~ N = len(c2v_1[c])
+                #~ if N>2:
+                    #~ ## Retreive positions of the vertices belonging to cell 'c':
+                    #~ xyz_t1=np.array([v2b_1[c2v_1[c][k]] for k in range(N)])
+                    #~ xyz_t2=np.array([v2b_2[v2v_12[c2v_1[c][k]]] for k in range(N)])
+                    #~ ## Compute the centroids:
+                    #~ c_t1=np.array((np.mean(xyz_t1[:,0]),np.mean(xyz_t1[:,1]),np.mean(xyz_t1[:,2])))
+                    #~ c_t2=np.array((np.mean(xyz_t2[:,0]),np.mean(xyz_t2[:,1]),np.mean(xyz_t2[:,2])))
+                    #~ ## Compute the centered matrix:
+                    #~ c_xyz_t1=np.array(xyz_t1-c_t1)
+                    #~ c_xyz_t2=np.array(xyz_t2-c_t2)
+                    #~ ## Compute the Singular Value Decomposition (SVD) of centered coordinates:
+                    #~ U_t1,D_t1,V_t1=svd(c_xyz_t1, full_matrices=False)
+                    #~ U_t2,D_t2,V_t2=svd(c_xyz_t2, full_matrices=False)
+                    #~ V_t1=V_t1.T ; V_t2=V_t2.T
+                    #~ ## Projection of the vertices' xyz 3D co-ordinate into the 2D subspace defined by the 2 first eigenvector
+                    #~ #(the third eigenvalue is really close from zero confirming the fact that all the vertices are close from the plane -true for external part of L1, not for inner parts of the tissue).
+                    #~ c_xy_t1=np.array([np.dot(U_t1[k,0:2],np.diag(D_t1)[0:2,0:2]) for k in range(N)])
+                    #~ c_xy_t2=np.array([np.dot(U_t2[k,0:2],np.diag(D_t2)[0:2,0:2]) for k in range(N)])
+                    #~ ## Compute the Singular Value Decomposition (SVD) of the least-square estimation of A.
+                    #~ #A is the (linear) transformation matrix in the regression equation between the centered vertices position of two time points:
+                    #~ lsq[c]=lstsq(c_xy_t1,c_xy_t2)
+                    #~ ##  Singular Value Decomposition (SVD) of A.
+                    #~ R,D_A,Q=svd(lsq[c][0])
+                    #~ Q=Q.T
+                    #~ # Compute Strain Rates and Areal Strain Rate:
+                    #~ sr[c] = np.log(D_A)/deltaT
+                    #~ asr[c] = sum(sr[c])
+                    #~ anisotropy[c]=((sr[c][0]-sr[c][1])/asr[c])
+                    #~ ##  Getting back in 3D: manually adding an extra dimension.
+                    #~ R=np.hstack([np.vstack([R,[0,0]]),[[0],[0],[1]]])
+                    #~ D_A=np.hstack([np.vstack([np.diag(D_A),[0,0]]),[[0],[0],[0]]])
+                    #~ Q=np.hstack([np.vstack([Q,[0,0]]),[[0],[0],[1]]])
+                    #~ ##  Getting back in 3D: strain of cell c represented at each time point.
+                    #~ s_t1[c] = np.dot(np.dot(np.dot(np.dot(V_t1, R), D_A), R.T), V_t1.T)
+                    #~ s_t2[c] = np.dot(np.dot(np.dot(np.dot(V_t2, Q), D_A), Q.T), V_t2.T)
+#~ 
+    #~ return sr,asr,anisotropy,s_t1,s_t2
 
 
 

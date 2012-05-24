@@ -59,8 +59,11 @@ class TemporalPropertyGraph(PropertyGraph):
         assert len(graphs) == len(mappings)+1
 
         self.append(graphs[0])
+        #~ self.add_graph_property('nb_time_points')
+        #~ len(mappings) = self.graph_property('nb_time_points')
         for g, m in zip(graphs[1:],mappings):
             self.append(g,m)
+            
 
         return self._old_to_new_ids
 
@@ -83,21 +86,21 @@ class TemporalPropertyGraph(PropertyGraph):
         old_to_new_vids, old_to_new_eids = relabel_ids
         # relabel the edge and vertex property
         self._relabel_and_add_vertex_edge_properties(graph, old_to_new_vids, old_to_new_eids)
-        
+
         # update properties on graph
         temporalgproperties = self.graph_properties()
-        
+
         # while on a property graph, graph_property are just dict of dict, 
         # on a temporal property graph, graph_property are dict of list of dict
         # to keep the different values for each time point.
 
         for gname in graph.graph_property_names():
-            if gname in [metavidtypepropertyname,metavidtypepropertyname]:
-                temporalgproperties[gname].update(graph.graph_property(gname))
+            if gname in [self.metavidtypepropertyname,self.metavidtypepropertyname]:
+                temporalgproperties[gname] = graph.graph_property(gname)
             else:
-                newgproperty = graph.translate_graph_property(gname,trans_vid, trans_eid)            
+                newgproperty = graph.translate_graph_property(gname, old_to_new_vids, old_to_new_eids)            
                 temporalgproperties[gname] = temporalgproperties.get(gname,[])+[newgproperty]
-        
+
         self._old_to_new_ids.append(relabel_ids)
 
         # set edge_type property for structural edges
@@ -109,10 +112,10 @@ class TemporalPropertyGraph(PropertyGraph):
             old_vertex_labels[vid] = old_vid
             indices[vid] = current_index
         if mapping:
-            on_ids_source, on_ids_target = self._old_to_new_ids[-2:] 
+            on_ids_source, on_ids_target = self._old_to_new_ids[-2:]
             for k, l in mapping.iteritems():
                 for v in l:
-                    eid = self.add_edge(on_ids_source[0][k], on_ids_target[0][v])
+                    eid = self.add_edge(on_ids_source[0][k], on_ids_target[0][v]) # We should verify that the vertex we try to link are in the graph !!!!
                     edge_types[eid] = self.TEMPORAL
 
         return relabel_ids
