@@ -1,3 +1,9 @@
+openalea-svgdraw (1.0.0b1~ppa1) oneiric; urgency=low
+
+  * Release 
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Mon, 12 Dec 2011 11:10:26 +0100
+
 openalea-svgdraw (0.9.0-1~ppa1) lucid; urgency=low
 
   * source package automatically created by stdeb 0.6.0
