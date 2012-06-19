@@ -114,12 +114,13 @@ class TemporalPropertyGraph(PropertyGraph):
         if mapping:
             on_ids_source, on_ids_target = self._old_to_new_ids[-2:]
             for k, l in mapping.iteritems():
-                for v in l:
-                    eid = self.add_edge(on_ids_source[0][k], on_ids_target[0][v]) # We should verify that the vertex we try to link are in the graph !!!!
-                    edge_types[eid] = self.TEMPORAL
+                # Check if the mother cell and ALL daugthers are present in their respective graph : WE DON'T WANT TO CREATE A PARTIAL LINEAGE !!!!
+                if on_ids_source[0].has_key(k) and ( sum([on_ids_target[0].has_key(v) for v in l]) == len(l) ):
+                    for v in l:
+                        eid = self.add_edge(on_ids_source[0][k], on_ids_target[0][v])
+                        edge_types[eid] = self.TEMPORAL
 
         return relabel_ids
-    
 
 
     def clear(self):
@@ -607,6 +608,58 @@ class TemporalPropertyGraph(PropertyGraph):
                     reduced_dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
             modif=tmpDist!=dist
         return (reduced_dist, dist)[full_dict]
+
+
+    def property_from_old_labels(self, vertex_property, old_labels2keep = 'all'):
+        """
+        Return a dictionary extracted from the graph.vertex_property(`vertex_property`) with relabelled keys thanks to the dictionary graph.vertex_property('old_labels').
+        
+        :Parameters:
+        - `vertex_property` : can be an existing 'graph.vertex_property' or a string refering to an existing graph.vertex_property to extract.
+        - `old_labels2keep` : a list of "old labels" (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
+
+        :Returns:
+        - `relabelled_dictionnary` : a dictionary with relabelled keys to "old labels" (i.e. from SpatialImages/PropertyGraphs), key : vertex/cell label, value : `vertex_property`
+        
+        :Examples:
+        graph.property_from_old_labels( graph.vertex_property('volume') )
+        graph.property_from_old_labels( 'volume' )
+        graph.property_from_old_labels( 'volume' , SpatialImageAnalysis.L1() )
+        
+        """
+        if isinstance(vertex_property,str):
+            vertex_property = self.vertex_property(vertex_property)
+
+        new2old = self.vertex_property('old_label')
+
+        if old_labels2keep == 'all':
+            import warnings
+            warnings.warn('You have asked for all labels from the TemporalPropertyGraph! Mistakes will be presents in the returned dictionary.')
+            old_labels2keep = new2old.values()
+            old2new = dict( [(new2old[k], k) for k in new2old] )
+        if isinstance(old_labels2keep, int):
+            old_labels2keep = [old_labels2keep]
+        if isinstance(old_labels2keep, list):
+            old2new = dict( [(new2old[k], k) for k in new2old if new2old[k] in old_labels2keep] )
+
+        relabelled_dictionary = dict( [(k, vertex_property[old2new[k]]) for k in old2new] )
+
+        return relabelled_dictionary
+
+
+    def translate_from_graph_at_time(self, dictionary, time_point):
+        """
+        Return a dictionary which keys are SpatialImage/Graph compatibles.
+        time_point numbers starts at '0'
+        """
+        if not isinstance(dictionary,dict):
+            import warnings
+            warnings.warn('This is not a "dict" type variable.')
+            return None
+
+        new2old = self.vertex_property('old_label')
+        return dict([(new2old[k], dictionary[k]) for k in dictionary if self.vertex_property('index')[k]==time_point])
+
 
 def test(display=False):
     import random

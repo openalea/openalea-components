@@ -16,45 +16,58 @@
 ################################################################################
 """This module helps to analyse TemporalPropertyGraph from Spatial Images."""
  
-from interface.property_graph import IPropertyGraph, PropertyError
+import types
+
 import numpy as np
 
+from interface.property_graph import IPropertyGraph, PropertyError
+
+
+
 def __normalized_parameters(func):
-    def wrapped_function(graph, vertex_property, vids = None, rank = 1, edge_type='s' , verbose = False):
+    def wrapped_function(graph, vertex_property, vids = None, rank = 1 , verbose = False):
         """
         :Parameters:
         - 'graph' : a TPG.
         - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
         - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
         - 'rank' : neighborhood at distance 'rank' will be used.
-        - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
 
         :Return:
-        - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= Mean absolute deviation
+        - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= "result of applyed fucntion `func`"
         """
         # if a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
+
+
         # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
             vids = vertex_property.keys()
 
+        # if an instancemethod is given, we use create a dictionary for the vids base ont the method.
+        if isinstance(vertex_property,types.MethodType):
+            tmp_vertex_property = {}
+            for vid in graph.vertices():
+                tmp_vertex_property[vid] = vertex_property(vid)
+            vertex_property = tmp_vertex_property
+
         if type(vids)==int:
             # for single id, compute single result
-            return func(graph, vertex_property, vids, rank, edge_type)
+            return func(graph, vertex_property, vids, rank)
         else:
             # for set of ids, we compute a dictionary of resulting values.
             l={}
             for k in vids:
                 if verbose and k%10==0: print k,'/',len(vids)
-                l[k] = func(graph, vertex_property, k, rank, edge_type)
+                l[k] = func(graph, vertex_property, k, rank)
             return l
 
     return  wrapped_function
 
 
 @__normalized_parameters
-def laplacian(graph, vertex_property, vid, rank=1, edge_type='s'):
+def laplacian(graph, vertex_property, vid, rank):
     """
     Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
@@ -63,13 +76,16 @@ def laplacian(graph, vertex_property, vid, rank=1, edge_type='s'):
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
     
     :Return:
     - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    vid_neighborhood = graph.neighborhood(vid,rank,edge_type=edge_type)
-    vid_neighborhood.remove(vid)
+    if rank == 1:
+        vid_neighborhood = graph.neighborhood(vid,rank)
+        vid_neighborhood.remove(vid)
+    else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+        vid_neighborhood = graph.neighborhood(vid,rank)-graph.neighborhood(vid,rank-1)
+
     nb_neighborhood = len(vid_neighborhood)
 
     result = 0
@@ -77,13 +93,10 @@ def laplacian(graph, vertex_property, vid, rank=1, edge_type='s'):
     if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
         for i in vid_neighborhood:
             result = result + vertex_property[i]
-    
         return ivalue - (result / float(nb_neighborhood))
-    else:
-        return 0
 
 @__normalized_parameters
-def mean_abs_dev(graph, vertex_property, vid, rank=1, edge_type='s'):
+def mean_abs_dev(graph, vertex_property, vid, rank):
     """
     Sub-function computing the mean sum of absolute difference between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
@@ -92,13 +105,16 @@ def mean_abs_dev(graph, vertex_property, vid, rank=1, edge_type='s'):
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
     
     :Return:
     - a single value = the mean absolute deviation between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    vid_neighborhood = graph.neighborhood(vid,rank,edge_type=edge_type)
-    vid_neighborhood.remove(vid)
+    if rank == 1:
+        vid_neighborhood = graph.neighborhood(vid,rank)
+        vid_neighborhood.remove(vid)
+    else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+        vid_neighborhood = graph.neighborhood(vid,rank)-graph.neighborhood(vid,rank-1)
+
     nb_neighborhood = len(vid_neighborhood)
 
     result = 0
@@ -112,7 +128,7 @@ def mean_abs_dev(graph, vertex_property, vid, rank=1, edge_type='s'):
         return 0
 
 @__normalized_parameters
-def change(graph, vertex_property, vid, rank=1, edge_type='t'):
+def change(graph, vertex_property, vid, rank):
     """
     Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
@@ -121,13 +137,16 @@ def change(graph, vertex_property, vid, rank=1, edge_type='t'):
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
     
     :Return:
     - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    vid_neighborhood = graph.neighborhood(vid,rank,edge_type=edge_type)
-    vid_neighborhood.remove(vid)
+    if rank == 1:
+        vid_neighborhood = graph.neighborhood(vid,rank)
+        vid_neighborhood.remove(vid)
+    else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+        vid_neighborhood = graph.neighborhood(vid,rank)-graph.neighborhood(vid,rank-1)
+
     nb_neighborhood = len(vid_neighborhood)
 
     result = 0
@@ -140,8 +159,9 @@ def change(graph, vertex_property, vid, rank=1, edge_type='t'):
     else:
         return 0
 
+
 def __normalized_temporal_parameters(func):
-    def wrapped_function(graph, vertex_property, vids = None, rank = 1, verbose = False):
+    def wrapped_function(graph, vertex_property, vids = None, rank = 1, labels_at_t_n = True, check_full_lineage = True, verbose = False):
         """
         :Parameters:
         - 'graph' : a TPG.
@@ -160,21 +180,36 @@ def __normalized_temporal_parameters(func):
         # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
             vids = vertex_property.keys()
-                
-        if type(vids)==int:
-            # for single id, compute single result
-            return func(graph, vertex_property, vids, rank)
+
+        if isinstance(vids,int):
+            vids=[vids] # for single id, compute single result
+
+        # for a list of ids, we create a dictionary of resulting values from function `func`.
+        l={}
+        for k,vid in enumerate(vids):
+            if verbose and k%10==0: print k,'/',len(vids)
+            if check_full_lineage:
+                if full_lineage(graph, vid, rank): # Check if ALL descendants up to `rank` exists !
+                    l[vid] = func(graph, vertex_property, vid, rank)
+            else:
+                if full_lineage(graph, vid, 1): # Check if there is at least one descendants for `vid`!
+                    l[vid] = func(graph, vertex_property, vid, rank)
+
+        if labels_at_t_n:
+            return l
         else:
-            # for set of ids, we compute a dictionary of resulting values.
-            l={}
-            for k in vids:
-                if verbose and k%10==0: print k,'/',len(vids)
-                l[k] = func(graph, vertex_property, k, rank )
-            return l        
+            m={}
+            print "You have asked for labels @ t_n+"+str(rank)
+            for vid in l:
+                vid_descendants = graph.descendants(vid ,rank)-graph.descendants(vid,rank-1)
+                for id_descendant in vid_descendants:
+                    m[id_descendant]=l[vid]
+            return m
+
     return  wrapped_function
-    
+
 @__normalized_temporal_parameters
-def temporal_change(graph, vertex_property, vid, rank=1):
+def temporal_change(graph, vertex_property, vid, rank):
     """
     Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
 
@@ -187,22 +222,22 @@ def temporal_change(graph, vertex_property, vid, rank=1):
     :Return:
     - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    vid_neighborhood = graph.descendants(vid,rank)
-    vid_neighborhood.remove(vid)
-    nb_neighborhood = len(vid_neighborhood)
+    if rank == 1:
+        vid_descendants = graph.descendants(vid,rank)
+        vid_descendants.remove(vid)
+    else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+        vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
 
-    result = 0
-    ivalue = vertex_property[vid]
-    if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
-        for i in vid_neighborhood:
-            result = result + vertex_property[i]
-    
-        return result - ivalue
-    else:
-        return 0
+    nb_descendants = len(vid_descendants)
+    descendants_value = 0
+    vid_value = vertex_property[vid]
+    for id_descendant in vid_descendants:
+        descendants_value = descendants_value + vertex_property[id_descendant]
+
+    return descendants_value - vid_value
 
 @__normalized_temporal_parameters
-def relative_temporal_change(graph, vertex_property, vid, rank=1):
+def relative_temporal_change(graph, vertex_property, vid, rank):
     """
     Sub-function computing the relative temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
 
@@ -215,7 +250,46 @@ def relative_temporal_change(graph, vertex_property, vid, rank=1):
     :Return:
     - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    return temporal_change(graph, vertex_property, vid, rank) / vertex_property[vid]
+    return temporal_change(graph, vertex_property, vid, rank).values()[0] / float(vertex_property[vid])
+
+def full_lineage(graph, vid, rank):
+    """
+    Check if lineage is complete over several ranks. 
+    i.e. every decendants cells from `vid` have a lineage up to rank `rank`.
+    Suppose that the lineage has been correctly done: a lineage is given to the graph only if we are sure to have all the daugthers from a mother.
+
+    :Parameters:
+    - `graph` TPG to browse;
+    - 'vid' : a vertex id.
+    - 'rank' : neighborhood at distance 'rank' will be used.
+    """
+    # -- We create a first list of descendants at rank 1.
+    vids_descendants={}
+    vids_descendants[1] = graph.descendants(vid,1)
+    vids_descendants[1].remove(vid)
+
+    # -- First thing you want to know is if there is a lineage at least at the first order !
+    if len(vids_descendants[1]) <= 1:
+        return False
+
+    # -- If rank == 1 (and there is a lineage but we already did the test!) we suppose that it has been correctly done !
+    if rank == 1:
+        return True
+
+    # -- To check a full lineage @rank_n :
+    for r in xrange(2,rank+1):
+        len_lineage_at_r = 0
+        for v in vids_descendants[r-1]: # for every mother cell @ rank_n-1 (n>2),
+            if len(graph.descendants(v,1)) > 1: # we verify she has a daughter @ rank_n
+                len_lineage_at_r += 1
+        if len_lineage_at_r != len(vids_descendants[r-1]):
+            #~ print len_lineage_at_r,'/', len(vids_descendants[r-1])
+            return False
+        else:
+            # Retreive cells only at rank_n-1: (not all cells between rank 1 and `rank`)
+            vids_descendants[r] = graph.descendants(vid,r)-graph.descendants(vid,r-1)
+
+    return True
 
 
 def time_point_property(graph,time_point,vertex_property):
@@ -455,6 +529,9 @@ def strain_cross(graph, xyz_t1, xyz_t2, N, dimension = 2):
 
     return s_t1,s_t2
 
+
+#~ def display_lignage(graph, ini):
+    
 #~ def strain2D(graph, tp_1, tp_2):
     #~ """
     #~ Strain computation based on the 3D->2D->3D GOODALL method.

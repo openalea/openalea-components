@@ -136,9 +136,9 @@ class PropertyGraph(IPropertyGraph, Graph):
         if property_name in self._graph_property:
             raise PropertyError("property %s is already defined on graph"
                                 % property_name)
-        if values is None: values = {}                                
+        if values is None: values = {}
         self._graph_property[property_name] = values
-    
+
     def remove_graph_property(self, property_name):
         """todo"""
         try:
@@ -146,7 +146,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         except KeyError:
             raise PropertyError("property %s is undefined on graph"
                                 % property_name)
-    
+
     def remove_vertex(self, vid):
         """todo"""
         for prop in self._vertex_property.itervalues():
@@ -199,28 +199,27 @@ class PropertyGraph(IPropertyGraph, Graph):
             if isinstance(eid, list): return [trans_eid[i]  for i in eid]
             if isinstance(eid, tuple): return tuple([trans_eid[i]  for i in eid])
             return trans_eid[eid]
-        
+
         translator = { ValueType : id_value, VertexIdType :  translate_vid, EdgeIdType : translate_eid }
-        
+
         key_translator = translator[key_translation]
         value_translator = translator[value_translation]
 
         # translate vid and value
         return dict([(key_translator(vid),value_translator(val)) for vid, val in values.iteritems()])
-        
-    
+
+
     def _relabel_and_add_vertex_edge_properties(self,graph, trans_vid, trans_eid):
         
         # update properties on vertices
         for prop_name in graph.vertex_property_names():
             if prop_name not in self._vertex_property:
                 self.add_vertex_property(prop_name)
-            
             value_translator = graph.get_property_value_type(prop_name,VertexProperty)
-            
+
             # import property into self. translate vid and value
             self.vertex_property(prop_name).update(self._translate_property(graph.vertex_property(prop_name), trans_vid, trans_eid, VertexIdType, value_translator))
-        
+
         # update properties on edges
         for prop_name in graph.edge_property_names():
             if prop_name not in self._edge_property:
@@ -231,7 +230,7 @@ class PropertyGraph(IPropertyGraph, Graph):
             
             # import property into self. translate vid and value
             self.edge_property(prop_name).update(self._translate_property(graph.edge_property(prop_name), trans_vid, trans_eid, EdgeIdType, value_translator))
-    
+
     def translate_graph_property(self, prop_name, trans_vid, trans_eid):
         """ Translate a graph property according to meta info """
         old_prop = self.graph_property(prop_name)
