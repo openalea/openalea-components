@@ -23,8 +23,8 @@ __license__= "Cecill-C"
 __revision__=" $Id$ "
 
 from array import array
-from interface.topomesh import TopomeshError,InvalidWisp,InvalidDegree,\
-                                ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh
+from interface.topomesh import (TopomeshError,InvalidWisp,InvalidDegree,
+                                ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh)
 from utils import IdDict
 
 class StrInvalidWisp (InvalidWisp) :
@@ -45,7 +45,6 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
     """
     implementation of a topological mesh
     """
-    __doc__+=ITopomesh.__doc__
     def __init__ (self, degree, idgenerator = "set") :
         """
         constructor of an empty mesh
@@ -231,3 +230,4 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
         self._borders[degree][wid].remove(border_id)
         self._regions[degree - 1][border_id].remove(wid)
     unlink.__doc__=IMutableMesh.unlink.__doc__
+
