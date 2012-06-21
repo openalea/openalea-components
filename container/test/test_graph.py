@@ -86,6 +86,11 @@ def test_nb_neighbors () :
     for i in xrange(8) :
         assert g.nb_neighbors(i+1)==2
 
+@with_setup(setup_func,teardown_func)
+def test_edge () :
+    assert g.edge(0,1) == 0
+    assert g.edge(0,2) == None
+
 # ##########################################################
 #
 # Edge List Graph Concept
