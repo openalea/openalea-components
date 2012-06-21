@@ -77,6 +77,18 @@ class Graph (IGraph,\
         except KeyError :
             raise InvalidEdge(eid)
     edge_vertices.__doc__=IGraph.edge_vertices.__doc__
+    
+    def edge(self, source, target) :
+        link_in,link_out=self._vertices[source]
+        for eid in link_in : 
+            if self._edges[eid][0] == target: 
+                return eid
+        for eid in link_out :
+            if self._edges[eid][1] == target: 
+                return eid        
+        return None
+        
+    edge.__doc__=IGraph.edge.__doc__
 
     def __contains__(self, vid):
         return self.has_vertex(vid)
