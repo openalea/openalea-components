@@ -17,9 +17,7 @@
 """This module helps to analyse TemporalPropertyGraph from Spatial Images."""
  
 import types
-
 import numpy as np
-
 from interface.property_graph import IPropertyGraph, PropertyError
 
 
@@ -39,7 +37,6 @@ def __normalized_parameters(func):
         # if a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
-
 
         # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
@@ -76,7 +73,7 @@ def laplacian(graph, vertex_property, vid, rank):
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    
+
     :Return:
     - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
@@ -105,7 +102,7 @@ def mean_abs_dev(graph, vertex_property, vid, rank):
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    
+
     :Return:
     - a single value = the mean absolute deviation between vertex 'vid' and its neighbors at rank 'rank'.
     """
@@ -122,10 +119,8 @@ def mean_abs_dev(graph, vertex_property, vid, rank):
     if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
         for i in vid_neighborhood:
             result = result + abs(ivalue - vertex_property[i])
-    
         return result / float(nb_neighborhood)
-    else:
-        return 0
+
 
 @__normalized_parameters
 def change(graph, vertex_property, vid, rank):
@@ -137,7 +132,7 @@ def change(graph, vertex_property, vid, rank):
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    
+
     :Return:
     - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
@@ -154,10 +149,7 @@ def change(graph, vertex_property, vid, rank):
     if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
         for i in vid_neighborhood:
             result = result + vertex_property[i]
-    
         return result - ivalue
-    else:
-        return 0
 
 
 def __normalized_temporal_parameters(func):
