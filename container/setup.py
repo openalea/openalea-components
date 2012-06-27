@@ -30,6 +30,9 @@ top_pkgs = [pkg for pkg in pkgs if  len(pkg.split('.')) < 2]
 packages = [ namespace + "." + pkg for pkg in pkgs]
 package_dir = dict( [('',pkg_root_dir)] + [(namespace + "." + pkg, pkg_root_dir + "/" + pkg) for pkg in top_pkgs] )
 
+
+share_dirs = {'share':'share'}
+
 # List of top level wralea packages (directories with __wralea__.py) 
 # (to be kept only if you have visual components)
 wralea_entry_points = ['container.mesh = openalea.container.wralea.mesh']
