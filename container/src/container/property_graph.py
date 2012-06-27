@@ -667,3 +667,84 @@ class PropertyGraph(IPropertyGraph, Graph):
         region_sub_graph=Graph.sub_graph(self, self._graph_property[region_name])
         distances=region_sub_graph.topological_distance(region_sub_graph._vertices.keys()[0], edge_type=edge_type)
         return not float('inf') in distances.values()
+        
+    def to_networkx(self):
+        import networkx as nx
+        """ Return a NetworkX Graph from a graph.
+
+        :Parameters: 
+
+            - `g` - TemporalPropertyGraph 
+                a dynamic property graph 
+        
+        :Returns: 
+
+            - A NetworkX graph.
+
+        """
+        
+        g = self
+
+        graph = nx.Graph()
+        graph.add_nodes_from(g.vertices())
+        graph.add_edges_from(( (g.source(eid), g.target(eid)) for eid in g.edges()))
+
+        # Add graph, vertex and edge properties
+        for k, v in g.graph_properties().iteritems():
+            graph.graph[k] = v
+
+        vp = g._vertex_property
+        for prop in vp:
+            for vid, value in vp[prop].iteritems():
+                graph.node[vid][prop] = value
+        
+        ep = g._edge_property
+        for eid in g.edges():
+            graph.edge[g.source(eid)][g.target(eid)]['eid'] = eid
+
+        for prop in ep:
+            for eid, value in ep[prop].iteritems():
+                graph.edge[g.source(eid)][g.target(eid)][prop] = value
+
+        return graph 
+
+    def from_networkx(self, graph):
+        """ Return a Graph from a NetworkX Directed graph.
+
+        :Parameters: 
+            - `graph` : A NetworkX graph.
+
+        :Returns: 
+            - `g`: a :class:`~openalea.container.interface.Graph`.
+
+        """
+        self.clear()
+        
+        g = self
+
+        if not graph.is_directed():
+            graph = graph.to_directed()
+
+        vp = self._vertex_property
+
+        for vid in graph.nodes_iter():
+            g.add_vertex(vid)
+            d = graph.node[vid]
+            for k, v in d.iteritems():
+                vp.setdefault(k,{})[vid] = v
+
+
+        ep = self._edge_property
+        for source, target in graph.edges_iter():
+            d = graph[source][target]
+            eid = d.get('eid')
+            eid = g.add_edge(source, target, eid)
+            for k, v in d.iteritems():
+                if k != 'eid':
+                    ep.setdefault(k,{})[eid] = v
+
+        gp = self._graph_property
+        gp.update(graph.graph)
+
+        return g
+
