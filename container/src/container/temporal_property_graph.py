@@ -2,9 +2,9 @@
 #
 #       OpenAlea.Container
 #
-#       Copyright 2011 INRIA - CIRAD - INRA
+#       Copyright 2011 - 2012 INRIA - CIRAD - INRA
 #
-#       File author(s): Jonathan Legrand
+#       File author(s): Jonathan Legrand <jonathan.legrand@ens-lyon.fr>
 #                       Christophe Pradal
 #
 #       Distributed under the Cecill-C License.
@@ -20,8 +20,6 @@ __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
 from property_graph import *
-import networkx as nx
-
 
 class TemporalPropertyGraph(PropertyGraph):
     """
@@ -323,38 +321,3 @@ class TemporalPropertyGraph(PropertyGraph):
 
         new2old = self.vertex_property('old_label')
         return dict([(new2old[k], dictionary[k]) for k in dictionary if self.vertex_property('index')[k]==time_point])
-
-
-def test(display=False):
-    import random
-    g = TemporalPropertyGraph()
-    #
-    p1, p2 = PropertyGraph(), PropertyGraph()
-    vids = range(1,10)
-    edges = []
-    for i in vids:
-        l = range((i+1),10)
-        random.shuffle(l)
-        for j in l[:3]:
-            edges.append((i,j))
-    mapping = dict((vid,[vid]) for vid in vids)
-    #
-    for v in vids:
-        p1.add_vertex(v)
-        p2.add_vertex(v)
-    for s,t in edges:
-        p1.add_edge(s,t)
-        p2.add_edge(s,t)
-    #
-    g.extend([p1,p2],[mapping])
-    #
-    #nxg = g.to_networkx()
-    #
-    #gg = TemporalPropertyGraph().from_networkx(nxg)
-    #
-    #if display:
-    #    import matplotlib.pyplot as plt
-    #    nx.draw(nxg)
-    #    plt.show()
-    #
-    return g

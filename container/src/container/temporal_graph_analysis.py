@@ -4,8 +4,8 @@
 #
 #       Copyright 2012 INRIA - CIRAD - INRA
 #
-#       File author(s):  Jonathan Legrand
-#                        Frederic Boudon
+#       File author(s):  Jonathan Legrand <jonathan.legrand@ens-lyon.fr>
+#                        Frederic Boudon <frederic.boudon@cirad.fr>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -19,7 +19,6 @@
 import types
 import numpy as np
 from interface.property_graph import IPropertyGraph, PropertyError
-
 
 
 def __normalized_parameters(func):
@@ -57,14 +56,14 @@ def __normalized_parameters(func):
             l={}
             for k in vids:
                 if verbose and k%10==0: print k,'/',len(vids)
-                l[k] = func(graph, vertex_property, k, rank)
+                l[k] = func(graph, vertex_property, k, rank, edge_type='s')
             return l
 
     return  wrapped_function
 
 
 @__normalized_parameters
-def laplacian(graph, vertex_property, vid, rank):
+def laplacian(graph, vertex_property, vid, rank, edge_type):
     """
     Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
@@ -78,10 +77,10 @@ def laplacian(graph, vertex_property, vid, rank):
     - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
     if rank == 1:
-        vid_neighborhood = graph.neighborhood(vid,rank)
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)
         vid_neighborhood.remove(vid)
     else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
-        vid_neighborhood = graph.neighborhood(vid,rank)-graph.neighborhood(vid,rank-1)
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)-graph.neighborhood(vid,rank-1, edge_type)
 
     nb_neighborhood = len(vid_neighborhood)
 
@@ -93,7 +92,7 @@ def laplacian(graph, vertex_property, vid, rank):
         return ivalue - (result / float(nb_neighborhood))
 
 @__normalized_parameters
-def mean_abs_dev(graph, vertex_property, vid, rank):
+def mean_abs_dev(graph, vertex_property, vid, rank, edge_type):
     """
     Sub-function computing the mean sum of absolute difference between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
@@ -107,10 +106,10 @@ def mean_abs_dev(graph, vertex_property, vid, rank):
     - a single value = the mean absolute deviation between vertex 'vid' and its neighbors at rank 'rank'.
     """
     if rank == 1:
-        vid_neighborhood = graph.neighborhood(vid,rank)
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)
         vid_neighborhood.remove(vid)
     else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
-        vid_neighborhood = graph.neighborhood(vid,rank)-graph.neighborhood(vid,rank-1)
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)-graph.neighborhood(vid,rank-1, edge_type)
 
     nb_neighborhood = len(vid_neighborhood)
 
@@ -123,7 +122,7 @@ def mean_abs_dev(graph, vertex_property, vid, rank):
 
 
 @__normalized_parameters
-def change(graph, vertex_property, vid, rank):
+def change(graph, vertex_property, vid, rank, edge_type):
     """
     Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
 
@@ -137,10 +136,10 @@ def change(graph, vertex_property, vid, rank):
     - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
     """
     if rank == 1:
-        vid_neighborhood = graph.neighborhood(vid,rank)
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)
         vid_neighborhood.remove(vid)
     else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
-        vid_neighborhood = graph.neighborhood(vid,rank)-graph.neighborhood(vid,rank-1)
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)-graph.neighborhood(vid,rank-1, edge_type)
 
     nb_neighborhood = len(vid_neighborhood)
 
@@ -160,7 +159,6 @@ def __normalized_temporal_parameters(func):
         - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
         - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
         - 'rank' : neighborhood at distance 'rank' will be used.
-        - 'edge_type' : type of edges to browse; 's' = structural, 't' = temporal.
 
         :Return:
         - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= Mean absolute deviation
@@ -193,7 +191,11 @@ def __normalized_temporal_parameters(func):
             m={}
             print "You have asked for labels @ t_n+"+str(rank)
             for vid in l:
-                vid_descendants = graph.descendants(vid ,rank)-graph.descendants(vid,rank-1)
+                if rank > 1:
+                    vid_descendants = graph.descendants(vid ,rank)-graph.descendants(vid,rank-1)
+                else:
+                    vid_descendants = graph.children(vid)
+                
                 for id_descendant in vid_descendants:
                     m[id_descendant]=l[vid]
             return m
@@ -215,8 +217,7 @@ def temporal_change(graph, vertex_property, vid, rank):
     - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
     if rank == 1:
-        vid_descendants = graph.descendants(vid,rank)
-        vid_descendants.remove(vid)
+        vid_descendants = graph.children(vid)
     else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
         vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
 
@@ -261,7 +262,7 @@ def full_lineage(graph, vid, rank):
     vids_descendants[1].remove(vid)
 
     # -- First thing you want to know is if there is a lineage at least at the first order !
-    if len(vids_descendants[1]) <= 1:
+    if len(vids_descendants[1]) < 1:
         return False
 
     # -- If rank == 1 (and there is a lineage but we already did the test!) we suppose that it has been correctly done !
@@ -284,7 +285,7 @@ def full_lineage(graph, vid, rank):
     return True
 
 
-def time_point_property(graph,time_point,vertex_property):
+def time_point_property(graph, time_point, vertex_property):
     """
     Allow to extract a property 'vertex_property' from the temporal graph for one time-point.
     
@@ -311,7 +312,7 @@ def time_point_property(graph,time_point,vertex_property):
     return tmp
 
 
-def cell_vtx_time_association(graph, return_cell2vertex_relations = False ):
+def cell_vtx_time_association(graph, return_cells_vertices_relations = False ):
     """
     Creates vrtx2vrtx dictionnary (v2v): associate the corresponding cell vertex over time.
     
@@ -323,14 +324,14 @@ def cell_vtx_time_association(graph, return_cell2vertex_relations = False ):
     :OUPTUT:
         .v2v: dict *keys=t_n+1 vertex number; *values=associated t_n vertex.
     """
-    from openalea.image.algo.analysis import cell2vertex_relations
+    from openalea.image.algo.analysis import cells_vertices_relations
     
-    cell2vtx, vtx2coords, vtx2cells = [],[],[]
+    cell2vertices, vtx2coords, vtx2cells = [],[],[]
     for t in xrange( len(graph.graph_property('cell_vertices_coord')) ):
-        tmp_1,tmp_2,tmp_3 = cell2vertex_relations(graph.graph_property('cell_vertices_coord')[t])
-        cell2vtx.append( tmp_1 )
+        tmp_1,tmp_2,tmp_3 = cells_vertices_relations(graph.graph_property('cell_vertices_coord')[t])
+        cell2vertices.append( tmp_3 )
         vtx2coords.append( tmp_2 )
-        vtx2cells.append( tmp_3 )
+        vtx2cells.append( tmp_1 )
     
     vtx_time_association = []
     for t in xrange( len(graph.graph_property('cell_vertices_coord'))-1 ):
@@ -355,8 +356,8 @@ def cell_vtx_time_association(graph, return_cell2vertex_relations = False ):
                         v2v[k] = vtx
         vtx_time_association.append(v2v)
     
-    if return_cell2vertex_relations:
-        return vtx_time_association, cell2vtx, vtx2coords, vtx2cells
+    if return_cells_vertices_relations:
+        return vtx_time_association, cell2vertices, vtx2coords, vtx2cells
     else:
         return vtx_time_association
 
@@ -377,19 +378,19 @@ def __strain_parameters(func):
             return 0
         else:
             from openalea.container.temporal_graph_analysis import cell_vtx_time_association
-            vtx_time_association, cell2vtx, vtx2coords, vtx2cells = cell_vtx_time_association(graph, return_cell2vertex_relations = True)
+            vtx_time_association, cell2vertices, vtx2coords, vtx2cells = cell_vtx_time_association(graph, return_cells_vertices_relations = True)
 
         strain_matrix = {}
         if vids == None:
             #~ for t in xrange(max(g.vertex_property('index').values())+1):
-            for t in xrange( len(cell2vtx)-1 ):
-                for n, cell in enumerate( cell2vtx[t] ):
-                    N = len( cell2vtx[t][cell] )
+            for t in xrange( len(cell2vertices)-1 ):
+                for n, cell in enumerate( cell2vertices[t] ):
+                    N = len( cell2vertices[t][cell] )
                     # - We make sure that all vertex of the cell 'cell' have been associtates over time.
-                    if sum( [(cell2vtx[t][cell][k] in vtx_time_association[t].keys()) for k in xrange(N)] ) == N :
+                    if sum( [(cell2vertices[t][cell][k] in vtx_time_association[t].keys()) for k in xrange(N)] ) == N :
                         # - Now we recover the coordinates @t_n and @t_n+1
-                        xyz_t1 = np.array( [vtx2coords[t][cell2vtx[t][cell][k]] for k in xrange(N)] )
-                        xyz_t2 = np.array( [vtx2coords[t][vtx_time_association[t][cell2vtx[t][cell][k]]] for k in xrange(N)] )
+                        xyz_t1 = np.array( [vtx2coords[t][cell2vertices[t][cell][k]] for k in xrange(N)] )
+                        xyz_t2 = np.array( [vtx2coords[t][vtx_time_association[t][cell2vertices[t][cell][k]]] for k in xrange(N)] )
                         strain_matrix[cell] = func(graph, xyz_t1, xyz_t2, N)
         return strain_matrix
 

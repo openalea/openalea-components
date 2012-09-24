@@ -257,38 +257,38 @@ class PropertyGraph(IPropertyGraph, Graph):
         for pname, prop in graph.graph_property_names():
             newgproperty = graph.translate_graph_property(pname,trans_vid, trans_eid)
             newgproperties[pname] = newgproperty
-            
+
         prop.update(newgproperties)
 
         return trans_vid, trans_eid
         
     extend.__doc__ = Graph.extend.__doc__
-    
-    
-    def set_property_value_to_vid_type(self, propertyname, property_type = VertexProperty):
+
+
+    def set_graph_property_value_to_vid_type(self, propertyname, property_type = VertexProperty):
         """ Give meta info on property value type. Associate it to Vertex Id type """
         if not self._graph_property.has_key(self.metavidtypepropertyname):
             self.add_graph_property(self.metavidtypepropertyname,([],[],[],[]))
         prop = self.graph_property(self.metavidtypepropertyname)[property_type]
         prop.append(propertyname)
-    
-    def set_property_value_to_eid_type(self, propertyname,  property_type = VertexProperty):
+
+    def set_graph_property_value_to_eid_type(self, propertyname,  property_type = EdgeProperty):
         """ Give meta info on property value type. Associate it to Edge Id type """
         if not self._graph_property.has_key(self.metaeidtypepropertyname):
             self.add_graph_property(self.metaeidtypepropertyname,([],[],[],[]))
         prop = self.graph_property(self.metaeidtypepropertyname)[property_type]
         prop.append(propertyname)
-        
+
     def set_graph_property_key_to_vid_type(self, propertyname):
         """ Give meta info on graph property key type. Associate it to Vertex Id type"""
-        self.set_property_value_to_vid_type(propertyname, 3)
-    
+        self.set_graph_property_value_to_vid_type(propertyname, 3)
+
     def set_graph_property_key_to_eid_type(self, propertyname):
-        """ Give meta info on graph property key type.  Associate it to Edge Id type """
-        self.set_property_value_to_eid_type(propertyname, 3)
-    
+        """ Give meta info on graph property key type. Associate it to Edge Id type """
+        self.set_graph_property_value_to_eid_type(propertyname, 3)
+
     def get_property_value_type(self, propertyname, property_type = VertexProperty):
-        """ Return meta info on property value type. Associate it to Edge Id type """
+        """ Return meta info on property value type. """
         try:
             prop = self.graph_property(self.metavidtypepropertyname)[property_type]
             if propertyname in prop : return VertexIdType
@@ -299,13 +299,12 @@ class PropertyGraph(IPropertyGraph, Graph):
             if propertyname in prop : return EdgeIdType
         except:
             return ValueType
-    
+
     def get_graph_property_key_type(self, propertyname):
-        """ Return meta info on graph property key type. Associate it to Vertex Id type"""
+        """ Return meta info on graph property key type. """
         return self.get_property_value_type(propertyname, 3)
-    
-    
-    
+
+
     def __to_set(self, s):
         if not isinstance(s, set):
             if isinstance(s, list):
@@ -335,7 +334,7 @@ class PropertyGraph(IPropertyGraph, Graph):
             edge_type_property = self._edge_property['edge_type']
             neighbors_list=set([self.source(eid) for eid in self._vertices[vid][0] if edge_type_property[eid] in edge_type])
         return neighbors_list
-  
+
     def iter_in_neighbors(self, vid, edge_type=None):
         """ Return the in vertices of the vertex vid
         
@@ -347,10 +346,10 @@ class PropertyGraph(IPropertyGraph, Graph):
         - `iterator` : an iterator on the set of parent vertices of the vertex vid
         """
         return iter(self.in_neighbors(vid, edge_type))
-  
+
     def out_neighbors(self, vid, edge_type=None):
         """ Return the out vertices of the vertex vid
-        
+
         :Parameters:
         - `vid` : a vertex id
         - `edges_type` : type of edges we want to consider (can be a set)
@@ -368,11 +367,11 @@ class PropertyGraph(IPropertyGraph, Graph):
             edge_type_property = self._edge_property['edge_type']
             neighbors_list=set([self.target(eid) for eid in self._vertices[vid][1] if edge_type_property[eid] in edge_type])
         return neighbors_list
-        
-                    
+
+
     def iter_out_neighbors(self, vid, edge_type=None):
         """ Return the out vertices of the vertex vid
-        
+
         :Parameters:
         - `vid` : a vertex id
         - `edges_type` : type of edges we want to consider (can be a set)
@@ -381,7 +380,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         - `iterator` : an iterator on the set of child vertices of the vertex vid
         """
         return iter(self.out_neighbors(vid, edge_type))
-  
+
     def neighbors(self, vid, edge_type=None):
         """ Return the neighbors vertices of the vertex vid
         
@@ -667,22 +666,19 @@ class PropertyGraph(IPropertyGraph, Graph):
         region_sub_graph=Graph.sub_graph(self, self._graph_property[region_name])
         distances=region_sub_graph.topological_distance(region_sub_graph._vertices.keys()[0], edge_type=edge_type)
         return not float('inf') in distances.values()
-        
+
+
     def to_networkx(self):
         import networkx as nx
         """ Return a NetworkX Graph from a graph.
 
         :Parameters: 
+         - `g` - TemporalPropertyGraph (property graphs temporaly linked)
 
-            - `g` - TemporalPropertyGraph 
-                a dynamic property graph 
-        
         :Returns: 
-
-            - A NetworkX graph.
-
+         - A NetworkX graph.
         """
-        
+
         g = self
 
         graph = nx.Graph()
@@ -710,16 +706,13 @@ class PropertyGraph(IPropertyGraph, Graph):
 
     def from_networkx(self, graph):
         """ Return a Graph from a NetworkX Directed graph.
-
         :Parameters: 
             - `graph` : A NetworkX graph.
 
         :Returns: 
             - `g`: a :class:`~openalea.container.interface.Graph`.
-
         """
         self.clear()
-        
         g = self
 
         if not graph.is_directed():
@@ -732,7 +725,6 @@ class PropertyGraph(IPropertyGraph, Graph):
             d = graph.node[vid]
             for k, v in d.iteritems():
                 vp.setdefault(k,{})[vid] = v
-
 
         ep = self._edge_property
         for source, target in graph.edges_iter():
