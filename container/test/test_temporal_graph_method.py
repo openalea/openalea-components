@@ -61,12 +61,12 @@ def test_temporalPropertyGraph():
                                        19: 3}
                           
     assert g.topological_distance(3, edge_type='t')=={0: 1,
-                                                      1: inf,
+                                                      1: float('Inf'),
                                                       2: 2,
                                                       3: 0,
                                                       4: 2,
-                                                      5: inf,
-                                                      6: inf,
+                                                      5: float('Inf'),
+                                                      6: float('Inf'),
                                                       7: 3,
                                                       8: 3,
                                                       9: 1,
@@ -74,33 +74,33 @@ def test_temporalPropertyGraph():
                                                       11: 3,
                                                       12: 3,
                                                       13: 3,
-                                                      14: inf,
-                                                      15: inf,
-                                                      16: inf,
-                                                      17: inf,
-                                                      18: inf,
-                                                      19: inf}
+                                                      14: float('Inf'),
+                                                      15: float('Inf'),
+                                                      16: float('Inf'),
+                                                      17: float('Inf'),
+                                                      18: float('Inf'),
+                                                      19: float('Inf')}
     
-    assert g.topological_distance(3, edge_type='s')=={0: inf,
-                                                      1: inf,
+    assert g.topological_distance(3, edge_type='s')=={0: float('Inf'),
+                                                      1: float('Inf'),
                                                       2: 1,
                                                       3: 0,
                                                       4: 1,
                                                       5: 1,
                                                       6: 2,
-                                                      7: inf,
-                                                      8: inf,
-                                                      9: inf,
-                                                      10: inf,
-                                                      11: inf,
-                                                      12: inf,
-                                                      13: inf,
-                                                      14: inf,
-                                                      15: inf,
-                                                      16: inf,
-                                                      17: inf,
-                                                      18: inf,
-                                                      19: inf}
+                                                      7: float('Inf'),
+                                                      8: float('Inf'),
+                                                      9: float('Inf'),
+                                                      10: float('Inf'),
+                                                      11: float('Inf'),
+                                                      12: float('Inf'),
+                                                      13: float('Inf'),
+                                                      14: float('Inf'),
+                                                      15: float('Inf'),
+                                                      16: float('Inf'),
+                                                      17: float('Inf'),
+                                                      18: float('Inf'),
+                                                      19: float('Inf')}
     
     assert g.topological_distance(3, edge_dist=lambda x,y: 2)=={0: 2,
                                                                 1: 4,
@@ -123,12 +123,12 @@ def test_temporalPropertyGraph():
                                                                 18: 6,
                                                                 19: 6}
 
-def func_test_regional_bin(graph, vid):
+def func_regional_bin(graph, vid):
     return (len(graph.neighborhood(vid))-1)==4
 
 def test_regionalisation():
     g=create_TemporalGraph()
-    g.add_region(func_test_regional_bin, "dist4")
+    g.add_region(func_regional_bin, "dist4")
     assert g._graph_property=={'dist4' : [0, 2, 9, 11, 15]}
     assert g._vertex_property["regions"] == {0 : ['dist4'], 
                                              2 : ['dist4'], 
@@ -150,13 +150,13 @@ def test_regionalisation():
     assert not 1 in g._graph_property["dist4"]
     assert g._vertex_property["regions"].get(1) == None
 
-    assert not g.is_region_connected("dist4")
+    assert not g.is_connected_region("dist4")
     
     g.add_vertex_to_region(3, "dist4")
     g.add_vertex_to_region([4, 5], "dist4")
     
-    assert g.is_region_connected("dist4")
-    assert not g.is_region_connected("dist4", "s")
+    assert g.is_connected_region("dist4")
+    assert not g.is_connected_region("dist4", "s")
 
     g.remove_region("dist4")
     assert g._graph_property.get("dist4") == None
