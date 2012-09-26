@@ -34,7 +34,6 @@ __all__ = []
 
 class ISvgElm(IInterface):
     """ Image interface """
-    __metaclass__ = IInterfaceMetaClass
 
 loadsc = Factory( name= "loadSC",
                   description= "load an svg file and convert it to svg scene",
@@ -42,7 +41,7 @@ loadsc = Factory( name= "loadSC",
                   nodemodule = "svg_inout",
                   nodeclass = "loadsc",
                   inputs=(dict(name="Filename", interface=IFileStr,),),
-                  outputs=(dict(name="scene", interface=ISvgElm,),),
+                  outputs=(dict(name="scene", interface='ISvgElm',),),
                   )
 
 __all__.append('loadsc')
@@ -52,7 +51,7 @@ writesc = Factory( name= "writeSC",
                    category = "Image,svg",
                    nodemodule = "svg_inout",
                    nodeclass = "writesc",
-                   inputs=(dict(name="scene", interface=ISvgElm),
+                   inputs=(dict(name="scene", interface='ISvgElm'),
                            dict(name="Filename", interface=IFileStr,),),
                    outputs=(),
                    )
@@ -64,9 +63,9 @@ getelm = Factory( name= "get elm",
                   category = "Image,svg",
                   nodemodule = "svg_inout",
                   nodeclass = "get_elm",
-                  inputs=(dict(name="scene", interface=ISvgElm),
+                  inputs=(dict(name="scene", interface='ISvgElm'),
                           dict(name="id", interface=IStr,),),
-                  outputs=(dict(name="elm", interface=ISvgElm),),
+                  outputs=(dict(name="elm", interface='ISvgElm'),),
                   )
 
 __all__.append('getelm')
@@ -79,7 +78,7 @@ img = Factory( name= "image",
                inputs=(dict(name="id", interface="IStr"),
                        dict(name="image", interface=IImage),
                           dict(name="filename", interface="IStr",),),
-               outputs=(dict(name="elm", interface=ISvgElm),),
+               outputs=(dict(name="elm", interface='ISvgElm'),),
                )
 
 __all__.append('img')
@@ -94,7 +93,7 @@ point = Factory( name= "point",
                           dict(name="y", interface=IFloat),
                          dict(name="radius", interface=IFloat),
                          dict(name="color", interface=IRGBColor,),),
-                 outputs=(dict(name="elm", interface=ISvgElm),),
+                 outputs=(dict(name="elm", interface='ISvgElm'),),
                  )
 
 __all__.append('point')
@@ -106,7 +105,7 @@ group = Factory( name= "group",
                  nodeclass = "svg_group",
                  inputs=(dict(name="id", interface=IStr),
                          dict(name="elms", interface=ISequence),),
-                 outputs=(dict(name="elm", interface=ISvgElm),),
+                 outputs=(dict(name="elm", interface='ISvgElm'),),
                  )
 
 __all__.append('group')
@@ -119,7 +118,7 @@ layer = Factory( name= "layer",
                   inputs=(dict(name="id", interface=IStr),
                           dict(name="elms", interface=ISequence),
                           dict(name="name", interface=IStr),),
-                  outputs=(dict(name="elm", interface=ISvgElm),),
+                  outputs=(dict(name="elm", interface='ISvgElm'),),
                   )
 
 __all__.append('layer')
@@ -132,7 +131,7 @@ scene = Factory( name= "scene",
                  inputs=(dict(name="width", interface=IFloat),
                          dict(name="height", interface=IFloat),
                          dict(name="layers", interface=ISequence),),
-                 outputs=(dict(name="scene", interface=ISvgElm),),
+                 outputs=(dict(name="scene", interface='ISvgElm'),),
                  )
 
 __all__.append('scene')
@@ -142,7 +141,7 @@ elements = Factory( name= "elements",
                     category = "Image,svg",
                     nodemodule = "svg_inout",
                     nodeclass = "svg_elements",
-                    inputs=(dict(name="group", interface=ISvgElm),),
+                    inputs=(dict(name="group", interface='ISvgElm'),),
                     outputs=(dict(name="elms", interface=ISequence),),
                     )
 
