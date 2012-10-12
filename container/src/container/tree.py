@@ -71,11 +71,17 @@ class Tree(IRootedGraph,
         '''
         return len(self._parent)
 
-    def vertices(self):
+    def vertices_iter(self):
         '''
         :returns: iter of vertex_id
         '''
         return self._parent.iterkeys()
+
+    def vertices(self):
+        '''
+        :returns: iter of vertex_id
+        '''
+        return list(self.vertices_iter())
 
     def __iter__(self):
         return self.vertices()
@@ -191,7 +197,7 @@ class Tree(IRootedGraph,
         '''
         return self._parent.get(vtx_id)
 
-    def children(self, vtx_id):
+    def children_iter(self, vtx_id):
         '''
         returns a vertex iterator
 
@@ -200,6 +206,16 @@ class Tree(IRootedGraph,
         :returns: iter of vertex identifier
         '''
         return iter(self._children.get(vtx_id,[]))
+
+    def children(self, vtx_id):
+        '''
+        returns a vertex iterator
+
+        :param vtx_id: The vertex identifier.
+
+        :returns: iter of vertex identifier
+        '''
+        return self._children.get(vtx_id,[])
 
     def nb_children(self, vtx_id):
         '''
@@ -210,9 +226,9 @@ class Tree(IRootedGraph,
 
         :returns: int
         '''
-        return len(self._children.get(vtx_id,[]))
+        return len(self.children(vtx_id))
 
-    def siblings(self, vtx_id):
+    def siblings_iter(self, vtx_id):
         '''
         returns an iterator of vtx_id siblings.
         vtx_id is not include in siblings.
@@ -228,6 +244,17 @@ class Tree(IRootedGraph,
         else:
             return (vid for vid in self._children[parent] if vid != vtx_id)
 
+    def siblings(self, vtx_id):
+        '''
+        returns an iterator of vtx_id siblings.
+        vtx_id is not include in siblings.
+
+        :Parameters:
+         - `vtx_id`: The vertex identifier.
+
+        :returns: iter of vertex identifier
+        '''
+        return list(self.siblings_iter(vtx_id))
 
     def nb_siblings(self, vtx_id):
         '''
@@ -660,6 +687,14 @@ class PropertyTree(Tree):
     #########################################################################
 
     def property_names(self):
+        '''
+        names of all property maps.
+        Properties are defined only on vertices, even edge properties.
+        return iter of names
+        '''
+        return self._properties.keys()
+
+    def property_names_iter(self):
         '''
         iter on names of all property maps.
         Properties are defined only on vertices, even edge properties.
