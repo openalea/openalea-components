@@ -11,10 +11,14 @@ from relation import Relation
 
 ################################
 #
-#       topomesh
+#       mesh
 #
 ################################
-from topomesh import Topomesh
+from topomesh import *
 from topomesh_txt import write_topomesh,read_topomesh
 from topomesh_algo import *
 from topomesh_geom_algo import *
+from mesh import *
+from mesh_shapes import *
+from mesh_algo import *
+from mesh_txt import *

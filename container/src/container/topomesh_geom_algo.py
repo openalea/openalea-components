@@ -5,7 +5,7 @@
 #
 #       Copyright or  or Copr. 2006 INRIA - CIRAD - INRA
 #
-#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#       File author(s): Jerome Chopard <revesansparole@gmail.com>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -30,7 +30,8 @@ try :
 	from numpy import subtract,cross,dot
 	from numpy.linalg import norm
 	__all__ = ["triangle_quality","flip_necessary",
-	           "triangulate_polygon","triangulate_face"]except ImportError :
+	           "triangulate_polygon","triangulate_face"]
+except ImportError :
 	__all__ = []
 
 
