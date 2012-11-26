@@ -567,6 +567,30 @@ class PropertyGraph(IPropertyGraph, Graph):
             modif=tmpDist!=dist
         return (reduced_dist, dist)[full_dict]
 
+    def _adjacency_matrix(self, edge_type = None, edge_dist = lambda x,y : 1):
+        import numpy as np
+        n = self.nb_vertices()
+        adjacency_matrix = np.ones((n, n))
+        infinity = float('inf')
+        adjacency_matrix = np.array(n*[n*[infinity]])
+        for edge in self.edges(edge_type):
+            v1, v2 = self.edge_vertices(edge)
+            adjacency_matrix[v1, v2] = edge_dist(v1, v2)
+            adjacency_matrix[v2, v1] = edge_dist(v2, v1)
+            # adjacency_matrix[edge[1], edge[0]] = 1
+        for i in range(n) : adjacency_matrix[i, i]=0
+        return adjacency_matrix
+
+    def floyd_warshall(self, edge_type = None, edge_dist = lambda x,y : 1):
+        adjacency_matrix = self._adjacency_matrix(edge_type, edge_dist)
+        n = self.nb_vertices()
+        for k in range(n):
+            for i in range(n):
+                for j in range(n):
+                    adjacency_matrix[i, j]=min(adjacency_matrix[i, j], 
+                                               adjacency_matrix[i, k] + adjacency_matrix[k, j])
+        return adjacency_matrix
+        
 
     def _add_vertex_to_region(self, vids, region_name):
         """
