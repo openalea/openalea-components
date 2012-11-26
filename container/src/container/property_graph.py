@@ -523,7 +523,8 @@ class PropertyGraph(IPropertyGraph, Graph):
         :Returns:
         - `iterator` : an iterator on the set of the vertices at distance n of the vertex vid
         """
-        return iter(self.neighborhood(vid, n, edge_type))      
+        return iter(self.neighborhood(vid, n, edge_type))    
+
 
     def topological_distance(self, vid, edge_type = None, edge_dist = lambda x,y : 1, max_depth=float('inf'), full_dict=True):
         """ Return the distances of each vertices at the vertex vid according a cost function
@@ -539,50 +540,75 @@ class PropertyGraph(IPropertyGraph, Graph):
         - `dist_dict` : a dictionary of the distances, key : vid, value : distance
         """
         import numpy as np
+        from heapq import heappop, heappush
         dist={}
         reduced_dist={}
         reduced_dist[vid]=0
-        untreated=set()
+        Q=[]
         infinity = float('inf')
         for k in self._vertices.iterkeys():
             dist[k] = infinity
-            untreated.add(k)
+            heappush(Q, (dist[k], k))
 
-        treated=set()
         dist[vid]=0
+        heappush(Q, (dist[vid], vid))
+        treated=set()
         modif=True
-        
-        while (len(untreated)>0 & modif):
-            tmpDist=dist.copy()
-            for k in treated:
-                tmpDist.pop(k)
-            actualVid=[k for k in tmpDist.keys()][np.argmin(tmpDist.values())]
-            untreated-=set([actualVid])
-            treated|=set([actualVid])
-            for neighb in self.iter_neighbors(actualVid, edge_type):
-                if ((dist[neighb] > dist[actualVid] + edge_dist(neighb, actualVid))
-                    & (dist[actualVid] + edge_dist(neighb, actualVid) < max_depth+1 ) ):
-                    dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
-                    reduced_dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
-            modif=tmpDist!=dist
-        return (reduced_dist, dist)[full_dict]
-
-    def _adjacency_matrix(self, edge_type = None, edge_dist = lambda x,y : 1):
-        import numpy as np
         n = self.nb_vertices()
-        adjacency_matrix = np.ones((n, n))
-        infinity = float('inf')
-        adjacency_matrix = np.array(n*[n*[infinity]])
+        while (len(treated)!=n and modif):
+            modif = False
+            actualVid = heappop(Q)
+            while actualVid[1] in treated and actualVid[0] == float('inf'):
+                actualVid = heappop(Q)
+
+            if actualVid[0] != float('inf'):
+                actualVid = actualVid[1]
+                treated.add(actualVid)
+            
+                for neighb in self.iter_neighbors(actualVid, edge_type):
+                    if ((dist[neighb] > dist[actualVid] + edge_dist(neighb, actualVid))
+                        & (dist[actualVid] + edge_dist(neighb, actualVid) < max_depth+1 ) ):
+                        dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
+                        reduced_dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
+                        heappush(Q, (dist[neighb], neighb))
+                    modif = True
+        return (reduced_dist, dist)[full_dict], Q
+
+
+    def adjacency_matrix(self, edge_type = None, edge_dist = 1, no_edge_val = 0, oriented = True, reflexive = True, reflexive_value = 0):
+        """
+        Return the adjacency matrix of the graph.
+        :Parameters:
+        - `edge_type` : type of edges we want to consider
+        - `edge_dist` : cost ot cost function to apply between two edges, default : 1
+        - `no_edge_val` : cost to put if there is no edge between two vertices, default : 0
+        - `oriented` : if True, the graph is considered oriented and we always add an edge j -> i if i -> j exists
+        - `reflexive` : if True, the graph is considered reflexive and we will put the cost or the cost_function `reflexive_value` on the diagonal of the adjacency_matrix, default : 0
+
+        :Return:
+        - `numpy.array` : a NxN matrix
+        """
+        import numpy as np
+        if not isinstance(edge_dist, type(lambda m: 1)):
+            val_edge_dist = edge_dist
+            edge_dist = lambda g, x, y : val_edge_dist
+        if not isinstance(reflexive_value, type(lambda m: 1)):
+            val_reflexive_value = reflexive_value
+            reflexive_value = lambda g, x, y : val_reflexive_value
+        
+        n = self.nb_vertices()
+        adjacency_matrix = np.array(n*[n*[no_edge_val]])
         for edge in self.edges(edge_type):
             v1, v2 = self.edge_vertices(edge)
-            adjacency_matrix[v1, v2] = edge_dist(v1, v2)
-            adjacency_matrix[v2, v1] = edge_dist(v2, v1)
-            # adjacency_matrix[edge[1], edge[0]] = 1
-        for i in range(n) : adjacency_matrix[i, i]=0
+            adjacency_matrix[v1, v2] = edge_dist(self, v1, v2)
+            if not oriented:
+                adjacency_matrix[v2, v1] = edge_dist(self, v2, v1)
+        if reflexive:
+            for i in range(n) : adjacency_matrix[i, i] = reflexive_value(self, i, i)
         return adjacency_matrix
 
-    def floyd_warshall(self, edge_type = None, edge_dist = lambda x,y : 1):
-        adjacency_matrix = self._adjacency_matrix(edge_type, edge_dist)
+    def floyd_warshall(self, edge_type = None, edge_dist = 1, oriented = False):
+        adjacency_matrix = self.adjacency_matrix(edge_type, edge_dist, float('inf'), oriented)
         n = self.nb_vertices()
         for k in range(n):
             for i in range(n):
