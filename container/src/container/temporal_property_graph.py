@@ -20,6 +20,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id: $ "
 
 from property_graph import *
+import warnings
 
 class TemporalPropertyGraph(PropertyGraph):
     """
@@ -119,7 +120,6 @@ class TemporalPropertyGraph(PropertyGraph):
                         edge_types[eid] = self.TEMPORAL
 
         return relabel_ids
-
 
     def clear(self):
         PropertyGraph.clear(self)
@@ -235,14 +235,13 @@ class TemporalPropertyGraph(PropertyGraph):
         - `iterator` : an iterator on the set of the 0, 1, ..., nth descendants of the vertex vid
         """
         return iter(self.descendant(vids, n))
-            
 
     def ancestors(self, vids, n):
-        """ Return the 0, 1, ..., nth ancestors of the vertex vid
+        """Return the 0, 1, ..., nth ancestors of the vertex vid
         
         :Parameters:
         - `vids` : a set of vertex id
-
+        
         :Returns:
         - `anestors_list` : the set of the 0, 1, ..., nth ancestors of the vertex vid
         """
@@ -270,54 +269,119 @@ class TemporalPropertyGraph(PropertyGraph):
         - `iterator` : an iterator on the set of the 0, 1, ..., nth ancestors of the vertex vid
         """
         return iter(self.ancestors(vids, n))
-  
 
-    def property_from_old_labels(self, vertex_property, old_labels2keep = 'all'):
+    def vertex_ids_at_time(self, time_point, only_lineaged = False, as_mother = False, as_daughter = False):
+        """
+        Return vertices ids corresponding to a given time point in the TPG.
+        """
+        if as_mother or as_daughter:
+            only_lineaged = True
+        
+        if only_lineaged:
+            return [ k for k in self.vertices() if (self.vertex_property('index')[k]==time_point) and
+             ( ((self.out_edges(k, 't') != set()) if as_mother else False ) or ( (self.in_edges(k, 't') != set()) if as_daughter else False ) ) ]
+        else:
+            return [k for k in self.vertices() if self.vertex_property('index')[k]==time_point]
+
+    def translate_ids_Graph2Image(self, id_list, time_point=None):
+        """
+        Return a list which contains SpatialImage ids type  graph ids type and need to be translated into .
+        
+        :Parameters:
+        - `id_list` (list) - graphs ids type;
+        - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
+        
+        :WARNING:
+            `time_point` numbers starts at '0'
+        """
+        if not isinstance(id_list,list):
+            warnings.warn('This is not a "list" type variable.')
+            return None
+
+        new2old_label = self.vertex_property('old_label') 
+        if not time_point is None:
+            return [new2old_label[k] for k in id_list if self.vertex_property('index')[k]==time_point]
+        else:
+            return [new2old_label[k] for k in id_list]
+
+    def translate_keys_Graph2Image(self, dictionary, time_point=None):
+        """
+        Return a dictionary which keys are SpatialImage ids type .
+        Initial keys are graph ids type and need to be translated into SpatialImage ids type.
+        
+        :Parameters:
+        - `dictionary` (dict) - keys are SpatialImage ids type;
+        - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
+        
+        :WARNING:
+            `time_point` numbers starts at '0'
+        """
+        if not isinstance(dictionary,dict):
+            warnings.warn('This is not a "dict" type variable.')
+            return None
+        
+        new2old_label = self.vertex_property('old_label')
+        if not time_point is None:
+            return dict([(new2old_label[k], dictionary[k]) for k in dictionary if self.vertex_property('index')[k]==time_point])
+        else:
+            return dict([(new2old_label[k], dictionary[k]) for k in dictionary])
+
+    def translate_keys_Image2Graph(self, dictionary, time_point):
+        """
+        Return a dictionary which keys are graph ids type .
+        Initial keys are SpatialImage ids type and need to be translated into graph ids type.
+        
+        :Parameters:
+        - `dictionary` (dict) - keys are graph ids type;
+        - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
+        
+        :WARNING:
+            `time_point` numbers starts at '0'
+        """
+        if not isinstance(dictionary,dict):
+            warnings.warn('This is not a "dict" type variable.')
+            return None
+        
+        new2old_label = dict( (v,k) for k,v in self.vertex_property('old_label').iteritems() )
+        return dict([(new2old_label[k], dictionary[k]) for k in dictionary if self.vertex_property('index')[new2old_label[k]]==time_point])
+
+
+    def vertex_property_with_image_labels(self, vertex_property, image_labels2keep = 'all', graph_labels2keep = None):
         """
         Return a dictionary extracted from the graph.vertex_property(`vertex_property`) with relabelled keys thanks to the dictionary graph.vertex_property('old_labels').
         
         :Parameters:
         - `vertex_property` : can be an existing 'graph.vertex_property' or a string refering to an existing graph.vertex_property to extract.
-        - `old_labels2keep` : a list of "old labels" (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
+        - `image_labels2keep` : a list of "image labels" (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
 
         :Returns:
-        - `relabelled_dictionnary` : a dictionary with relabelled keys to "old labels" (i.e. from SpatialImages/PropertyGraphs), key : vertex/cell label, value : `vertex_property`
+        - a dictionary with relabelled keys to "images labels" (i.e. from SpatialImages/PropertyGraphs), key : vertex/cell label, value : `vertex_property`
         
         :Examples:
-        graph.property_from_old_labels( graph.vertex_property('volume') )
-        graph.property_from_old_labels( 'volume' )
-        graph.property_from_old_labels( 'volume' , SpatialImageAnalysis.L1() )
+        graph.vertex_property_with_image_labels( graph.vertex_property('volume') )
+        graph.vertex_property_with_image_labels( 'volume' )
+        graph.vertex_property_with_image_labels( 'volume' , SpatialImageAnalysis.L1() )
         
         """
         if isinstance(vertex_property,str):
             vertex_property = self.vertex_property(vertex_property)
 
-        new2old = self.vertex_property('old_label')
+        new2old_label = self.vertex_property('old_label')
+        
+        if (not graph_labels2keep is None) and (isinstance(graph_labels2keep, list)):
+            return dict( [(new2old_label[k], vertex_property[k]) for k in new2old_label if k in graph_labels2keep and vertex_property.has_key(k)] )
+        
+        else:
+            if (image_labels2keep == 'all'):
+                warnings.warn('You have asked for all labels from the TemporalPropertyGraph! Mistakes will be presents in the returned dictionary.')
+                image_labels2keep = new2old_label.values()
+                new2old_label = dict( [(new2old_label[k], k) for k in new2old_label] )
+            
+            if isinstance(image_labels2keep, int):
+                image_labels2keep = [image_labels2keep]
+            if isinstance(image_labels2keep, list):
+                new2old_label = dict( [(new2old_label[k], k) for k in new2old_label if new2old_label[k] in image_labels2keep] )
+            
+            return dict( [(k, vertex_property[new2old_label[k]]) for k in new2old_label] )
 
-        if old_labels2keep == 'all':
-            import warnings
-            warnings.warn('You have asked for all labels from the TemporalPropertyGraph! Mistakes will be presents in the returned dictionary.')
-            old_labels2keep = new2old.values()
-            old2new = dict( [(new2old[k], k) for k in new2old] )
-        if isinstance(old_labels2keep, int):
-            old_labels2keep = [old_labels2keep]
-        if isinstance(old_labels2keep, list):
-            old2new = dict( [(new2old[k], k) for k in new2old if new2old[k] in old_labels2keep] )
 
-        relabelled_dictionary = dict( [(k, vertex_property[old2new[k]]) for k in old2new] )
-
-        return relabelled_dictionary
-
-
-    def translate_from_graph_at_time(self, dictionary, time_point):
-        """
-        Return a dictionary which keys are SpatialImage/Graph compatibles.
-        time_point numbers starts at '0'
-        """
-        if not isinstance(dictionary,dict):
-            import warnings
-            warnings.warn('This is not a "dict" type variable.')
-            return None
-
-        new2old = self.vertex_property('old_label')
-        return dict([(new2old[k], dictionary[k]) for k in dictionary if self.vertex_property('index')[k]==time_point])
