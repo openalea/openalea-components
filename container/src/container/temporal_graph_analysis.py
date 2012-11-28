@@ -1,4 +1,4 @@
-# -*- python -*-
+# -*- python -
 #
 #       OpenAlea.Container
 #
@@ -152,39 +152,48 @@ def change(graph, vertex_property, vid, rank, edge_type):
 
 
 def __normalized_temporal_parameters(func):
-    def wrapped_function(graph, vertex_property, vids = None, rank = 1, labels_at_t_n = True, check_full_lineage = True, verbose = False):
+    def wrapped_function(graph, vertex_property, vids = None, rank = 1, labels_at_t_n = True, check_full_lineage = True, rank_lineage_check = None, verbose = False):
         """
         :Parameters:
         - 'graph' : a TPG.
         - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
-        - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
-        - 'rank' : neighborhood at distance 'rank' will be used.
+        - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the function `func` will be computed for all ids present in the graph provided.
+        - 'rank' : temporal neighborhood at distance 'rank' will be used.
+        - 'rank_lineage_check' : usefull if you want to check the lineage for a different rank than the temporal neighborhood rank.
+        
+        :Example:
+        VG12 = g.translate_keys_Graph2Image(relative_temporal_change(g, 'volume', rank = 1, rank_lineage_check = 4), 0 )
+        VG15 = g.translate_keys_Graph2Image(relative_temporal_change(g, 'volume', rank = 4, rank_lineage_check = 4), 0 )
+        This make sure that the same lineage is used for volumetric growth computation between t1-t2 and t1-t5.
 
         :Return:
-        - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= Mean absolute deviation
+        - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= value computed by `func`
         """
         # if a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
-
+        
         # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
             vids = vertex_property.keys()
-
+        
         if isinstance(vids,int):
             vids=[vids] # for single id, compute single result
-
+        
+        if rank_lineage_check == None:
+            rank_lineage_check = rank
+        
         # for a list of ids, we create a dictionary of resulting values from function `func`.
         l={}
         for k,vid in enumerate(vids):
             if verbose and k%10==0: print k,'/',len(vids)
             if check_full_lineage:
-                if full_lineage(graph, vid, rank): # Check if ALL descendants up to `rank` exists !
+                if full_lineage(graph, vid, rank_lineage_check): # Check if ALL descendants up to `rank_lineage_check` exists !
                     l[vid] = func(graph, vertex_property, vid, rank)
             else:
                 if full_lineage(graph, vid, 1): # Check if there is at least one descendants for `vid`!
                     l[vid] = func(graph, vertex_property, vid, rank)
-
+        
         if labels_at_t_n:
             return l
         else:
@@ -199,14 +208,14 @@ def __normalized_temporal_parameters(func):
                 for id_descendant in vid_descendants:
                     m[id_descendant]=l[vid]
             return m
-
+    
     return  wrapped_function
 
 @__normalized_temporal_parameters
 def temporal_change(graph, vertex_property, vid, rank):
     """
     Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
-
+    
     :Parameters:
     - 'graph' : a TPG.
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
@@ -220,20 +229,20 @@ def temporal_change(graph, vertex_property, vid, rank):
         vid_descendants = graph.children(vid)
     else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
         vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
-
+    
     nb_descendants = len(vid_descendants)
     descendants_value = 0
     vid_value = vertex_property[vid]
     for id_descendant in vid_descendants:
         descendants_value = descendants_value + vertex_property[id_descendant]
-
+    
     return descendants_value - vid_value
 
 @__normalized_temporal_parameters
 def relative_temporal_change(graph, vertex_property, vid, rank):
     """
     Sub-function computing the relative temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
-
+    
     :Parameters:
     - 'graph' : a TPG.
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
@@ -250,7 +259,7 @@ def full_lineage(graph, vid, rank):
     Check if lineage is complete over several ranks. 
     i.e. every decendants cells from `vid` have a lineage up to rank `rank`.
     Suppose that the lineage has been correctly done: a lineage is given to the graph only if we are sure to have all the daugthers from a mother.
-
+    
     :Parameters:
     - `graph` TPG to browse;
     - 'vid' : a vertex id.
@@ -260,15 +269,15 @@ def full_lineage(graph, vid, rank):
     vids_descendants={}
     vids_descendants[1] = graph.descendants(vid,1)
     vids_descendants[1].remove(vid)
-
+    
     # -- First thing you want to know is if there is a lineage at least at the first order !
     if len(vids_descendants[1]) < 1:
         return False
-
+    
     # -- If rank == 1 (and there is a lineage but we already did the test!) we suppose that it has been correctly done !
     if rank == 1:
         return True
-
+    
     # -- To check a full lineage @rank_n :
     for r in xrange(2,rank+1):
         len_lineage_at_r = 0
@@ -281,18 +290,18 @@ def full_lineage(graph, vid, rank):
         else:
             # Retreive cells only at rank_n-1: (not all cells between rank 1 and `rank`)
             vids_descendants[r] = graph.descendants(vid,r)-graph.descendants(vid,r-1)
-
+    
     return True
 
 
-def time_point_property(graph, time_point, vertex_property):
+def time_point_property(graph, time_point, vertex_property, only_lineaged = False, as_mother = False, as_daughter = False):
     """
     Allow to extract a property 'vertex_property' from the temporal graph for one time-point.
     
     :Parameters:
-    - `graph` TPG to browse;
-    - `time_point` integer defining the time-point to consider;
-    - `vertex_property` vertex property to extract;
+    - `graph` (TemporalPropertyGraph) - Spatio-temporal graph to browse;
+    - `time_point` (int) - define the time-point to consider;
+    - `vertex_property` (str) - name of the vertex property to extract;
     :Return:
     - dictionnary of vertex property extracted from the time-point 'time_point';
     """
@@ -304,13 +313,55 @@ def time_point_property(graph, time_point, vertex_property):
         import warnings
         warnings.warn(str(time_point)+"not in"+str(graph))
 
-    k=[i for i in graph.vertex_property('index') if graph.vertex_property('index')[i]==time_point]
-    tmp={}
-    for i in k:
-        tmp[i]=vertex_property[i]
+    vids_at_time = graph.vertex_ids_at_time(time_point, only_lineaged, as_mother, as_daughter)
     
-    return tmp
+    return dict([(i,vertex_property[i]) for i in vertex_property if i in vids_at_time])
+    
 
+def time_point_property_by_regions(graph, time_point, vertex_property, only_lineaged = False, as_mother = False, as_daughter = False):
+    """
+    Allow to extract a property 'vertex_property' from the temporal graph for one time-point, sorted by regions.
+    Return a dict of dict, first level of keys are region(s) name(s) and second layer are vertex ids and the values of their associated property.
+    
+    :Parameters:
+    - `graph` (TemporalPropertyGraph) - Spatio-temporal graph to browse;
+    - `time_point` (int) - define the time-point to consider;
+    - `vertex_property` (str) - name of the vertex property to extract;
+    :Return:
+    - dictionary of regions which values are a dictionnary of vertex property extracted from the time-point;
+    """
+    extracted_property = time_point_property(graph, time_point, vertex_property, only_lineaged, as_mother, as_daughter)
+    
+    regions_names = list(np.unique([v[0] for k,v in graph.vertex_property('regions').iteritems() if graph.vertex_property('index')[k]==time_point]))
+    
+    property_by_regions = {}
+    for region_name in regions_names:
+        property_by_regions[region_name] = dict( (k,v) for k,v in extracted_property.iteritems() if graph.vertex_property('regions').has_key(k) and (graph.vertex_property('regions')[k][0]==region_name) )
+    
+    return property_by_regions
+
+def shape_anisotropy_2D(graph, vids=None, add2vertex_property = True):
+    """
+    Compute shape anisotropy in 2D based on the two largest inertia axis length.
+    !!!!! SHOULD BE COMPARED WITH NORMAL VECTOR FROM CURVATURE COMPUTATION !!!!!
+    """
+    if vids == None:
+        vids = graph.vertex_property('inertia_axis').keys()
+    else:
+        for vid in vids:
+            if not graph.vertex_property('inertia_axis').has_key(vid):
+                warnings.warn("Inertia axis hasn't been computed for vid #"+str(vid))
+                vids.remove(vid)
+    
+    shape_anisotropy_2D = {}
+    for vid in vids:
+        axis_len = graph.vertex_property('inertia_axis')[vid][1]
+        shape_anisotropy_2D[vid] = float(axis_len[0]-axis_len[1])/(axis_len[0]+axis_len[1])
+    
+    if add2vertex_property:
+        graph.add_vertex_property("2D shape anisotropy",shape_anisotropy_2D)
+    
+    return shape_anisotropy_2D
 
 def cell_vtx_time_association(graph, return_cells_vertices_relations = False ):
     """
@@ -681,3 +732,25 @@ def triplot(graphs_list, values2plot, labels_list=None, values_name="",normed=Fa
         plt.ylabel('Number of observations')
     plt.legend()
     plt.show()
+
+
+def sparse_matrix_from_graph(graph, vids2keep):
+    """
+    Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
+    Defines for each vertex the neigbhoring vertex following a given structure of the data.
+    
+    :Parameters:
+     - graph (Graph | PropertyGraph | TemporalPropertyGraph): graph to extract connectivity.
+     - vids2keep (list): lis of vertex ids to build the sparse matrix from.
+     
+    """    
+    N = len(vids2keep)
+    sparse_matrix = np.zeros([N,N],dtype=bool)
+    
+    for edge in graph.edges(edge_type='s'):
+        s,t = graph.edge_vertices(edge)
+        if (s in vids2keep) and (t in vids2keep):
+            sparse_matrix[vids2keep.index(s),vids2keep.index(t)] = sparse_matrix[vids2keep.index(t),vids2keep.index(s)] = True
+    
+    return sparse_matrix
+

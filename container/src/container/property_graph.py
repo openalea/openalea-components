@@ -21,6 +21,7 @@ __revision__ = " $Id$ "
 
 from interface.property_graph import IPropertyGraph, PropertyError
 from graph import Graph, InvalidVertex, InvalidEdge
+import numpy as np
 
 VertexProperty, EdgeProperty, GraphProperty = range(3)
 VertexIdType, EdgeIdType, ValueType = range(3)
@@ -640,7 +641,6 @@ class PropertyGraph(IPropertyGraph, Graph):
                 self._vertex_property["regions"].pop(vid)
                 
             self._graph_property[region_name].remove(vid)
-        
 
     def add_vertex_to_region(self, vids, region_name):
         """
@@ -661,8 +661,7 @@ class PropertyGraph(IPropertyGraph, Graph):
                                 % region_name)
         self._remove_vertex_from_region(self.__to_set(vids), region_name)
 
-
-    def add_region(self, func, region_name):
+    def add_region_from_func(self, func, region_name):
         """ Create a region of vertices according a function
         
         :Parameters:
@@ -670,7 +669,6 @@ class PropertyGraph(IPropertyGraph, Graph):
         - `region_name` : the name of the region
         
         """
-        
         if region_name in self._graph_property:
             raise PropertyError("property %s is already defined on graph"
                                 % region_name)
@@ -681,6 +679,30 @@ class PropertyGraph(IPropertyGraph, Graph):
             if func(self, vid):
                 self._add_vertex_to_region(set([vid]), region_name)
 
+    def add_regions_from_dict(self, dict_regions, region_names):
+        """
+        If one already posses a dict indicating for a list of vertex which region they belong to, it can be given to the graph directly.
+        
+        :Parameters:
+        - `dict_regions` (dict) - *keys = ids (SpatialImage); *values = intergers indicating the region(s)
+        - `region_name` (list) - a list containing the name of the region(s)
+        """
+        list_regions = np.unique(dict_regions.values())
+        if len(region_names) != len(list_regions):
+            warnings.warn("You didn't provided the same number of regions and region names.")
+            pass
+        
+        if not "regions" in self._vertex_property.keys():
+            self.add_vertex_property("regions")
+        
+        for region, region_name in enumerate(region_names):
+            if region_name in self._graph_property:
+                raise PropertyError("property %s is already defined on graph"
+                                    % region_name)
+            self._graph_property[region_name]=[]
+            for vid in dict_regions:
+                if dict_regions[vid] == list_regions[region]:
+                    self._add_vertex_to_region(set([vid]), region_name)
 
     def iter_region(self, region_name):
         if not region_name in self._graph_property:
