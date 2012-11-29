@@ -115,22 +115,23 @@ class SVGTransform (object) :
 	def __mul__ (self, transfo) :
 		"""Composition of transformations
 		
-		Add the translation part and
-		multiply the matrix part
+		Multiply the two transform as if 3x3 matrices by
+		virtualy adding a row of (0, 0, 1)
 		
 		:Parameters:
 		 - `transfo` (:class:SVGTransform)
 		
 		:Returns Type: :class:SVGTransform
 		"""
+		t = transfo
 		ret = SVGTransform()
-		ret._m00 = self._m00 * transfo._m00 + self._m01 * transfo._m10
-		ret._m01 = self._m00 * transfo._m01 + self._m01 * transfo._m11
-		ret._m10 = self._m10 * transfo._m00 + self._m11 * transfo._m10
-		ret._m11 = self._m10 * transfo._m01 + self._m11 * transfo._m11
+		ret._m00 = self._m00 * t._m00 + self._m01 * t._m10
+		ret._m01 = self._m00 * t._m01 + self._m01 * t._m11
+		ret._m10 = self._m10 * t._m00 + self._m11 * t._m10
+		ret._m11 = self._m10 * t._m01 + self._m11 * t._m11
 		
-		ret._t0 = self._t0 + transfo._t0
-		ret._t1 = self._t1 + transfo._t1
+		ret._t0 = self._m00 * t._t0 + self._m01 * t._t1 + self._t0
+		ret._t1 = self._m10 * t._t0 + self._m11 * t._t1 + self._t1
 		
 		return ret
 	
