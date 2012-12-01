@@ -27,6 +27,7 @@ __all__ = ["TopomeshError"
          , "Topomesh"]
 
 
+from warnings import warn
 from array import array
 from interface.topomesh import (TopomeshError, InvalidDart
                               , ITopomesh, IDartListMesh
@@ -65,7 +66,11 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	#               Mesh concept
 	#
 	########################################################################
-	def degree (self, did) :
+	def degree (self, did = None) :
+		if did is None :
+			warn("Deprecated")
+			return None
+		
 		try :
 			return self._degree[did]
 		except KeyError :
@@ -82,6 +87,10 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 		return did in self._degree
 	
 	has_dart.__doc__ = ITopomesh.has_dart.__doc__
+
+	def has_wisp (self, degree, wid) :
+		warn("deprecated, use 'has_dart' instead")
+		return self.has_dart(wid)
 	
 	def _borders_with_offset (self, dids, offset) :
 		if offset == 0 :
@@ -93,7 +102,26 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 			
 			return self._borders_with_offset(bids, offset - 1)
 	
-	def borders (self, did, offset = 1) :
+	def borders (self, did, *args, **kwds) :
+		if "offset" in kwds :
+			offset = kwds["offset"]
+			if "degree" in kwds :
+				warn("deprecated, don't specify degree anymore")
+			if len(args) > 0 :
+				warn("deprecated, don't specify degree anymore")
+				did = args[0]
+		else :
+			if "degree" in kwds :
+				warn("deprecated, don't specify degree anymore")
+			if len(args) == 0 :
+				offset = 1
+			elif len(args) == 1 :
+				offset = args[0]
+			elif len(args) == 2 :
+				warn("deprecated, don't need to specify degree anymore")
+				did = args[0]
+				offset = args[1]
+		
 		if self.degree(did) == 0 and offset == 1 :
 			return iter([])
 		
@@ -106,7 +134,11 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	
 	borders.__doc__ = ITopomesh.borders.__doc__
 	
-	def nb_borders (self, did) :
+	def nb_borders (self, did, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = args[0]
+		
 		return len(self._borders[did])
 	
 	nb_borders.__doc__ = ITopomesh.nb_borders.__doc__
@@ -121,12 +153,35 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 			
 			return self._regions_with_offset(rids, offset - 1)
 	
-	def regions (self, did, offset = 1) :
+	def regions (self, did, *args, **kwds) :
+		if "offset" in kwds :
+			offset = kwds["offset"]
+			if "degree" in kwds :
+				warn("deprecated, don't specify degree anymore")
+			if len(args) > 0 :
+				warn("deprecated, don't specify degree anymore")
+				did = args[0]
+		else :
+			if "degree" in kwds :
+				warn("deprecated, don't specify degree anymore")
+			if len(args) == 0 :
+				offset = 1
+			elif len(args) == 1 :
+				offset = args[0]
+			elif len(args) == 2 :
+				warn("deprecated, don't need to specify degree anymore")
+				did = args[0]
+				offset = args[1]
+		
 		return self._regions_with_offset([did], offset)
 	
 	regions.__doc__ = ITopomesh.regions.__doc__
 	
-	def nb_regions (self, did) :
+	def nb_regions (self, did, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = args[0]
+		
 		return len(self._regions[did])
 	
 	nb_regions.__doc__ = ITopomesh.nb_regions.__doc__
@@ -149,6 +204,10 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	
 	darts.__doc__ = IDartListMesh.darts.__doc__
 	
+	def wisps (self, degree) :
+		warn("deprecated, use 'darts' instead")
+		return self.darts(degree)
+	
 	def __iter__ (self) :
 		return iter(self._degree)
 	
@@ -164,13 +223,21 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 			return nb
 	
 	nb_darts.__doc__ = IDartListMesh.nb_darts.__doc__
+
+	def nb_wisps (self, degree) :
+		warn("deprecated, use 'nb_darts' instead")
+		return self.nb_darts(degree)
 	
 	########################################################################
 	#
 	#               Neighborhood concept
 	#
 	########################################################################
-	def border_neighbors (self, did) :
+	def border_neighbors (self, did, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = args[0]
+		
 		for bid in self.borders(did) :
 			for rid in self.regions(bid) :
 				if rid != did :
@@ -178,12 +245,20 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	
 	border_neighbors.__doc__ = INeighborhoodMesh.border_neighbors.__doc__
 	
-	def nb_border_neighbors (self, did) :
+	def nb_border_neighbors (self, did, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = args[0]
+		
 		return len(tuple(self.border_neighbors(did) ) )
 	
 	nb_border_neighbors.__doc__ = INeighborhoodMesh.nb_border_neighbors.__doc__
 	
-	def region_neighbors (self, did) :
+	def region_neighbors (self, did, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = args[0]
+		
 		for rid in self.regions(did) :
 			for bid in self.borders(rid) :
 				if bid != did :
@@ -191,7 +266,11 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	
 	region_neighbors.__doc__ = INeighborhoodMesh.region_neighbors.__doc__
 	
-	def nb_region_neighbors (self, did) :
+	def nb_region_neighbors (self, did, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = args[0]
+		
 		return len(tuple(self.region_neighbors(did) ) )
 	
 	nb_region_neighbors.__doc__ = INeighborhoodMesh.nb_region_neighbors.__doc__
@@ -214,6 +293,10 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	
 	add_dart.__doc__ = IMutableMesh.add_dart.__doc__
 	
+	def add_wisp (self, degree, wid = None) :
+		warn("deprecated, use 'add_dart' instead")
+		return self.add_dart(degree, wid)
+	
 	def remove_dart (self, did) :
 		try :
 			del self._degree[did]
@@ -232,7 +315,16 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	
 	remove_dart.__doc__ = IMutableMesh.remove_dart.__doc__
 	
-	def link (self, did, bid) :
+	def remove_wisp (self, degree, wid) :
+		warn("deprecated, use 'remove_dart' instead")
+		return self.remove_dart(wid)
+	
+	def link (self, did, bid, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = bid
+			bid = args[0]
+		
 		if self.degree(bid) + 1 != self.degree(did) :
 			raise InvalidDart(bid)
 		
@@ -241,7 +333,12 @@ class Topomesh (ITopomesh, IDartListMesh, INeighborhoodMesh, IMutableMesh) :
 	
 	link.__doc__ = IMutableMesh.link.__doc__
 	
-	def unlink (self, did, bid) :
+	def unlink (self, did, bid, *args) :
+		if len(args) > 0 :
+			warn("deprecated, don't specify degree anymore")
+			did = bid
+			bid = args[0]
+		
 		self._borders[did].remove(bid)
 		self._regions[bid].remove(did)
 	
