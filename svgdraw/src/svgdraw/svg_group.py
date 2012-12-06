@@ -127,6 +127,31 @@ class SVGGroup (SVGElement) :
 		for elm in self.elements() :
 			self.remove_child(elm)
 		self._elms=[]
+	
+	##################################################
+	#
+	#		geometric transformations
+	#
+	##################################################
+	def local_pos (self, pos) :
+		"""Express a position in scene absolute referential
+		in the local referential of the group
+		
+		Apply recursively all transformations
+		to pos to obtain the local position
+		in the group.
+		
+		:Parameters:
+		 - `pos` (float,float) - scene coordinates of a point
+		
+		:Returns Type: float,float
+		"""
+		if self.parent() is not None :
+			pos = self.parent().local_pos(pos)
+
+		t = self._transform.inverse()
+		return t.apply_to_point(pos)
+	
 	##################################################
 	#
 	#		svg elements access

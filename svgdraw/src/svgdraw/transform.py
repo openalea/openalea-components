@@ -134,6 +134,26 @@ class SVGTransform (object) :
 		ret._t1 = self._m10 * t._t0 + self._m11 * t._t1 + self._t1
 		
 		return ret
+
+	def inverse (self) :
+		"""Return inverse transformation such as inverse * self = Id
+		
+		:Returns Type: :class:SVGTransform
+		"""
+		d = self._m00 * self._m11 - self._m10 * self._m01
+		if abs(d) < 1e-6 :
+			raise UserWarning("Transfo has no inverse")
+		
+		ret = SVGTransform()
+		ret._m00 = self._m11 / d
+		ret._m01 = - self._m01 / d
+		ret._m10 = - self._m10 / d
+		ret._m11 = self._m00 / d
+
+		ret._t0 = (self._m01 * self._t1 - self._m11 * self._t0) / d
+		ret._t1 = (self._m10 * self._t0 - self._m00 * self._t1) / d
+
+		return ret
 	
 	#############################################
 	#

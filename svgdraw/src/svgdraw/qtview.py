@@ -56,12 +56,14 @@ def display (sc, title = "SVG scene") :
 	
 	qapp.exec_()
 
-def save_png (filename, sc) :
+def save_png (filename, sc, background = (255,255,255, 0) ) :
 	"""Create a png image from a scene
 	
 	:Parameters:
 	 - `filename` (str) - name to write the image
 	 - `sc` (SVGScene)
+	 - `background` (int, int, int, int) - background color
+	                        as (R, G, B, alpha) 0-255 tuple
 	"""
 	qapp = QApplication.instance()
 	if qapp is None :
@@ -72,7 +74,7 @@ def save_png (filename, sc) :
 	r.load(data)
 	
 	pix = QPixmap(r.defaultSize() )
-	pix.fill(QColor(255,255,255) )
+	pix.fill(QColor(*background) )
 	painter = QPainter(pix)
 	r.render(painter)
 	painter.end()
