@@ -35,8 +35,7 @@ __all__ = ["clean_remove","clean_geometry","clean_orphans",
            "find_cycles","clone_mesh",
            "topo_divide_edge","topo_divide_face","topo_divide_cell",
            "ordered_pids","topo_triangulate_polygon","topo_triangulate_face",
-           "find_connex_parts"]
-
+           "find_connex_parts"]
 ###########################################################
 #
 #       mesh edition
@@ -67,8 +66,7 @@ def clean_remove (mesh, degree, wid) :
     #handle points
     for wid in to_remove :
         mesh.remove_wisp(0,wid)
-
-def merge_wisps (mesh, scale, wid1, wid2) :
+def merge_wisps (mesh, scale, wid1, wid2) :
     """
     merge two wisps into a single one
     assertion1 : wisps share a border
@@ -123,35 +121,30 @@ def is_flip_topo_allowed (mesh, eid) :
 
 def flip_edge (mesh, eid) :
     """Flip the orientation of an edge.
-    
-    In a triangulated mesh, assuming this edge is the
-    diagonal of a quadrilatere formed by the two faces, this
-    method will flip this edge for the other diagonal.
-    
-    :Warning: call is_flip_topo_allowed if there is some doubt
+
+    in a triangulated mesh
+    call is_flip_topo_allowed if there is some doubt
     on the validy of this operation
-    
-    :Note: this function does not produce any new dart
     """
     #definition of local elements
-    fid1, fid2 = mesh.regions(eid) #work only if planar polygon
-    pid3, pid4 = mesh.borders(eid)
-    pid1, = set(mesh.borders(fid1,2) ) - set( (pid3, pid4) )
-    pid2, = set(mesh.borders(fid2,2) ) - set( (pid3, pid4) )
-    eid13, = set(mesh.borders(fid1) ) - set(mesh.regions(pid3) )
-    eid14, = set(mesh.borders(fid1) ) - set(mesh.regions(pid4) )
-    eid23, = set(mesh.borders(fid2) ) - set(mesh.regions(pid3) )
-    eid24, = set(mesh.borders(fid2) ) - set(mesh.regions(pid4) )
+    fid1,fid2 = mesh.regions(1,eid) #work only if planar polygon
+    pid3,pid4 = mesh.borders(1,eid)
+    pid1, = set(mesh.borders(2,fid1,2)) - set( (pid3,pid4) )
+    pid2, = set(mesh.borders(2,fid2,2)) - set( (pid3,pid4) )
+    eid13, = set(mesh.borders(2,fid1)) - set(mesh.regions(0,pid3))
+    eid14, = set(mesh.borders(2,fid1)) - set(mesh.regions(0,pid4))
+    eid23, = set(mesh.borders(2,fid2)) - set(mesh.regions(0,pid3))
+    eid24, = set(mesh.borders(2,fid2)) - set(mesh.regions(0,pid4))
     #relink eid
-    mesh.unlink(eid, pid3)
-    mesh.unlink(eid, pid4)
-    mesh.link(eid, pid1)
-    mesh.link(eid, pid2)
+    mesh.unlink(1,eid,pid3)
+    mesh.unlink(1,eid,pid4)
+    mesh.link(1,eid,pid1)
+    mesh.link(1,eid,pid2)
     #relink faces
-    mesh.unlink(fid1, eid14)
-    mesh.unlink(fid2, eid23)
-    mesh.link(fid1, eid23)
-    mesh.link(fid2, eid14)
+    mesh.unlink(2,fid1,eid14)
+    mesh.unlink(2,fid2,eid23)
+    mesh.link(2,fid1,eid23)
+    mesh.link(2,fid2,eid14)
 
 def is_collapse_topo_allowed (mesh, eid, protected_edges) :
     """Test wether collapse of the edge is safe.
@@ -420,35 +413,34 @@ def clone_mesh (mesh, wids) :
 ###############################################
 def _next_point (mesh, eids, pid) :
 	for eid in eids :
-		if pid in mesh.borders(eid) :
-			new_pid,  = set(mesh.borders(eid) ) - set([pid])
-			return eid, new_pid
+		if pid in mesh.borders(1,eid) :
+			new_pid,  = set(mesh.borders(1,eid) ) - set([pid])
+			return eid,new_pid
 
 def ordered_pids (mesh, fid) :
-	"""Return the list of points tha border this face
-	ordered along edges
+	"""Return the list of points that
+	border this face ordered along edges
 	
 	:Parameters:
 	 - `mesh` (:class:`Topomesh`)
-	 - `fid` (fid) - id of the face
+	 - `fid` (fid) : id of the face
 	
-	:Returns: (list of pid) - border points ordered
+	:Returns Type: list of pid
 	"""
-	eids = set(mesh.borders(fid) )
+	eids = set(mesh.borders(2,fid) )
 	eid = eids.pop()
-	pids = list(mesh.borders(eid) )
+	pids = list(mesh.borders(1,eid) )
 	
 	try :
 		while len(eids) > 1 :
-			eid, pid = _next_point(mesh, eids, pids[-1])
+			eid,pid = _next_point(mesh,eids,pids[-1])
 			eids.discard(eid)
 			pids.append(pid)
 	except TypeError :
 		raise AssertionError("unable to order")
 	
-	assert len(set(mesh.borders(eids.pop() ) ) \
+	assert len(set(mesh.borders(1,eids.pop() ) ) \
 	         - set([pids[0],pids[-1] ]) ) == 0
-	
 	return pids
 
 def topo_triangulate_polygon (pids) :
