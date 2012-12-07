@@ -5,7 +5,7 @@
 #
 #       Copyright  or Copr. 2006 INRIA - CIRAD - INRA
 #
-#       File author(s): Jerome Chopard <revesansparole@gmail.com>
+#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -15,153 +15,150 @@
 #
 
 __doc__="""
-This module provides a topological mesh interface
+This module provide a topological mesh interface
 """
 
 __license__= "Cecill-C"
 __revision__=" $Id$ "
 
 class TopomeshError (Exception) :
-	"""Base class for all exception in a topomesh
-	"""
+    """
+    base class for all exception in a topomesh
+    """
 
+class InvalidWisp (TopomeshError,KeyError) :
+    """
+    exception raised when a wrong wisp id is provided
+    """
 
-class InvalidDart (TopomeshError, KeyError) :
-	"""Exception raised when a wrong dart id is provided
-	"""
-
+class InvalidDegree (TopomeshError,ValueError) :
+    """
+    exception raised when a the degree is outside of bounds
+    """
 
 class ITopomesh (object) :
-	"""Interface definition of a topological mesh
-	
-	A mesh is formed of elements called darts separated by
-	elements of degree-1
-	"""
-	
-	def degree (self, did) :
-		"""Degree of a given dart
-		"""
-		raise NotImplementedError
-	
-	def is_valid (self) :
-		"""Test wether the mesh fulfill all mesh properties
-		"""
-		raise NotImplementedError
-	
-	def has_dart (self, did) :
-		"""Return true if the dart specified by its id
-		is in mesh
-		"""
-		raise NotImplementedError
-	
-	def borders (self, did, degree_offset = 1) :
-		"""Iterator on all border of this dart
-		"""
-		raise NotImplementedError
-	
-	def nb_borders (self, did, degree_offset = 1) :
-		"""Number of border of this dart
-		"""
-		raise NotImplementedError
-	
-	def regions (self, did) :
-		"""Iterator on all regions this dart separate
-		"""
-		raise NotImplementedError
-	
-	def nb_regions (self, did) :
-		"""Number of regions this darts separate
-		"""
-		raise NotImplementedError
+    """
+    interface definition of a topological mesh
+    a mesh is formed of elements called wisps
+    separated by elements of degree-1
+    """
+    def degree (self) :
+        """
+        maximum degree (or scale) of elements of the mesh
+        """
+        raise NotImplementedError
 
+    def is_valid (self) :
+        """
+        test wether the mesh fulfill all mesh properties
+        """
+        raise NotImplementedError
 
-class IDartListMesh (object) :
-	"""A mesh viewe as a collection of darts
-	"""
-	
-	def darts (self, degree = None) :
-		"""Iterator on all darts of a given degree
-		
-		If degree is None, iterate on all darts in the mesh
-		"""
-		raise NotImplementedError
-	
-	def nb_darts (self, degree = None) :
-		"""Number of darts of the given degree
-		or total number of darts if degree is None
-		"""
-		raise NotImplementedError
+    def has_wisp (self, degree, wid) :
+        """
+        return true if the wisp
+        specified by its id is in mesh
+        """
+        raise NotImplementedError
 
+    def borders (self, degree, wid, degree_offset=1) :
+        """
+        iterator on all border of this wisp
+        """
+        raise NotImplementedError
+
+    def nb_borders (self, degree, wid, degree_offset=1) :
+        """
+        number of border of this wisp
+        """
+        raise NotImplementedError
+
+    def regions (self, degree, wid) :
+        """
+        iterator on all regions this wisp separate
+        """
+        raise NotImplementedError
+
+    def nb_regions (self, degree, wid) :
+        """
+        number of regions this wisp separate
+        """
+        raise NotImplementedError
+
+class IWispListMesh (object) :
+    """
+    mesh view as a collection of wisps
+    """
+    def wisps (self, degree) :
+        """
+        iterator on all wisps of a given degree
+        """
+        raise NotImplementedError
+
+    def nb_wisps (self, degree) :
+        """
+        number of wisps of the given degree
+        """
+        raise NotImplementedError
 
 class INeighborhoodMesh (object) :
-	"""Implicit neighborhood between darts at the same degree
-	"""
-	
-	def border_neighbors (self, did) :
-		"""Iterator on all darts at the same degree
-		that share a border with this dart
-		"""
-		raise NotImplementedError
-	
-	def nb_border_neighbors (self, did) :
-		"""Number of border_neighbors of this dart
-		"""
-		raise NotImplementedError
-	
-	def region_neighbors (self, did) :
-		"""Iterator on all darts at the same degree
-		that share a region with this dart
-		"""
-		raise NotImplementedError
-	
-	def nb_region_neighbors (self, did) :
-		"""Number of region_neighbors of this dart
-		"""
-		raise NotImplementedError
+    """
+    implicit neighborhood between wisps at the same scale
+    """
+    def border_neighbors (self, degree, wid) :
+        """
+        iterator on all wisps at the same degree
+        that share a border with this wisp
+        """
+        raise NotImplementedError
 
+    def nb_border_neighbors (self, degree, wid) :
+        """
+        number of border_neighbors of this wisp
+        """
+        raise NotImplementedError
+
+    def region_neighbors (self, degree, wid) :
+        """
+        iterator on all wisps at the same degree
+        that share a region with this wisp
+        """
+        raise NotImplementedError
+
+    def nb_region_neighbors (self, degree, wid) :
+        """
+        number of region_neighbors of this wisp
+        """
+        raise NotImplementedError
 
 class IMutableMesh (object) :
-	"""Interface for editing methods on mesh
-	"""
-	
-	def add_dart (self, degree, did = None) :
-		"""Add a new dart connected to nothing
-		
-		if did is None, create a free id
-		
-		returns used did
-		"""
-		raise NotImplementedError
-	
-	def remove_dart (self, did) :
-		"""Remove dart from the mesh
-		
-		Also remove all attached links
-		"""
-		raise NotImplementedError
-	
-	def link (self, did, bid) :
-		"""Link a dart to its border
-		
-		:Parameters:
-		 - `did` (did) - id of the dart
-		 - `bid` (bid) - id of the new border
-		"""
-		raise NotImplementedError
-	
-	def unlink (self, did, bid) :
-		"""Remove a link between a region and its border
-		"""
-		raise NotImplementedError
+    """
+    interface for editing methods on mesh
+    """
+    def add_wisp (self, degree, wid=None) :
+        """
+        add a new wisp connected to nothing
+        if wid is None, create a free id
+        return used wid
+        """
+        raise NotImplementedError
 
+    def remove_wisp (self, degree, wid) :
+        """
+        remove wisp from the mesh
+        remove all attached links
+        """
+        raise NotImplementedError
 
+    def link (self, degree, wid, border_id) :
+        """
+        link a wisp of degree degree with id wid
+        with another wisp of degree degree-1 with id border_id
+        """
+        raise NotImplementedError
 
-
-
-
-
-
-
-
-
-
+    def unlink (self, degree, wid, border_id) :
+        """
+        remove links between a region and its border
+        """
+        raise NotImplementedError
