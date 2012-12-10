@@ -105,6 +105,22 @@ class PropertyGraph(IPropertyGraph, Graph):
         self._vertex_property[property_name] = values
     add_vertex_property.__doc__ = IPropertyGraph.add_vertex_property.__doc__
 
+    def extend_vertex_property(self, property_name, values ):
+        """todo AND TO CHECK AND TEST !!"""
+        if not isinstance(values, dict):
+            raise TypeError("Values %s is not a type 'dict'" % values)                                
+        if property_name not in self._vertex_property:
+            print PropertyError("Property %s is not defined on vertices"
+                                % property_name)
+            print "Creating vertex property %s" % property_name
+            self._vertex_property[property_name] = {}
+        
+        for k,v in values.iteritems():
+            if k in self.vertices():
+                self._vertex_property[property_name][k] = v
+            else:
+                print "!! Vertex id #%s doesn't exist in the graph !!" % k
+
     def remove_vertex_property(self, property_name):
         """todo"""
         try:
@@ -573,7 +589,8 @@ class PropertyGraph(IPropertyGraph, Graph):
                         reduced_dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
                         heappush(Q, (dist[neighb], neighb))
                     modif = True
-        return (reduced_dist, dist)[full_dict], Q
+        #~ return (reduced_dist, dist)[full_dict], Q
+        return (reduced_dist, dist)[full_dict]
 
 
     def adjacency_matrix(self, edge_type = None, edge_dist = 1, no_edge_val = 0, oriented = True, reflexive = True, reflexive_value = 0):
