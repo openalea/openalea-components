@@ -341,6 +341,30 @@ def time_point_property_by_regions(graph, time_point, vertex_property, only_line
     
     return property_by_regions
 
+
+def csr_matrix_from_graph(graph, vids2keep):
+    """
+    Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
+    Defines for each vertex the neigbhoring vertex following a given structure of the data.
+    
+    :Parameters:
+     - graph (Graph | PropertyGraph | TemporalPropertyGraph): graph to extract connectivity.
+     - vids2keep (list): lis of vertex ids to build the sparse matrix from.
+     (columns and rows will be ordered like in this list)
+    """    
+    N = len(vids2keep)
+    data,row,col = [],[],[]
+    
+    for edge in graph.edges(edge_type='s'):
+        s,t = graph.edge_vertices(edge)
+        if (s in vids2keep) and (t in vids2keep):
+            row.extend([vids2keep.index(s),vids2keep.index(t)])
+            col.extend([vids2keep.index(t),vids2keep.index(s)])
+            data.extend([1,1])
+    
+    return csr_matrix((data,(row,col)), shape=(N,N))
+
+
 def shape_anisotropy_2D(graph, vids=None, add2vertex_property = True):
     """
     Compute shape anisotropy in 2D based on the two largest inertia axis length.
@@ -363,6 +387,7 @@ def shape_anisotropy_2D(graph, vids=None, add2vertex_property = True):
         graph.add_vertex_property("2D shape anisotropy",shape_anisotropy_2D)
     
     return shape_anisotropy_2D
+
 
 def cell_vtx_time_association(graph, return_cells_vertices_relations = False ):
     """
@@ -734,73 +759,4 @@ def triplot(graphs_list, values2plot, labels_list=None, values_name="",normed=Fa
     plt.legend()
     plt.show()
 
-
-def sparse_matrix_from_graph(graph, vids2keep):
-    """
-    Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
-    Defines for each vertex the neigbhoring vertex following a given structure of the data.
-    
-    :Parameters:
-     - graph (Graph | PropertyGraph | TemporalPropertyGraph): graph to extract connectivity.
-     - vids2keep (list): lis of vertex ids to build the sparse matrix from.
-     
-    """    
-    N = len(vids2keep)
-    sparse_matrix = np.zeros([N,N],dtype=bool)
-    
-    for edge in graph.edges(edge_type='s'):
-        s,t = graph.edge_vertices(edge)
-        if (s in vids2keep) and (t in vids2keep):
-            sparse_matrix[vids2keep.index(s),vids2keep.index(t)] = sparse_matrix[vids2keep.index(t),vids2keep.index(s)] = True
-    
-    return sparse_matrix
-
-#~ def csr_matrix_from_graph(graph, vids2keep):
-    #~ """
-    #~ Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
-    #~ Defines for each vertex the neigbhoring vertex following a given structure of the data.
-    #~ 
-    #~ :Parameters:
-     #~ - graph (Graph | PropertyGraph | TemporalPropertyGraph): graph to extract connectivity.
-     #~ - vids2keep (list): list of vertex ids to build the sparse matrix from (columns and rows will be ordered like this list).
-     #~ 
-    #~ """    
-    #~ N = len(vids2keep)
-    #~ data,row,col = [],[],[]
-    #~ 
-    #~ interaction_described=[]
-    #~ 
-    #~ for vid in vids2keep:
-        #~ nei = graph.neighbors(vid,'s')
-        #~ for vid_nei in nei:
-            #~ if (vid_nei in vids2keep) and ([vid_nei,vid] not in interaction_described):
-                #~ row.extend([vids2keep.index(vid),vids2keep.index(vid_nei)])
-                #~ col.extend([vids2keep.index(vid_nei),vids2keep.index(vid)])
-                #~ data.extend([1,1])
-                #~ interaction_described.append([vid,vid_nei])
-    #~ 
-    #~ return csr_matrix((data,(row,col)), shape=(N,N))
-
-
-def csr_matrix_from_graph(graph, vids2keep):
-    """
-    Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
-    Defines for each vertex the neigbhoring vertex following a given structure of the data.
-    
-    :Parameters:
-     - graph (Graph | PropertyGraph | TemporalPropertyGraph): graph to extract connectivity.
-     - vids2keep (list): lis of vertex ids to build the sparse matrix from.
-     (columns and rows will be ordered like in this list)
-    """    
-    N = len(vids2keep)
-    data,row,col = [],[],[]
-    
-    for edge in graph.edges(edge_type='s'):
-        s,t = graph.edge_vertices(edge)
-        if (s in vids2keep) and (t in vids2keep):
-            row.extend([vids2keep.index(s),vids2keep.index(t)])
-            col.extend([vids2keep.index(t),vids2keep.index(s)])
-            data.extend([1,1])
-    
-    return csr_matrix((data,(row,col)), shape=(N,N))
 

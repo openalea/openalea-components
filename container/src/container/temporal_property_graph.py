@@ -294,6 +294,9 @@ class TemporalPropertyGraph(PropertyGraph):
         :WARNING:
             `time_point` numbers starts at '0'
         """
+        if isinstance(id_list,int):
+            return self.vertex_property('old_label')[id_list]
+        
         if not isinstance(id_list,list):
             warnings.warn('This is not a "list" type variable.')
             return None
