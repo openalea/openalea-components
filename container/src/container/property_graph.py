@@ -117,9 +117,12 @@ class PropertyGraph(IPropertyGraph, Graph):
         
         for k,v in values.iteritems():
             if k in self.vertices():
-                self._vertex_property[property_name][k] = v
+                if not self._vertex_property[property_name].has_key(k):
+                    self._vertex_property[property_name][k] = v
+                else:
+                    print "Vertex id",k,"already has a value for vertex property",property_name
             else:
-                print "!! Vertex id #%s doesn't exist in the graph !!" % k
+                print "Vertex id #%s doesn't exist in the graph !!" % k
 
     def remove_vertex_property(self, property_name):
         """todo"""
