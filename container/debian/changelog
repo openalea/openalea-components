@@ -1,3 +1,27 @@
+openalea-container (2.16.1~ppa8) quantal; urgency=low
+
+  * Port to quantal
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Tue, 11 Dec 2012 11:34:46 +0100
+
+openalea-container (2.16.1~ppa7) precise; urgency=low
+
+  * Rebuild with new PlantGL 
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Thu, 06 Dec 2012 14:01:00 +0100
+
+openalea-container (2.16.1~ppa3) precise; urgency=low
+
+  * Switch to dh_python2
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Wed, 12 Sep 2012 16:31:51 +0200
+
+openalea-container (2.2.0~ppa2) precise; urgency=low
+
+  * Switch to dh_python2 
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Wed, 12 Sep 2012 15:41:45 +0200
+
 openalea-container (2.2.0~ppa1) precise; urgency=low
 
   *  Release 1.0 on precise  
