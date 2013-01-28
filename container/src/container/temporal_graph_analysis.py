@@ -15,12 +15,151 @@
 #
 ################################################################################
 """This module helps to analyse TemporalPropertyGraph from Spatial Images."""
- 
+
+import warnings
 import types
 import numpy as np
 from interface.property_graph import IPropertyGraph, PropertyError
 
 from scipy.sparse import csr_matrix
+
+def keys_to_mother_id(graph, data, rank = 1):
+    """
+    Translate a dict with daughter ids as key, to a dict with mother ids as keys.
+    :Parameters:
+     - 'graph' (TPG): the TPG to be used for translation
+     - 'data' (dict): the dictionary to translate
+    """
+    translated_dict = {}
+    for vid in data.keys():
+        if exist_relative_at_rank(graph,vid,-rank):
+            mother = list(graph.ancestors(vid,rank)-graph.ancestors(vid,rank-1))[0]
+            if not translated_dict.has_key(mother):
+                translated_dict[mother] = data[vid]
+
+    return translated_dict
+
+
+def keys_to_daughter_id(graph, data, rank = 1):
+    """
+    Translate a dict with mother ids as key, to a dict with daughter ids as keys.
+    :Parameters:
+     - 'graph' (TPG): the TPG to be used for translation
+     - 'data' (dict): the dictionary to translate
+    """
+    translated_dict = {}
+    for vid in data.keys():
+        if exist_relative_at_rank(graph,vid,rank):
+            daughter = list(graph.descendants(vid,rank)-graph.descendants(vid,rank-1))
+            for d in daughter:
+                translated_dict[d] = data[vid]
+
+    return translated_dict
+
+
+def exist_relative_at_rank(graph, vid, rank):
+    """
+    Check if there is a relative (descendant or ancestor) of the 'vid' at 'rank'.
+    :Parameters:
+     - 'graph' (TPG): the TPG to be used for translation
+     - 'vid' (int): the initial point to look-out for rank existence.
+     - 'rank' (int): the rank to test.
+    """
+    if rank == 0 :
+        return True
+    if (rank > 0) :
+        return graph.descendants(vid,rank)-graph.descendants(vid,rank-1) != set()
+    if (rank < 0) :
+        return graph.ancestors(vid,abs(rank))-graph.ancestors(vid,abs(rank)-1) != set()
+
+
+def translate_ids_Graph2Image(graph, id_list):
+    """
+    Return a list which contains SpatialImage ids type translated from the TPG ids type `id_list`.
+    
+    :Parameters:
+     - `graph` (TPG): the TemporalPropertyGraph containing the translation informations
+     - `id_list` (list) - graphs ids type
+    """
+    if isinstance(id_list,int):
+        return graph.vertex_property('old_label')[id_list]
+    
+    if not isinstance(id_list,list):
+        warnings.warn('This is not a "list" type variable.')
+        return None
+
+    return [graph.vertex_property('old_label')[k] for k in id_list]
+
+def translate_ids_Image2Graph(graph, id_list, time_point):
+    """
+    Return a list which contains TPG ids type translated from the SpatialImage ids type `id_list`.
+    
+    :Parameters:
+     - `graph` (TPG): the TemporalPropertyGraph containing the translation informations
+     - `id_list` (list) - SpatialImage ids type
+     - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph
+    
+    :WARNING:
+        `time_point` numbers starts at '0'
+    """
+    if (not isinstance(id_list,list)) and (not isinstance(id_list,int)):
+        warnings.warn('This is not a "list" type variable.')
+        return None
+
+    graph_labels_at_time_point = graph.vertex_ids_at_time(time_point)
+    Image2Graph_labels_at_time_point = dict( (v,k) for k,v in graph.vertex_property('old_label').iteritems() if k in graph_labels_at_time_point )
+
+    Image2Graph_labels, Image_labels_not_found = [], []
+    for k in id_list:
+        if k in Image2Graph_labels_at_time_point.keys():
+            Image2Graph_labels.append(Image2Graph_labels_at_time_point[k])
+        else:
+            Image_labels_not_found.append(k)
+
+    if Image_labels_not_found != []:
+        warnings.warn("The cell ids"+str(Image_labels_not_found)+"were not in the graph!")
+
+    if isinstance(id_list,int) and (Image_labels_not_found == []):
+        return Image2Graph_labels[0]
+
+    return Image2Graph_labels
+
+def translate_keys_Graph2Image(graph, dictionary):
+    """
+    Return a dictionary which keys are SpatialImage ids type .
+    Initial keys are graph ids type and need to be translated into SpatialImage ids type.
+    
+    :Parameters:
+    - `dictionary` (dict) - keys are SpatialImage ids type;
+    - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
+    
+    :WARNING:
+        `time_point` numbers starts at '0'
+    """
+    if not isinstance(dictionary,dict):
+        warnings.warn('This is not a "dict" type variable.')
+        return None
+    
+    return dict( (graph.vertex_property('old_label')[k], dictionary[k]) for k in dictionary )
+
+def translate_keys_Image2Graph(graph, dictionary, time_point):
+    """
+    Return a dictionary which keys are graph ids type .
+    Initial keys are SpatialImage ids type and need to be translated into graph ids type.
+    
+    :Parameters:
+    - `dictionary` (dict) - keys are graph ids type;
+    - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
+    
+    :WARNING:
+        `time_point` numbers starts at '0'
+    """
+    if not isinstance(dictionary,dict):
+        warnings.warn('This is not a "dict" type variable.')
+        return None
+    
+    return dict( (k,dictionary[v]) for k,v in graph.vertex_property('old_label').iteritems() if (graph.vertex_property('index')[k] == time_point) and (v in dictionary) )
+
 
 def __normalized_parameters(func):
     def wrapped_function(graph, vertex_property, vids = None, rank = 1 , verbose = False):
