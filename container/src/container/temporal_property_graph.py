@@ -21,6 +21,7 @@ __revision__ = " $Id: $ "
 
 from property_graph import *
 import warnings
+from openalea.container.temporal_graph_analysis import translate_ids_Image2Graph, translate_keys_Graph2Image
 
 class TemporalPropertyGraph(PropertyGraph):
     """
@@ -214,6 +215,8 @@ class TemporalPropertyGraph(PropertyGraph):
         edge_type='t'
         neighbs=set()
         vids=self.__to_set(vids)
+        if n==0 :
+            return vids
         if n==1 :
             for vid in vids:
                 neighbs |= (self.out_neighbors(vid, 't') | set([vid]))
@@ -248,6 +251,8 @@ class TemporalPropertyGraph(PropertyGraph):
         edge_type='t'
         neighbs=set()
         vids=self.__to_set(vids)
+        if n==0 :
+            return vids
         if n==1 :
             for vid in vids:
                 neighbs |= (self.in_neighbors(vid, 't') | set([vid]))
@@ -283,79 +288,15 @@ class TemporalPropertyGraph(PropertyGraph):
         else:
             return [k for k in self.vertices() if self.vertex_property('index')[k]==time_point]
 
-    def translate_ids_Graph2Image(self, id_list, time_point=None):
-        """
-        Return a list which contains SpatialImage ids type  graph ids type and need to be translated into .
-        
-        :Parameters:
-        - `id_list` (list) - graphs ids type;
-        - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
-        
-        :WARNING:
-            `time_point` numbers starts at '0'
-        """
-        if isinstance(id_list,int):
-            return self.vertex_property('old_label')[id_list]
-        
-        if not isinstance(id_list,list):
-            warnings.warn('This is not a "list" type variable.')
-            return None
 
-        new2old_label = self.vertex_property('old_label') 
-        if not time_point is None:
-            return [new2old_label[k] for k in id_list if self.vertex_property('index')[k]==time_point]
-        else:
-            return [new2old_label[k] for k in id_list]
-
-    def translate_keys_Graph2Image(self, dictionary, time_point=None):
-        """
-        Return a dictionary which keys are SpatialImage ids type .
-        Initial keys are graph ids type and need to be translated into SpatialImage ids type.
-        
-        :Parameters:
-        - `dictionary` (dict) - keys are SpatialImage ids type;
-        - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
-        
-        :WARNING:
-            `time_point` numbers starts at '0'
-        """
-        if not isinstance(dictionary,dict):
-            warnings.warn('This is not a "dict" type variable.')
-            return None
-        
-        new2old_label = self.vertex_property('old_label')
-        if not time_point is None:
-            return dict([(new2old_label[k], dictionary[k]) for k in dictionary if self.vertex_property('index')[k]==time_point])
-        else:
-            return dict([(new2old_label[k], dictionary[k]) for k in dictionary])
-
-    def translate_keys_Image2Graph(self, dictionary, time_point):
-        """
-        Return a dictionary which keys are graph ids type .
-        Initial keys are SpatialImage ids type and need to be translated into graph ids type.
-        
-        :Parameters:
-        - `dictionary` (dict) - keys are graph ids type;
-        - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
-        
-        :WARNING:
-            `time_point` numbers starts at '0'
-        """
-        if not isinstance(dictionary,dict):
-            warnings.warn('This is not a "dict" type variable.')
-            return None
-        
-        new2old_label = dict( (v,k) for k,v in self.vertex_property('old_label').iteritems() )
-        return dict([(new2old_label[k], dictionary[k]) for k in dictionary if self.vertex_property('index')[new2old_label[k]]==time_point])
-
-
-    def vertex_property_with_image_labels(self, vertex_property, image_labels2keep = 'all', graph_labels2keep = None):
+    def vertex_property_with_image_labels(self, vertex_property, image_labels2keep = None, graph_labels2keep = None):
         """
         Return a dictionary extracted from the graph.vertex_property(`vertex_property`) with relabelled keys thanks to the dictionary graph.vertex_property('old_labels').
         
         :Parameters:
         - `vertex_property` : can be an existing 'graph.vertex_property' or a string refering to an existing graph.vertex_property to extract.
-        - `image_labels2keep` : a list of "image labels" (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
+        - `image_labels2keep` (int|list) : a list of "image type" labels (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
+        - `graph_labels2keep` (int|list) : a list of "graph type" labels (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
 
         :Returns:
         - a dictionary with relabelled keys to "images labels" (i.e. from SpatialImages/PropertyGraphs), key : vertex/cell label, value : `vertex_property`
@@ -368,23 +309,18 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         if isinstance(vertex_property,str):
             vertex_property = self.vertex_property(vertex_property)
-
-        new2old_label = self.vertex_property('old_label')
         
-        if (not graph_labels2keep is None) and (isinstance(graph_labels2keep, list)):
-            return dict( [(new2old_label[k], vertex_property[k]) for k in new2old_label if k in graph_labels2keep and vertex_property.has_key(k)] )
+        if (graph_labels2keep is not None) and (image_labels2keep is not None):
+            warnings.warn("You can't specify both image_labels2keep AND graph_labels2keep!")
         
-        else:
-            if (image_labels2keep == 'all'):
-                warnings.warn('You have asked for all labels from the TemporalPropertyGraph! Mistakes will be presents in the returned dictionary.')
-                image_labels2keep = new2old_label.values()
-                new2old_label = dict( [(new2old_label[k], k) for k in new2old_label] )
-            
-            if isinstance(image_labels2keep, int):
-                image_labels2keep = [image_labels2keep]
-            if isinstance(image_labels2keep, list):
-                new2old_label = dict( [(new2old_label[k], k) for k in new2old_label if new2old_label[k] in image_labels2keep] )
-            
-            return dict( [(k, vertex_property[new2old_label[k]]) for k in new2old_label] )
+        if (graph_labels2keep is None) and (image_labels2keep is None):
+            warnings.warn('You have asked for all labels from the TemporalPropertyGraph to be returned!')
+            warnings.warn('Mistakes will be presents in the returned dictionary.')
+        
+        if (graph_labels2keep is not None):
+            return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in graph_labels2keep)) 
+        
+        if (image_labels2keep is not None):
+            return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in translate_ids_Image2Graph(image_labels2keep))) 
 
 
