@@ -22,6 +22,7 @@ import numpy as np
 from interface.property_graph import IPropertyGraph, PropertyError
 
 from scipy.sparse import csr_matrix
+from numpy.linalg import svd, lstsq
 
 def keys_to_mother_id(graph, data, rank = 1):
     """
@@ -309,7 +310,7 @@ def __normalized_temporal_parameters(func):
         :Return:
         - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= value computed by `func`
         """
-        # if a name is given, we use vertex_property stored in the graph with this name.
+        # -- If a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
         
@@ -322,18 +323,29 @@ def __normalized_temporal_parameters(func):
         
         if rank_lineage_check == None:
             rank_lineage_check = rank
-        
-        # for a list of ids, we create a dictionary of resulting values from function `func`.
+
+        try:
+            graph.graph_property('time_steps')
+        except:
+            warnings.warn("You did not defined the `time_steps` when creating the TemporalPropertyGraph.")
+            print("Use graph.add_graph_property('time_steps',time_steps) to add it.")
+            return None
+
+        # -- We compute the `time_interval` once and for all:
+        index_1 = graph.vertex_property('index')[vids[0]]
+        time_interval = (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
+
+        # -- For a list of ids, we create a dictionary of resulting values from function `func`.
         l={}
         for k,vid in enumerate(vids):
             if verbose and k%10==0: print k,'/',len(vids)
             if check_full_lineage:
                 if full_lineage(graph, vid, rank_lineage_check): # Check if ALL descendants up to `rank_lineage_check` exists !
-                    l[vid] = func(graph, vertex_property, vid, rank)
+                    l[vid] = func(graph, vertex_property, vid, rank, time_interval)
             else:
                 if full_lineage(graph, vid, 1): # Check if there is at least one descendants for `vid`!
-                    l[vid] = func(graph, vertex_property, vid, rank)
-        
+                    l[vid] = func(graph, vertex_property, vid, rank, time_interval)
+
         if labels_at_t_n:
             return l
         else:
@@ -344,7 +356,7 @@ def __normalized_temporal_parameters(func):
                     vid_descendants = graph.descendants(vid ,rank)-graph.descendants(vid,rank-1)
                 else:
                     vid_descendants = graph.children(vid)
-                
+
                 for id_descendant in vid_descendants:
                     m[id_descendant]=l[vid]
             return m
@@ -352,7 +364,7 @@ def __normalized_temporal_parameters(func):
     return  wrapped_function
 
 @__normalized_temporal_parameters
-def temporal_change(graph, vertex_property, vid, rank):
+def temporal_change(graph, vertex_property, vid, rank, time_interval):
     """
     Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
     
@@ -376,10 +388,11 @@ def temporal_change(graph, vertex_property, vid, rank):
     for id_descendant in vid_descendants:
         descendants_value = descendants_value + vertex_property[id_descendant]
     
-    return descendants_value - vid_value
+    return (descendants_value - vid_value) / float(time_interval)
+
 
 @__normalized_temporal_parameters
-def relative_temporal_change(graph, vertex_property, vid, rank):
+def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     """
     Sub-function computing the relative temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
     
@@ -392,7 +405,8 @@ def relative_temporal_change(graph, vertex_property, vid, rank):
     :Return:
     - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    return temporal_change(graph, vertex_property, vid, rank).values()[0] / float(vertex_property[vid])
+    return temporal_change(graph, vertex_property, vid, rank).values()[0] / float(vertex_property[vid]) / float(time_interval)
+
 
 def full_lineage(graph, vid, rank):
     """
@@ -528,28 +542,50 @@ def shape_anisotropy_2D(graph, vids=None, add2vertex_property = True):
     return shape_anisotropy_2D
 
 
-def cell_vtx_time_association(graph, return_cells_vertices_relations = False ):
+def cells_landmarks_relations(cells2landmark_coord):
     """
-    Creates vrtx2vrtx dictionnary (v2v): associate the corresponding cell vertex over time.
+    Creates landmark_id2cells_id, landmark_id2coord & cell_id2landmarks_id dictionaries.
     
+    :INPUT:
+    - `cells2landmark_coord` (dict) *keys=the cells ids bound to a landmark coordinates ; *values=3D coordinates of a landmark in the SpatialImage.
+    
+    :OUPTUTS:
+    - `landmark_id2cells_id` (dict) - *keys= landmark NEW id ; *values= ids of the associated cells.
+    - `landmark_id2coord` (dict) - *keys= landmark NEW id ; *values= 3D coordinates of the landmark in the SpatialImage.
+    - `cell_id2landmarks_id` (dict) - *keys= cell id ; *values= ids of the landmarks defining the cell.
+    """
+    landmark_id2cells_id = {} #associated cells to each vertex;
+    cell_id2landmarks_id = {} #associated landmark to each cells;
+    landmark_id2coord = {}
+    for n, i in enumerate(cells2landmark_coord.keys()):
+        landmark_id2cells_id[n] = list(i)
+        landmark_id2coord[n] = list(cells2landmark_coord[i])
+        for j in list(i):
+            #check if cell j is already in the dict
+            if cell_id2landmarks_id.has_key(j): 
+                cell_id2landmarks_id[j] = cell_id2landmarks_id[j]+[n] #if true, keep the previous entry (landmark)and give the value of the associated landmark
+            else:
+                cell_id2landmarks_id[j] = [n] #if false, create a new one and give the value of the associated landmark
+    #~ del(cell_id2landmarks_id[1]) #cell #1 doesn't really exist...
+    return landmark_id2cells_id, landmark_id2coord, cell_id2landmarks_id
+
+
+def landmark_temporal_association(graph, use_projected_anticlinal_wall = False):
+    """
+    Creates landmark2landmark dictionnary (v2v): associate the landmarks over time.
+
     :INPUTS:
-        .l21: t_n+1-> t_n (LienTissuTXT) cells lineage
-        .vrtx2cell_1: dict at t_n *keys=vertex id ; *values=ids of the 4 associated cells
-        .vrtx2cell_2: dict at t_n+1 *keys=vertex id ; *values=ids of the 4 associated cells
-    
+     - `graph` (TPG) 
+     - `use_projected_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('projected_anticlinal_wall_median') to compute a strain in 2D.
+
     :OUPTUT:
         .v2v: dict *keys=t_n+1 vertex number; *values=associated t_n vertex.
     """
-    from openalea.image.algo.analysis import cells_vertices_relations
-    
-    cell2vertices, vtx2coords, vtx2cells = [],[],[]
-    for t in xrange( len(graph.graph_property('cell_vertices_coord')) ):
-        tmp_1,tmp_2,tmp_3 = cells_vertices_relations(graph.graph_property('cell_vertices_coord')[t])
-        cell2vertices.append( tmp_3 )
-        vtx2coords.append( tmp_2 )
-        vtx2cells.append( tmp_1 )
-    
+    # -- We create new dictionaries to be used further:
+    landmark_id2cells_id, landmark_id2coord, cell_id2landmarks_id = cells_landmarks_relations( cells2landmark_coord )
+
     vtx_time_association = []
+    
     for t in xrange( len(graph.graph_property('cell_vertices_coord'))-1 ):
         v2v = {} ##vertex t_n vers t_n+1
         ## Loop on the vertices label of t_n+1:
@@ -579,47 +615,109 @@ def cell_vtx_time_association(graph, return_cells_vertices_relations = False ):
 
 
 def __strain_parameters(func):
-    def wrapped_function(graph, vids = None, verbose = False):
+    def wrapped_function(graph, vids = None, use_projected_anticlinal_wall = False, verbose = False):
         """
         :Parameters:
-        - 'graph' : a TPG.
-        - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the mean absolute deviation will be computed for all ids present in the graph provided.
+         - `graph` (TPG)
+         - `vids` (int|list) - list of (graph) vertex ids @ t_n. If :None: it will be computed for all possible vertex
+         - `use_projected_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('projected_anticlinal_wall_median') to compute a strain in 2D.
         """
-        # Check if cell vertices have been recovered and associated.
-        try :
-            graph.graph_property('cell_vertices_coord')
-        except:
-            import warnings
-            warnings.warn("It seems that you don't have detected cell vertices...")
-            return 0
+        # Check if cells landmarks have been recovered ans stored in the graph structure:
+        if use_projected_anticlinal_wall:
+            assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
         else:
-            from openalea.container.temporal_graph_analysis import cell_vtx_time_association
-            vtx_time_association, cell2vertices, vtx2coords, vtx2cells = cell_vtx_time_association(graph, return_cells_vertices_relations = True)
+            assert 'wall_median' in graph.edge_property_names()
+            assert 'unlabelled_wall_median' in graph.vertex_property_names()
+            assert 'epidermis_wall_median' in graph.vertex_property_names()
 
-        strain_matrix = {}
-        if vids == None:
-            #~ for t in xrange(max(g.vertex_property('index').values())+1):
-            for t in xrange( len(cell2vertices)-1 ):
-                for n, cell in enumerate( cell2vertices[t] ):
-                    N = len( cell2vertices[t][cell] )
-                    # - We make sure that all vertex of the cell 'cell' have been associtates over time.
-                    if sum( [(cell2vertices[t][cell][k] in vtx_time_association[t].keys()) for k in xrange(N)] ) == N :
-                        # - Now we recover the coordinates @t_n and @t_n+1
-                        xyz_t1 = np.array( [vtx2coords[t][cell2vertices[t][cell][k]] for k in xrange(N)] )
-                        xyz_t2 = np.array( [vtx2coords[t][vtx_time_association[t][cell2vertices[t][cell][k]]] for k in xrange(N)] )
-                        strain_matrix[cell] = func(graph, xyz_t1, xyz_t2, N)
-        return strain_matrix
+        # -- If the vid is not associated through time it's not possible to compute the strain.
+        if vids is None:
+            vids = graph.vertices()
+        if isinstance(vids,int):
+            vids=[vids]
+
+        # -- If the vid is not associated through time it's not possible to compute the strain.
+        for vid in vids:
+            if graph.descendants(vid, 1) == set([vid]):
+                vids.remove(vid)
+
+        spatial_vertices_edge = dict( ((min(v[0],v[1]),max(v[0],v[1])),k) for k,v in graph._edges.iteritems() if k in graph.edges(edge_type='s'))
+        # Next line need to be changed: we should create a smaller dict by looking in something smaller than all graphs edges!!!
+        wall_median_2 = dict( ( (min(graph.edge_vertices(eid)[0],graph.edge_vertices(eid)[1]),max(graph.edge_vertices(eid)[0],graph.edge_vertices(eid)[1])) ,graph.edge_property('wall_median')[eid]) for eid in graph.edges(edge_type='s') if graph.edge_property('wall_median').has_key(eid) )
+        strain_mat = {}
+        for n,vid in enumerate(vids):
+            if verbose and n%10==0: print n, " / ", len(vids)
+            missing_data=False
+            spatial_out_edges = list(graph.edges( vid, 's' ))
+            wall_median = dict( ((min(graph.edge_vertices(eid)[0],graph.edge_vertices(eid)[1]),max(graph.edge_vertices(eid)[0],graph.edge_vertices(eid)[1])),graph.edge_property('wall_median')[eid]) for eid in spatial_out_edges if graph.edge_property('wall_median').has_key(eid) )
+
+            # - If not every 's'type edges from a `vid` have a median and there is no 'unlabelled_wall_median' associated, it means we don't have all the info for strain computation:
+            if (len(wall_median) == len(spatial_out_edges)) or (graph.vertex_property('unlabelled_wall_median').has_key(vid)):
+                xyz_t1, xyz_t2 = [], []
+                descendants_vid = graph.descendants(vid,1)-set([vid])
+                neighbors_t1 = list(graph.neighbors(vid,'s'))
+                # -- Now we need to find the time correspondance between each median:
+                for neighbor in neighbors_t1:
+                    descendants_neighbor = graph.descendants(neighbor,1)-set([neighbor])
+                    nei = list(descendants_vid | descendants_neighbor)
+                    # -- In order to find the decendants that share the 'same' wall we have to find those from each (two) groups that have a topological distance of 1:
+                    topological_distance = dict( ((vtx_id, graph.topological_distance(vtx_id, 's', full_dict=False))) for vtx_id in nei )
+                    neighbors_descendants = []
+                    for nei_1 in descendants_vid:
+                        for nei_2 in descendants_neighbor:
+                            if topological_distance[nei_1][nei_2] == 1:
+                                if nei_1 < nei_2: neighbors_descendants.append((nei_1,nei_2))
+                                if nei_1 > nei_2: neighbors_descendants.append((nei_2,nei_1))
+
+                    if neighbors_descendants != [] and len([wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants])==len(neighbors_descendants):
+                        id_couple = (min(vid,neighbor),max(vid,neighbor))
+                        xyz_t1.append(np.array(wall_median[id_couple]))
+                        xyz_t2.append(weighted_mean( [wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants], [graph.edge_property('wall_surface')[spatial_vertices_edge[desc_id_cp]] for desc_id_cp in neighbors_descendants] ))
+                    else:
+                        missing_data=True
+
+                # -- We need to make sure `unlabelled_wall_median` is both @ t_n and at least for one daughter cell @ t_n+1
+                if not missing_data and graph.vertex_property('unlabelled_wall_median').has_key(vid) and (sum([graph.vertex_property('unlabelled_wall_median').has_key(id2) for id2 in descendants_vid])>=1):
+                    xyz_t1.append(graph.vertex_property('unlabelled_wall_median')[vid])
+                    xyz_t2.append( weighted_mean( [graph.vertex_property('unlabelled_wall_median')[desc_vid] for desc_vid in descendants_vid], [graph.vertex_property('unlabelled_wall_surface')[desc_id] for desc_id in descendants_vid] ))
+
+                # -- We need to make sure `epidermis_wall_median` is both @ t_n and at least for one daughter cell @ t_n+1
+                if not missing_data and graph.vertex_property('epidermis_wall_median').has_key(vid) and (sum([graph.vertex_property('epidermis_wall_median').has_key(id2) for id2 in descendants_vid])>=1):
+                    xyz_t1.append(graph.vertex_property('epidermis_wall_median')[vid])
+                    xyz_t2.append( weighted_mean( [graph.vertex_property('epidermis_wall_median')[desc_vid] for desc_vid in descendants_vid], [graph.vertex_property('epidermis_surface')[desc_id] for desc_id in descendants_vid] ))
+
+            if not missing_data:
+                assert len(xyz_t1) == len(xyz_t2)
+                N = len(xyz_t1)
+                if use_projected_anticlinal_wall:
+                    strain_mat[vid] = func(graph, xyz_t1, xyz_t2, N, dimension = 2, deltaT = time_interval )
+                else:
+                    strain_mat[vid] = func(graph, xyz_t1, xyz_t2, N, dimension = 3, deltaT = time_interval )
+
+        return strain_mat
 
     return  wrapped_function
 
+def weighted_mean( values, weights ):
+    """
+    Function computing a weighted mean of `values` according to `weights`.
+         - `values` (list)
+         - `weights` (list)
+    Return:
+         - wm = sum_i( value_i * weight_i/sum(weights) )
+    """
+    assert len(values)==len(weights)
+    
+    if isinstance(values[0],int) or isinstance(values[0],np.ndarray):
+        return sum( [v * w / float(sum(weights)) for v,w in zip(values, weights)] )
+    if isinstance(values[0],list) or isinstance(values[0],tuple):
+        return sum( [np.array(v) * w / float(sum(weights)) for v,w in zip(values, weights)] )
 
 @__strain_parameters
-def strain_matrix(graph, xyz_t1, xyz_t2, N, dimension = 2):
+def strain_matrix(graph, xyz_t1, xyz_t2, N, dimension, deltaT):
     """
-    Suppose that you made sure vid has descendants.
+    Compute the strain matrix.
     """
-    from numpy.linalg import svd, lstsq
-
     # -- We start by making sure we can compute the strain matrix in the dimensionnality provided.
     if (dimension > 3) or (dimension < 1) :
         import warnings
@@ -627,8 +725,8 @@ def strain_matrix(graph, xyz_t1, xyz_t2, N, dimension = 2):
         return None
 
     ## Compute the centroids:
-    c_t1=np.array((np.mean(xyz_t1[:,0]),np.mean(xyz_t1[:,1]),np.mean(xyz_t1[:,2])))
-    c_t2=np.array((np.mean(xyz_t2[:,0]),np.mean(xyz_t2[:,1]),np.mean(xyz_t2[:,2])))
+    c_t1 = np.mean(xyz_t1,0)
+    c_t2 = np.mean(xyz_t2,0)
     ## Compute the centered matrix:
     c_xyz_t1=np.array(xyz_t1-c_t1)
     c_xyz_t2=np.array(xyz_t2-c_t2)
@@ -647,61 +745,54 @@ def strain_matrix(graph, xyz_t1, xyz_t2, N, dimension = 2):
 
     return A
 
-
-def strain_rate(strain_matrix, deltaT = 24):
+def strain_rate(graph, strain_mat):
     """
     Compute the strain rate: sr[c] = np.log(D_A[0])/deltaT , np.log(D_A[1])/deltaT
     Dimensionnality is imposed by the one of the strain matrix.
     """
-    from numpy.linalg import svd
     sr = {}
-    for c in strain_matrix:
+    for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q=svd(strain_matrix[c])
+        R,D_A,Q=svd(strain_mat[vid])
         # Compute Strain Rates :
-        sr[c] = np.log(D_A)/deltaT
+        sr[vid] = np.log(D_A)/float(time_interval(graph, vid, rank =1))
 
     return sr
 
-
-def areal_strain_rate(strain_matrix, deltaT = 24):
+def areal_strain_rate(graph, strain_mat):
     """
-    Compute the areal strain rate: asr[c] = sum(np.log(D_A[0])/deltaT , np.log(D_A[1])/deltaT
+    Compute the areal strain rate: asr[c] = sum(np.log(D_A[0])/deltaT, np.log(D_A[1])/deltaT)
     Dimensionnality is imposed by the one of the strain matrix.
     """
-    from numpy.linalg import svd
     asr = {}
-    for c in strain_matrix:
+    for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q=svd(strain_matrix[c])
+        R,D_A,Q=svd(strain_mat[vid])
         # Compute Strain Rates and Areal Strain Rate:
-        asr[c] = sum(np.log(D_A)/deltaT)
+        asr[vid] = sum(np.log(D_A)/float(time_interval(graph, vid, rank =1)))
 
     return asr
 
-def anisotropy(strain_matrix, deltaT = 24):
+def strain_anisotropy(graph, strain_mat):
     """
     Compute the "Growth" Anisotropy = (sr1-sr2)/(sr1+sr2)
     Dimensionnality is imposed by the one of the strain matrix.
     """
-    from numpy.linalg import svd
     anisotropy = {}
-    for c in strain_matrix:
+    for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q=svd(strain_matrix[c])
+        R,D_A,Q = svd(strain_mat[vid])
         # Compute Strain Rates :
-        strain_rate = np.log(D_A)/deltaT
-        anisotropy[c] = (strain_rate[0]-strain_rate[1])/(strain_rate[0]+strain_rate[1])
+        strain_rate = np.log(D_A)/float(time_interval(graph, vid, rank =1))
+        anisotropy[vid] = (strain_rate[0]-strain_rate[1])/(strain_rate[0]+strain_rate[1])
 
     return anisotropy
 
 @__strain_parameters
-def strain_cross(graph, xyz_t1, xyz_t2, N, dimension = 2):
+def strain_cross(graph, xyz_t1, xyz_t2, dimension, N):
     """
-    Suppose that you made sure vid has descendants.
-    """
-    from numpy.linalg import svd, lstsq
 
+    """
     # -- We start by making sure we can compute the strain matrix in the dimensionnality provided.
     if (dimension > 3) or (dimension < 1) :
         import warnings
@@ -709,8 +800,8 @@ def strain_cross(graph, xyz_t1, xyz_t2, N, dimension = 2):
         return None
 
     ## Compute the centroids:
-    c_t1=np.array((np.mean(xyz_t1[:,0]),np.mean(xyz_t1[:,1]),np.mean(xyz_t1[:,2])))
-    c_t2=np.array((np.mean(xyz_t2[:,0]),np.mean(xyz_t2[:,1]),np.mean(xyz_t2[:,2])))
+    c_t1 = np.mean(xyz_t1,0)
+    c_t2 = np.mean(xyz_t2,0)
     ## Compute the centered matrix:
     c_xyz_t1=np.array(xyz_t1-c_t1)
     c_xyz_t2=np.array(xyz_t2-c_t2)
@@ -738,6 +829,12 @@ def strain_cross(graph, xyz_t1, xyz_t2, N, dimension = 2):
 
     return s_t1,s_t2
 
+def time_interval(graph,vid,rank=1):
+    """
+    Compute the time interval for the vexterx id `vid` thanks to data saved in graph.graph_property('time_steps').
+    """
+    index_1 = graph.vertex_property('index')[vid]
+    return (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
 
 #~ def display_lignage(graph, ini):
     

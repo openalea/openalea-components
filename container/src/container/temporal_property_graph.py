@@ -44,7 +44,8 @@ class TemporalPropertyGraph(PropertyGraph):
         self.add_vertex_property('index')
         self._old_to_new_ids = []
 
-    def extend(self, graphs, mappings):
+
+    def extend(self, graphs, mappings, time_steps = None):
         """ Extend the structure with graphs and mappings.
         Each graph contains structural edges. 
         Mapping define dynamic edges between two graphs.
@@ -52,6 +53,7 @@ class TemporalPropertyGraph(PropertyGraph):
         :Parameters:
             - graphs - a list of PropertyGraph
             - mappings - a list defining the dynamic or temporal edges between two graphs.
+            - time_steps - time corresponding to each graph
 
         :warning:: len(graphs) == len(mappings)-1
         """
@@ -63,9 +65,13 @@ class TemporalPropertyGraph(PropertyGraph):
         #~ len(mappings) = self.graph_property('nb_time_points')
         for g, m in zip(graphs[1:],mappings):
             self.append(g,m)
-            
+
+        if time_steps is not None:
+            assert len(graphs) == len(time_steps)
+            self.add_graph_property('time_steps',time_steps)
 
         return self._old_to_new_ids
+
 
     def append(self, graph, mapping=None):
         """
