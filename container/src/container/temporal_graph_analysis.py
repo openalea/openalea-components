@@ -495,29 +495,6 @@ def time_point_property_by_regions(graph, time_point, vertex_property, only_line
     return property_by_regions
 
 
-def csr_matrix_from_graph(graph, vids2keep):
-    """
-    Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
-    Defines for each vertex the neigbhoring vertex following a given structure of the data.
-    
-    :Parameters:
-     - graph (Graph | PropertyGraph | TemporalPropertyGraph): graph to extract connectivity.
-     - vids2keep (list): lis of vertex ids to build the sparse matrix from.
-     (columns and rows will be ordered like in this list)
-    """    
-    N = len(vids2keep)
-    data,row,col = [],[],[]
-    
-    for edge in graph.edges(edge_type='s'):
-        s,t = graph.edge_vertices(edge)
-        if (s in vids2keep) and (t in vids2keep):
-            row.extend([vids2keep.index(s),vids2keep.index(t)])
-            col.extend([vids2keep.index(t),vids2keep.index(s)])
-            data.extend([1,1])
-    
-    return csr_matrix((data,(row,col)), shape=(N,N))
-
-
 def shape_anisotropy_2D(graph, vids=None, add2vertex_property = True):
     """
     Compute shape anisotropy in 2D based on the two largest inertia axis length.
