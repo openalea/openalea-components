@@ -22,14 +22,14 @@ from numpy import ndarray
 
 from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 
-def distance_matrix_from_vector(data, variable_type):
+def distance_matrix_from_vector(data, variable_types):
     """
     Function creating a distance matrix based on a vector (list) of values.
     Each values are attached to an individual.
 
     :Parameters:
      - `data` (list) - vector/list of value
-     - `variable_type` (str) - type of variable
+     - `variable_types` (str) - type of variable
 
     :Returns:
      - `dist_mat` (np.array) - distance matrix
@@ -37,13 +37,13 @@ def distance_matrix_from_vector(data, variable_type):
     N = len(data)
     dist_mat = np.zeros( shape = [N,N], dtype=float )
 
-    if variable_type == "Numeric":
+    if variable_types == "Numeric":
         for i in xrange(N):
             for j in xrange(i+1,N):# we skip when i=j because in that case the distance is 0.
                 dist_mat[i,j] = i-j
                 dist_mat[j,i] = j-i
 
-    if variable_type == "Ordinal":
+    if variable_types == "Ordinal":
         rank = data.argsort() # In case of ordinal variables, observed values are replaced by ranked values.
         for i in xrange(N):
             for j in xrange(i+1,N): # we skip when i=j because in that case the distance is 0.
@@ -53,12 +53,12 @@ def distance_matrix_from_vector(data, variable_type):
     return dist_mat
 
 
-def standardisation(data, norm, variable_type):
+def standardisation(data, norm, variable_types):
     """
     :Parameters:
      - `mat` (np.array) - distance matrix
      - `norm` (str) - "L1" or "L2", select which standarisation metric to apply to the data;
-     - `variable_type` (str) - "Numeric" or "Ordinal" or "Interval"
+     - `variable_types` (str) - "Numeric" or "Ordinal" or "Interval"
     
     :Returns:
      - `standard_mat` (np.array) - standardized distance matrix
@@ -73,7 +73,7 @@ def standardisation(data, norm, variable_type):
     if isinstance(data,list):
         print "You provided a vector of variable, we compute the distance matrix first !"
         N = len(data)
-        distance_matrix = distance_matrix_from_vector(data, variable_type)
+        distance_matrix = distance_matrix_from_vector(data, variable_types)
 
     if isinstance(data,ndarray) and (data.shape[0]==data.shape[1]) and ((data.shape[0]!=1)and(data.shape[1]!=1)):
         print "You provided a distance matrix !"
@@ -89,12 +89,12 @@ def standardisation(data, norm, variable_type):
         return distance_matrix / sd
 
 
-def standardisation_scikit(data, norm, variable_type):
+def standardisation_scikit(data, norm, variable_types):
     """
     :Parameters:
      - `mat` (np.array) - distance matrix
      - `norm` (str) - "L1" or "L2", select which standarisation metric to apply to the data;
-     - `variable_type` (str) - "Numeric" or "Ordinal" or "Interval"
+     - `variable_types` (str) - "Numeric" or "Ordinal" or "Interval"
     
     :Returns:
      - `standard_mat` (np.array) - standardized distance matrix
@@ -102,7 +102,7 @@ def standardisation_scikit(data, norm, variable_type):
     if (norm != 'L1') and (norm != 'L2'):
         warnings.warn("Undefined standardisation metric")
 
-    X = distance_matrix_from_vector(data, variable_type)
+    X = distance_matrix_from_vector(data, variable_types)
 
     from sklearn import preprocessing
 
@@ -157,49 +157,107 @@ def csr_matrix_from_graph(graph, vids2keep):
     return csr_matrix((data,(row,col)), shape=(N,N))
 
 
-def weighted_global_distance_matrix(graph, variable_list, variable_weights, variable_type, spatial_weight, temporal_list, temporal_weights, standardisation_method = "L1", only_lineaged_vertices = True, rank = 1 ):
+def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[], variable_types=[], spatial_weight=0, temporal_list=[], temporal_weights=[], temporal_types=[], standardisation_method = "L1", only_lineaged_vertices = True, rank = 1 ):
     """
-    
-    """
-    assert sum([variable_weights, temporal_weights, spatial_weight])==1
+    :Parameters:
+     - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from wich to extract spatial, spatio-temporal and topological/euclidian distance variables.
+     - `variable_list` (list) - list of `vertex_property_names` related to spatial information (ex. volume).
+     - `variable_weights` (list) - list of weights related to spatial information (ex. volume). If only an integer is given for several variables (in `variable_list`), we divide it by the number of variables in `variable_list`.
+     - `variable_types` (list) - list of variable types. Can be "Ordinal" or "Numeric".
+     - `spatial_weight` (int) - weight related to topological/euclidian distance.
+     - `temporal_list` (list) - list of `vertex_property_names` related to spatio-temporal information (ex. volumetric growth).
+     - `temporal_weights` (list) - list of weights related to spatio-temporal information (ex. volumetric growth). If only an integer is given for several variables (in `temporal_list`), we divide it by the number of variables in `temporal_list`.
 
+    :NOTE: We use :ABSOLUTE: temporal change !
+    """
+    # -- Treating stupid cases:
+    if spatial_weight == 1:
+        print("No need to do that: no topological/euclidian distance between each time point!!")
+        return None
+
+    # -- Making sure all spatial variable asked for in `variable_list` are present in the `graph`:
     for variable_name in variable_list:
         assert variable_name in graph.vertex_property_names()
 
-    # -- If only an integer is given for several variable, we divide it by the number of variable:
+    # -- Handling multiple types of inputs:
+    if isinstance(variable_list,str): variable_list = [variable_list]
+    if isinstance(variable_types,str): variable_types = [variable_types]
     nb_variables = len(variable_list)
-    if isinstance(variable_weights,int) and len(variable_weights)!=nb_variables:
+    if isinstance(variable_weights,int) or isinstance(variable_weights,float): 
+        variable_weights = [variable_weights]
+    # - If only an integer is given for several variables (in `variable_list`), we divide it by the number of variables in `variable_list`:
+    if nb_variables != 0 and len(variable_weights)!=nb_variables:
         variable_weights = [variable_weights / float(nb_variables)]
         for i in xrange(nb_variables-1):
             variable_weights.append(variable_weights)
 
-    # -- If only an integer is given for several temporal_variable, we divide it by the number of temporal_variable:
+    # -- Handling multiple types of inputs:
+    if isinstance(temporal_list,str): temporal_list = [temporal_list]
+    if isinstance(temporal_types,str): temporal_types = [temporal_types]
     nb_temporal_variables = len(temporal_list)
-    if isinstance(temporal_weights,int) and len(temporal_weights)!=nb_temporal_variables:
+    if isinstance(temporal_weights,int) or isinstance(temporal_weights,float):
+        temporal_weights = [temporal_weights]
+    # - If only an integer is given for several temporal variables (in `temporal_list`), we divide it by the number of temporal variable in `temporal_list`:
+    if nb_temporal_variables != 0 and len(temporal_weights)!=nb_temporal_variables:
         temporal_weights = [temporal_weights / float(nb_temporal_variables)]
         for i in xrange(nb_temporal_variables-1):
-            temporal_weights.append(nb_temporal_variables)
+            temporal_weights.append(temporal_weights)
 
-    # -- We begin by making up the list of vertices:
+    assert sum(variable_weights)+sum(temporal_weights)+spatial_weight==1
+
+    # -- Creating the list of vertices:
     nb_time_points = max(graph.vertex_property('index').values())+1
-    vtx_list = [vid for vid in graph.vertices() if (graph.vertex_property('index')[vid]<nb_time_points-1 and exist_relative_at_rank(graph, vid, rank)) or (graph.vertex_property('index')[vid]==nb_time_points-1 and exist_relative_at_rank(graph, vid, -rank))]
+    if temporal_weights == []:
+        print "Make sure the rank you provided is equal (or superior) to the one you used to compute spatio-temporal properties !!"
+    vtx_list = [vid for vid in graph.vertices() if (graph.vertex_property('index')[vid]<nb_time_points-1 and exist_relative_at_rank(graph, vid, rank)) or (graph.vertex_property('index')[vid]==nb_time_points-1 and exist_relative_at_rank(graph, vid, -rank))] #we keep vertex ids only if they are temporally linked in the graph at `rank`
     N = len(vtx_list)
 
     index = dict( (vid,graph.vertex_property('index')[vid]) for vid in vtx_list )
-    nb_individuals_index = [sum(np.array(index.values())==t) for t in xrange(nb_time_points)]
+    #~ nb_individuals_index = [sum(np.array(index.values())==t) for t in xrange(nb_time_points)]
 
-    variable_standardized_distance_matrix = {}
-    for n, variable_name in enumerate(variable_list):
-        variable_distance_matrix[variable_name] = distance_matrix_from_vector([graph.vertex_property(variable_name)[vid] for vid in vtx_list],standardisation_method, variable_type[n])
+    # -- We compute the standardized distance matrix related to spatial variables:
+    if nb_variables != 0:
+        variable_standard_distance_matrix = {}
+        for n, variable_name in enumerate(variable_list):
+            variable_standard_distance_matrix[variable_name] = standardisation([graph.vertex_property(variable_name)[vid] for vid in vtx_list],standardisation_method, variable_types[n])
+
+    # -- We compute the standardized distance matrix related to temporal variables:
+    if nb_temporal_variables != 0:
+        from openalea.container.temporal_graph_analysis import temporal_change
+        temporal_standard_distance_matrix = {}
+        for n, temporal_name in enumerate(temporal_list):
+            temporal_standard_distance_matrix[temporal_name] = standardisation([temporal_change(graph, temporal_name, vids = vid, rank = rank, labels_at_t_n = False, check_full_lineage = True) for vid in vtx_list if exist_relative_at_rank(graph, vid, rank)], standardisation_method, temporal_types[n])
+
+    # -- We compute the standardized topological distance matrix:
+    if spatial_weight != 0:
+        import time
+        t = time.time()
+        topological_distance = dict( ((vid, graph.topological_distance(vid, 's', full_dict=False))) for vid in vtx_list )
+        print "Time to compute the topological distance matrix: %f s" % (time.time() - t)
+
+        topo_dist_rank = np.zeros( [N,N], dtype=float )
+        # we suppose here that we have the topological distance of a vertex from itself (i.e. 0)
+        for i,vid in enumerate(vtx_list):
+            for j,vid2 in enumerate(vtx_list):
+                if i != j and topological_distance[vid].has_key(vid2):
+                    topo_dist_rank [i,j] = topological_distance[vid][vid2]
+
+        topo_dist_rank_standard = standardisation(topo_dist_rank ,standardisation_method ,"Ordinal")
+    else:
+        topo_dist_rank_standard = np.zeros( [N,N], dtype=int )
 
     D = np.zeros( shape = [N,N], dtype=float )
+    if sum(temporal_weights)== 1:
+        warnings.warn("You have asked only for temporally differenciated variables. There will be no distance for the first time-point!")
     for i,vid1 in enumerate(vtx_list):
         for j,vid2 in enumerate(vtx_list):
             if i>j:
-                if index[vid1] == index[vid2]:
-                    D[i,j] = D[j,i] = 
-                if index[vid1] != index[vid2]:
-                    D[i,j] = D[j,i] = 
+                if sum(temporal_weights)!= 1 and (index[vid1] == rank or index[vid2]==rank):
+                    D[i,j] = D[j,i] = (spatial_weight/(1-sum(temporal_weights))) * topo_dist_rank_standard[i,j] + sum([(variable_weights[n]/(1-sum(temporal_weights)))*variable_standard_distance_matrix[e][i,j] for n,e in enumerate(variable_list)])
+                if index[vid1] != rank and index[vid1] == index[vid2]:
+                    D[i,j] = D[j,i] = spatial_weight * topo_dist_rank_standard[i,j] + sum([variable_weights[n]*variable_standard_distance_matrix[e][i,j] for n,e in enumerate(variable_list)]) + sum([temporal_weights[n]*temporal_standard_distance_matrix[e][i,j] for n,e in enumerate(temporal_list)])
+                if index[vid1]!=rank and index[vid2]!=rank and index[vid1] != index[vid2]:
+                    D[i,j] = D[j,i] = sum([(variable_weights[n]/(1-spatial_weight))*variable_standard_distance_matrix[e][i,j] for n,e in enumerate(variable_list)]) + sum([(temporal_weights[n]/(1-spatial_weight))*temporal_standard_distance_matrix[e][i,j] for n,e in enumerate(temporal_list)])
 
-    return variable_standardized_distance_matrix
+    return vtx_list, D
 

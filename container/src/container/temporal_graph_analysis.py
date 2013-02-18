@@ -812,9 +812,81 @@ def time_interval(graph,vid,rank=1):
     """
     index_1 = graph.vertex_property('index')[vid]
     return (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
-
-#~ def display_lignage(graph, ini):
     
+
+def triplot(graphs_list, values2plot, labels_list=None, values_name="",normed=False):
+    """
+    TO DO
+    """
+    import numpy as np
+    if labels_list==None:
+        labels_list=[]
+        for g in graphs_list:
+            labels_list.append(g.vertex_property('label'))
+    
+    values=[]
+    abs_dev_values=[]
+    laplacian_values=[]
+    #-- if 'values2plot' is a string, it must be a property found in all graphs in the 'graph_list'.
+    if type(values2plot)==type(str('str')):
+        for g in graphs_list:
+            if values2plot not in g.vertex_property_names():
+                import sys
+                sys.exit(1)
+            else:
+                if (values_name==""):
+                    values_name=values2plot
+                values.append(g.vertex_property(values2plot).values())
+                abs_dev_values.append(dev_abs(g,values2plot,True))
+                laplacian_values.append(laplacian(g,values2plot,True))
+
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    fig.subplots_adjust( wspace=0.13, left=0.05, right=0.95, top=0.95)
+    main=fig.add_subplot(1,2,1)
+    main.hist(values, bins=20,normed=normed,
+        label=( ('t1, n='+str(len(values[0]))+', mean='+str(np.round(np.mean(values[0]), 2))) ,
+        ('t2, n='+str(len(values[1]))+', mean='+str(np.round(np.mean(values[1]), 2))) ,
+        ('t3, n='+str(len(values[2]))+', mean='+str(np.round(np.mean(values[2]), 2))) ), histtype='bar' )
+    plt.title("L1 cells' "+values_name)
+    if values_name=='volume':
+        plt.xlabel('Volumes'+ r' ($\mu m^3$)')
+    else:
+        plt.xlabel(values_name)
+    if normed:
+            plt.ylabel('Frequency')
+    else:
+        plt.ylabel('Number of observations')
+    plt.legend()
+    
+    dev=fig.add_subplot(2,2,2)
+    dev.hist(abs_dev_values, bins=20,normed=normed,
+        label=( ('t1, n='+str(len(abs_dev_values[0]))+', mean='+str(np.round(np.mean(abs_dev_values[0]), 2))) ,
+        ('t2, n='+str(len(abs_dev_values[1]))+', mean='+str(np.round(np.mean(abs_dev_values[1]), 2))) ,
+        ('t3, n='+str(len(abs_dev_values[2]))+', mean='+str(np.round(np.mean(abs_dev_values[2]), 2))) ), histtype='bar' )
+    plt.title("L1 cells' absolute deviance from neighbors in "+values_name)
+    plt.xlabel('Deviance from neighbors in volumes'+ r' ($\mu m^3$)')
+    if normed:
+            plt.ylabel('Frequency')
+    else:
+        plt.ylabel('Number of observations')
+    plt.legend()
+    
+    lap=fig.add_subplot(2,2,4)
+    lap.hist(laplacian_values, bins=20,normed=normed,
+        label=( ('t1, n='+str(len(laplacian_values[0]))+', mean='+str(np.round(np.mean(laplacian_values[0]), 2))) ,
+        ('t2, n='+str(len(laplacian_values[1]))+', mean='+str(np.round(np.mean(laplacian_values[1]), 2))) ,
+        ('t3, n='+str(len(laplacian_values[2]))+', mean='+str(np.round(np.mean(laplacian_values[2]), 2))) ), histtype='bar' )
+    plt.title("L1 cells' laplacian from neighbors in "+values_name)
+    plt.xlabel('Laplacian from neighbors in volumes'+ r' ($\mu m^3$)')
+    if normed:
+            plt.ylabel('Frequency')
+    else:
+        plt.ylabel('Number of observations')
+    plt.legend()
+    plt.show()
+
+
 #~ def strain2D(graph, tp_1, tp_2):
     #~ """
     #~ Strain computation based on the 3D->2D->3D GOODALL method.
@@ -897,79 +969,4 @@ def time_interval(graph,vid,rank=1):
                     #~ s_t2[c] = np.dot(np.dot(np.dot(np.dot(V_t2, Q), D_A), Q.T), V_t2.T)
 #~ 
     #~ return sr,asr,anisotropy,s_t1,s_t2
-
-
-
-def triplot(graphs_list, values2plot, labels_list=None, values_name="",normed=False):
-    """
-    TO DO
-    """
-    import numpy as np
-    if labels_list==None:
-        labels_list=[]
-        for g in graphs_list:
-            labels_list.append(g.vertex_property('label'))
-    
-    values=[]
-    abs_dev_values=[]
-    laplacian_values=[]
-    #-- if 'values2plot' is a string, it must be a property found in all graphs in the 'graph_list'.
-    if type(values2plot)==type(str('str')):
-        for g in graphs_list:
-            if values2plot not in g.vertex_property_names():
-                import sys
-                sys.exit(1)
-            else:
-                if (values_name==""):
-                    values_name=values2plot
-                values.append(g.vertex_property(values2plot).values())
-                abs_dev_values.append(dev_abs(g,values2plot,True))
-                laplacian_values.append(laplacian(g,values2plot,True))
-
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    fig.subplots_adjust( wspace=0.13, left=0.05, right=0.95, top=0.95)
-    main=fig.add_subplot(1,2,1)
-    main.hist(values, bins=20,normed=normed,
-        label=( ('t1, n='+str(len(values[0]))+', mean='+str(np.round(np.mean(values[0]), 2))) ,
-        ('t2, n='+str(len(values[1]))+', mean='+str(np.round(np.mean(values[1]), 2))) ,
-        ('t3, n='+str(len(values[2]))+', mean='+str(np.round(np.mean(values[2]), 2))) ), histtype='bar' )
-    plt.title("L1 cells' "+values_name)
-    if values_name=='volume':
-        plt.xlabel('Volumes'+ r' ($\mu m^3$)')
-    else:
-        plt.xlabel(values_name)
-    if normed:
-            plt.ylabel('Frequency')
-    else:
-        plt.ylabel('Number of observations')
-    plt.legend()
-    
-    dev=fig.add_subplot(2,2,2)
-    dev.hist(abs_dev_values, bins=20,normed=normed,
-        label=( ('t1, n='+str(len(abs_dev_values[0]))+', mean='+str(np.round(np.mean(abs_dev_values[0]), 2))) ,
-        ('t2, n='+str(len(abs_dev_values[1]))+', mean='+str(np.round(np.mean(abs_dev_values[1]), 2))) ,
-        ('t3, n='+str(len(abs_dev_values[2]))+', mean='+str(np.round(np.mean(abs_dev_values[2]), 2))) ), histtype='bar' )
-    plt.title("L1 cells' absolute deviance from neighbors in "+values_name)
-    plt.xlabel('Deviance from neighbors in volumes'+ r' ($\mu m^3$)')
-    if normed:
-            plt.ylabel('Frequency')
-    else:
-        plt.ylabel('Number of observations')
-    plt.legend()
-    
-    lap=fig.add_subplot(2,2,4)
-    lap.hist(laplacian_values, bins=20,normed=normed,
-        label=( ('t1, n='+str(len(laplacian_values[0]))+', mean='+str(np.round(np.mean(laplacian_values[0]), 2))) ,
-        ('t2, n='+str(len(laplacian_values[1]))+', mean='+str(np.round(np.mean(laplacian_values[1]), 2))) ,
-        ('t3, n='+str(len(laplacian_values[2]))+', mean='+str(np.round(np.mean(laplacian_values[2]), 2))) ), histtype='bar' )
-    plt.title("L1 cells' laplacian from neighbors in "+values_name)
-    plt.xlabel('Laplacian from neighbors in volumes'+ r' ($\mu m^3$)')
-    if normed:
-            plt.ylabel('Frequency')
-    else:
-        plt.ylabel('Number of observations')
-    plt.legend()
-    plt.show()
-
 
