@@ -69,9 +69,15 @@ def exist_relative_at_rank(graph, vid, rank):
     if rank == 0 :
         return True
     if (rank > 0) :
-        return graph.descendants(vid,rank)-graph.descendants(vid,rank-1) != set()
+        try :
+            return graph.descendants(vid,rank)-graph.descendants(vid,rank-1) != set()
+        except:
+            return False
     if (rank < 0) :
-        return graph.ancestors(vid,abs(rank))-graph.ancestors(vid,abs(rank)-1) != set()
+        try :
+            return graph.ancestors(vid,abs(rank))-graph.ancestors(vid,abs(rank)-1) != set()
+        except:
+            return False
 
 
 def translate_ids_Graph2Image(graph, id_list):
@@ -331,36 +337,41 @@ def __normalized_temporal_parameters(func):
             print("Use graph.add_graph_property('time_steps',time_steps) to add it.")
             return None
 
-        # -- We compute the `time_interval` once and for all:
-        index_1 = graph.vertex_property('index')[vids[0]]
-        time_interval = (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
-
         # -- For a list of ids, we create a dictionary of resulting values from function `func`.
-        l={}
-        for k,vid in enumerate(vids):
-            if verbose and k%10==0: print k,'/',len(vids)
+        temporal_func_mothers={}
+        out_of_range_index = []
+        for n,vid in enumerate(vids):
+            if verbose and n%10==0: print n,'/',len(vids)
+            # -- We compute the `time_interval` each time in case `vids` have differents indexes:
+            index_1 = graph.vertex_property('index')[vid]
+            try:
+                time_interval = (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
+            except:
+                out_of_range_index.append(vid)
+                continue #will go to the next `vid` if its 'index_1+rank' is out of range!
             if check_full_lineage:
                 if full_lineage(graph, vid, rank_lineage_check): # Check if ALL descendants up to `rank_lineage_check` exists !
-                    l[vid] = func(graph, vertex_property, vid, rank, time_interval)
+                    temporal_func_mothers[vid] = func(graph, vertex_property, vid, rank, time_interval)
             else:
-                if full_lineage(graph, vid, 1): # Check if there is at least one descendants for `vid`!
-                    l[vid] = func(graph, vertex_property, vid, rank, time_interval)
+                if exist_relative_at_rank(graph, vid, rank): # Check if there is at least one descendants for `vid` at `rank`!
+                    temporal_func_mothers[vid] = func(graph, vertex_property, vid, rank, time_interval)
 
-        if labels_at_t_n:
-            return l
+        # -- If there was any problems with some vis, we print it before returning the results:
+        if out_of_range_index != []:
+            print "These vids were out of range in the 'index' dictionary (probably no descendant): ", out_of_range_index
+
+        # -- Now we return the results of temporal differentiation function:
+        if labels_at_t_n: 
+            return temporal_func_mothers
         else:
-            m={}
+            temporal_func_daughters={}
             print "You have asked for labels @ t_n+"+str(rank)
-            for vid in l:
-                if rank > 1:
-                    vid_descendants = graph.descendants(vid ,rank)-graph.descendants(vid,rank-1)
-                else:
-                    vid_descendants = graph.children(vid)
-
+            for vid in temporal_func_mothers:
+                vid_descendants = graph.descendants(vid ,rank)-graph.descendants(vid,rank-1)
                 for id_descendant in vid_descendants:
-                    m[id_descendant]=l[vid]
-            return m
-    
+                    temporal_func_daughters[id_descendant]=temporal_func_mothers[vid]
+            return temporal_func_daughters
+
     return  wrapped_function
 
 @__normalized_temporal_parameters
