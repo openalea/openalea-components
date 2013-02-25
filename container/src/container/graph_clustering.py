@@ -22,7 +22,7 @@ from numpy import ndarray
 
 from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 
-def distance_matrix_from_vector(data, variable_types):
+def distance_matrix_from_vector(data, variable_types, no_dist_index = []):
     """
     Function creating a distance matrix based on a vector (list) of values.
     Each values are attached to an individual.
@@ -40,20 +40,26 @@ def distance_matrix_from_vector(data, variable_types):
     if variable_types == "Numeric":
         for i in xrange(N):
             for j in xrange(i+1,N):# we skip when i=j because in that case the distance is 0.
-                dist_mat[i,j] = i-j
-                dist_mat[j,i] = j-i
+                if i in no_dist_index or j in no_dist_index:
+                    dist_mat[i,j] = dist_mat[j,i] = 0
+                else:
+                    dist_mat[i,j] = i-j
+                    dist_mat[j,i] = j-i
 
     if variable_types == "Ordinal":
         rank = data.argsort() # In case of ordinal variables, observed values are replaced by ranked values.
         for i in xrange(N):
             for j in xrange(i+1,N): # we skip when i=j because in that case the distance is 0.
-                dist_mat[i,j] = rank[i]-rank[j]
-                dist_mat[j,i] = rank[j]-rank[i]
+                if i in no_dist_index or j in no_dist_index:
+                    dist_mat[i,j] = dist_mat[j,i] = 0
+                else:
+                    dist_mat[i,j] = rank[i]-rank[j]
+                    dist_mat[j,i] = rank[j]-rank[i]
 
     return dist_mat
 
 
-def standardisation(data, norm, variable_types):
+def standardisation(data, norm, variable_types=None):
     """
     :Parameters:
      - `mat` (np.array) - distance matrix
@@ -138,10 +144,10 @@ def weighted_distance_matrix(distance_matrix_list, weights_list):
 def csr_matrix_from_graph(graph, vids2keep):
     """
     Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
-    Defines for each vertex the neigbhoring vertex following a given structure of the data.
+    Defines for each vertex the neighbouring vertex following a given structure of the data.
 
     :Parameters:
-     - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from wich to extract connectivity.
+     - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from which to extract connectivity.
      - `vids2keep` (list) - list of vertex ids to build the sparse matrix from (columns and rows will be ordered according to this list).
     """    
     N = len(vids2keep)
@@ -160,7 +166,7 @@ def csr_matrix_from_graph(graph, vids2keep):
 def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[], variable_types=[], spatial_weight=0, temporal_list=[], temporal_weights=[], temporal_types=[], standardisation_method = "L1", only_lineaged_vertices = True, rank = 1 ):
     """
     :Parameters:
-     - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from wich to extract spatial, spatio-temporal and topological/euclidian distance variables.
+     - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from wich to extract spatial, spatio-temporal and topological/euclidean distance variables.
      - `variable_list` (list) - list of `vertex_property_names` related to spatial information (ex. volume).
      - `variable_weights` (list) - list of weights related to spatial information (ex. volume). If only an integer is given for several variables (in `variable_list`), we divide it by the number of variables in `variable_list`.
      - `variable_types` (list) - list of variable types. Can be "Ordinal" or "Numeric".
@@ -168,23 +174,27 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
      - `temporal_list` (list) - list of `vertex_property_names` related to spatio-temporal information (ex. volumetric growth).
      - `temporal_weights` (list) - list of weights related to spatio-temporal information (ex. volumetric growth). If only an integer is given for several variables (in `temporal_list`), we divide it by the number of variables in `temporal_list`.
 
-    :NOTE: We use :ABSOLUTE: temporal change !
+    :NOTE:
+     - We use :ABSOLUTE: temporal change (from openalea.container.temporal_graph_analysis import temporal_change)!
+     - We assign temporal change to t_n+1.
+     - One can privide a vector (type list) of spatial or/and spatio-temporal data => NEED to be detected before creating the `vtx_list` and would force to provide this list of vertices!!! (or we could use a dictionary)  NOT DONE YET !!!
     """
-    # -- Treating stupid cases:
+    # -- Taking care of stupid cases:
     if spatial_weight == 1:
         print("No need to do that: no topological/euclidian distance between each time point!!")
         return None
 
     # -- Making sure all spatial variable asked for in `variable_list` are present in the `graph`:
     for variable_name in variable_list:
-        assert variable_name in graph.vertex_property_names()
+        if isinstance(variable_name,str):
+            assert variable_name in graph.vertex_property_names()
 
     # -- Handling multiple types of inputs:
-    if isinstance(variable_list,str): variable_list = [variable_list]
-    if isinstance(variable_types,str): variable_types = [variable_types]
-    nb_variables = len(variable_list)
     if isinstance(variable_weights,int) or isinstance(variable_weights,float): 
         variable_weights = [variable_weights]
+    if isinstance(variable_list,str): variable_list = [variable_list]
+    nb_variables = len(variable_list)
+    if isinstance(variable_types,str): variable_types = [variable_types]
     # - If only an integer is given for several variables (in `variable_list`), we divide it by the number of variables in `variable_list`:
     if nb_variables != 0 and len(variable_weights)!=nb_variables:
         variable_weights = [variable_weights / float(nb_variables)]
@@ -206,35 +216,58 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
     assert sum(variable_weights)+sum(temporal_weights)+spatial_weight==1
 
     # -- Creating the list of vertices:
-    nb_time_points = max(graph.vertex_property('index').values())+1
-    if temporal_weights == []:
+    min_index = min(graph.vertex_property('index').values())
+    max_index = max(graph.vertex_property('index').values())
+    if nb_temporal_variables != 0:
         print "Make sure the rank you provided is equal (or superior) to the one you used to compute spatio-temporal properties !!"
-    vtx_list = [vid for vid in graph.vertices() if (graph.vertex_property('index')[vid]<nb_time_points-1 and exist_relative_at_rank(graph, vid, rank)) or (graph.vertex_property('index')[vid]==nb_time_points-1 and exist_relative_at_rank(graph, vid, -rank))] #we keep vertex ids only if they are temporally linked in the graph at `rank`
+    vtx_list = [vid for vid in graph.vertices() if exist_relative_at_rank(graph, vid, rank) or exist_relative_at_rank(graph, vid, -rank)] #we keep vertex ids only if they are temporally linked in the graph at `rank`
     N = len(vtx_list)
 
     index = dict( (vid,graph.vertex_property('index')[vid]) for vid in vtx_list )
-    #~ nb_individuals_index = [sum(np.array(index.values())==t) for t in xrange(nb_time_points)]
+    #~ nb_individuals_index = [sum(np.array(index.values())==t) for t in xrange(max_index)]
 
     # -- We compute the standardized distance matrix related to spatial variables:
     if nb_variables != 0:
         variable_standard_distance_matrix = {}
         for n, variable_name in enumerate(variable_list):
-            variable_standard_distance_matrix[variable_name] = standardisation([graph.vertex_property(variable_name)[vid] for vid in vtx_list],standardisation_method, variable_types[n])
+            if isinstance(variable_name,str):
+                variable_vector = [graph.vertex_property(variable_name)[vid] for vid in vtx_list]
+            if isinstance(variable_name,dict):
+                variable_vector = [variable_name[vid] for vid in vtx_list]
+            variable_standard_distance_matrix[temporal_name] = standardisation(variable_vector, standardisation_method, variable_types[n])
 
     # -- We compute the standardized distance matrix related to temporal variables:
+    vtx_with_no_temporal_data = []
     if nb_temporal_variables != 0:
+        # If we want to work with temporally differentiated variables, we need to find vertex without a mother (since we assign spatio-temporal variable @ t_n+1):
+        #    - those from the first time step
+        #    - those from other time steps which doesnt have a mother
+        vtx_with_no_temporal_data = [vid for vid in vtx_list if graph.vertex_property('index')[vid]==0 or (graph.vertex_property('index')[vid]>0 and not exist_relative_at_rank(graph, vid, -rank))]
+        index_vtx_with_no_temporal_data = [vtx_list.index(k) for k in vtx_with_no_temporal_data]
         from openalea.container.temporal_graph_analysis import temporal_change
         temporal_standard_distance_matrix = {}
         for n, temporal_name in enumerate(temporal_list):
-            temporal_standard_distance_matrix[temporal_name] = standardisation([temporal_change(graph, temporal_name, vids = vid, rank = rank, labels_at_t_n = False, check_full_lineage = True) for vid in vtx_list if exist_relative_at_rank(graph, vid, rank)], standardisation_method, temporal_types[n])
+            if isinstance(temporal_name,dict):
+                if sum([True if temporal_name.has_key(vid) or vid in vtx_with_no_temporal_data else False for vid in vtx_list])!=N:
+                    warnings.warn("Some temporally linked vertex ids are missing in your temporal dictionary #%d !!" %n)
+                    return None
+                dict_temporal = temporal_name
+            if isinstance(temporal_name,str):
+                dict_temporal = temporal_change(graph, temporal_name, [vid for vid in vtx_list if index[vid]<max_index], rank, labels_at_t_n = False)
+            temporal_distance_list = []
+            for vid in vtx_list:# we need to do that if we want: len(temporal_distance_list) == N
+                if dict_temporal.has_key(vid):
+                    temporal_distance_list.append(dict_temporal[vid])
+                if vid in vtx_with_no_temporal_data:
+                    temporal_distance_list.append(0)
+            temporal_standard_distance_matrix[temporal_name] = standardisation(distance_matrix_from_vector(temporal_distance_list, temporal_types[n], index_vtx_with_no_temporal_data), standardisation_method)
 
     # -- We compute the standardized topological distance matrix:
     if spatial_weight != 0:
         import time
         t = time.time()
         topological_distance = dict( ((vid, graph.topological_distance(vid, 's', full_dict=False))) for vid in vtx_list )
-        print "Time to compute the topological distance matrix: %f s" % (time.time() - t)
-
+        print "Time to compute the topological distances : %f s" % (time.time() - t)
         topo_dist_rank = np.zeros( [N,N], dtype=float )
         # we suppose here that we have the topological distance of a vertex from itself (i.e. 0)
         for i,vid in enumerate(vtx_list):
@@ -245,19 +278,28 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
         topo_dist_rank_standard = standardisation(topo_dist_rank ,standardisation_method ,"Ordinal")
     else:
         topo_dist_rank_standard = np.zeros( [N,N], dtype=int )
+  
+    # -- If sum(temporal_weights)==1 : there is no spatial nor topological data to 're-norm'...
+    if sum(temporal_weights) == 1:
+        warnings.warn("You have asked only for a distance matrix based on temporally differentiated variables. There will be no distance for the first time-point!")
+        D = sum([temporal_weights[n]*temporal_standard_distance_matrix[e] for n,e in enumerate(temporal_list)])
+        return vtx_list, D
 
     D = np.zeros( shape = [N,N], dtype=float )
-    if sum(temporal_weights)== 1:
-        warnings.warn("You have asked only for temporally differenciated variables. There will be no distance for the first time-point!")
     for i,vid1 in enumerate(vtx_list):
         for j,vid2 in enumerate(vtx_list):
-            if i>j:
-                if sum(temporal_weights)!= 1 and (index[vid1] == rank or index[vid2]==rank):
+            if i>j: #D[i,j]=D[j,i] and if i==j, D[i,j]=D[j,i]=0
+                # -- Case where one of the vertex doesn't have a spatio-temporal data assigned :
+                if (vid1 in vtx_with_no_temporal_data or vid2 in vtx_with_no_temporal_data):
                     D[i,j] = D[j,i] = (spatial_weight/(1-sum(temporal_weights))) * topo_dist_rank_standard[i,j] + sum([(variable_weights[n]/(1-sum(temporal_weights)))*variable_standard_distance_matrix[e][i,j] for n,e in enumerate(variable_list)])
-                if index[vid1] != rank and index[vid1] == index[vid2]:
+                # -- Case where both vertices belong to the same time_step ('index'): we use all information available.
+                elif index[vid1] == index[vid2]:
                     D[i,j] = D[j,i] = spatial_weight * topo_dist_rank_standard[i,j] + sum([variable_weights[n]*variable_standard_distance_matrix[e][i,j] for n,e in enumerate(variable_list)]) + sum([temporal_weights[n]*temporal_standard_distance_matrix[e][i,j] for n,e in enumerate(temporal_list)])
-                if index[vid1]!=rank and index[vid2]!=rank and index[vid1] != index[vid2]:
+                # -- Case where vertices doesn't belong to the same time_step ('index'): we need to 're-norm' because there is no topological/euclidean distance
+                elif index[vid1] != index[vid2]:
                     D[i,j] = D[j,i] = sum([(variable_weights[n]/(1-spatial_weight))*variable_standard_distance_matrix[e][i,j] for n,e in enumerate(variable_list)]) + sum([(temporal_weights[n]/(1-spatial_weight))*temporal_standard_distance_matrix[e][i,j] for n,e in enumerate(temporal_list)])
+                else:
+                    print "UH-OH!!!, vids: ", [vid1, vid2]
 
     return vtx_list, D
 
