@@ -19,6 +19,9 @@
 import warnings
 import numpy as np
 from numpy import ndarray
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 
@@ -303,3 +306,290 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
 
     return vtx_list, D
 
+
+def cluster_distance_matrix( distance_matrix, clustering ):
+    """
+    Function computing distance between clusters.
+    For $\ell \eq q$  :
+    \[ D(q,\ell) = \dfrac{ \sum_{i,j \in q; i \neq j} D(i,j) }{(N_{q}-1)N_{q}} , \]
+    For $\ell \neq q$  :
+    \[ D(q,\ell) = \dfrac{ \sum_{i \in q} \sum_{j \in \ell} D(i,j) }{N_{q} N_{\ell} } , \]
+    where $D(i,j)$ is the distance matrix, $N_{q}$ and $N_{\ell}$ are the number of elements found in clusters $q$ and $\ell$.
+
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    clusters_ids = list(set(clustering))
+    nb_clusters = len(clusters_ids)
+    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+
+    D = np.zeros( shape = [nb_clusters,nb_clusters], dtype = float )
+    for n,q in enumerate(clusters_ids):
+        for m,l in enumerate(clusters_ids):
+            if n==m:
+                index_q = np.where(clustering == q)[0]
+                D[n,m] = sum( [distance_matrix[i,j] for i in index_q for j in index_q if i!=j] ) / ( (nb_ids_by_clusters[n]-1) * nb_ids_by_clusters[n])
+            if n>m:
+                index_q = np.where(clustering == q)[0]
+                index_l = np.where(clustering == l)[0]
+                D[n,m] = D[m,n]= sum( [distance_matrix[i,j] for i in index_q for j in index_l] ) / (nb_ids_by_clusters[n] * nb_ids_by_clusters[m])
+
+    return D
+
+
+def within_cluster_distance(distance_matrix, clustering):
+    """
+    Function computing within cluster distance.
+    $$ D(q) = \dfrac{ \sum_{i,j \in q; i \neq j} D(i,j) }{(N_{q}-1)N_{q}} ,$$
+    where $D(i,j)$ is the distance matrix, $N$ is the total number of elements and $N_{q}$ is the number of elements found in clusters $q$.
+
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    clusters_ids = list(set(clustering))
+    nb_clusters = len(clusters_ids)
+    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+
+    D_within = {}
+    for n,q in enumerate(clusters_ids):
+        index_q = np.where(clustering == q)[0]
+        D_within[q] = sum( [distance_matrix[i,j] for i in index_q for j in index_q if i!=j] ) / ( (nb_ids_by_clusters[n]-1) * nb_ids_by_clusters[n])
+
+    if nb_clusters == 1:
+        return D_within.values()
+    else:
+        return D_within
+
+
+def between_cluster_distance(distance_matrix, clustering):
+    """
+    Function computing within cluster distance.
+    $$ D(q) = \dfrac{ \sum_{i \in q} \sum_{j \not\in q} D(i,j) }{ (N - N_q) N_q }, $$
+    where $D(i,j)$ is the distance matrix, $N$ is the total number of elements and $N_{q}$ is the number of elements found in clusters $q$.
+
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    N = len(clustering)
+    clusters_ids = list(set(clustering))
+    nb_clusters = len(clusters_ids)
+    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+
+    D_between = {}
+    for n,q in enumerate(clusters_ids):
+        index_q = np.where(clustering == q)[0]
+        index_not_q = list(set(xrange(len(clustering)))-set(index_q))
+        D_between[q] = sum( [distance_matrix[i,j] for i in index_q for j in index_not_q] ) / ( (N-nb_ids_by_clusters[n]) * nb_ids_by_clusters[n])
+
+    if nb_clusters == 1:
+        return D_between.values()
+    else:
+        return D_between
+
+
+def cluster_diameters(distance_matrix, clustering):
+    """
+    Function computing within cluster diameter, i.e. the max distance between two vertex from the same cluster.
+    $$ \max_{i,j \in q} D(j,i) ,$$
+    where $D(i,j)$ is the distance matrix and $q$ a cluster, .
+    
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    clusters_ids = list(set(clustering))
+    nb_clusters = len(clusters_ids)
+
+    diameters = {}
+    for q in clusters_ids:
+        index_q = np.where(clustering == q)[0]
+        diameters[q] = max([distance_matrix[i,j] for i in index_q for j in index_q])
+
+    if nb_clusters == 1:
+        return diameters.values()
+    else:
+        return diameters
+
+
+def clusters_separation(distance_matrix, clustering):
+    """
+    Function computing within cluster diameter, i.e. the min distance between two vertex from two diferent clusters.
+    $$ \min_{i \in q, j \not\in q} D(j,i) ,$$
+    where $D(i,j)$ is the distance matrix and $q$ a cluster.
+    
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    clusters_ids = list(set(clustering))
+    nb_clusters = len(clusters_ids)
+
+    separation = {}
+    for q in clusters_ids:
+        index_q = np.where(clustering == q)[0]
+        index_not_q = np.where(clustering != q)[0]
+        separation[q] = min([distance_matrix[i,j] for i in index_q for j in index_not_q if not distance_matrix[i,j] == 0 ])
+
+    if nb_clusters == 1:
+        return separation.values()
+    else:
+        return separation
+
+
+def global_cluster_distance(distance_matrix, clustering):
+    """
+    Function computing global cluster distances, i.e. return the sum of within_cluster_distance and between_cluster_distance.
+
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    gcd_w = sum(within_cluster_distance(distance_matrix, clustering).values())
+    gcd_b = sum(between_cluster_distance(distance_matrix, clustering).values())
+    return gcd_w, gcd_b
+
+
+def vertex2clusters_distance(distance_matrix, clustering):
+    """
+    Compute the mean distance between a vertex and those from each group.
+    $$ D(i,q) = \dfrac{ \sum_{i \neq j} D(i,j) }{ N_q } \: , \quad \forall i \in [1,N] \:, \: q \in [1,Q],$$
+    where $D(i,j)$ is the distance matrix and $q$ a cluster.
+    
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    N = len(clustering)
+    clusters_ids = list(set(clustering))
+    nb_clusters = len(clusters_ids)
+    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+
+    # -- Compute clusters index once and for all:
+    index_q = {}
+    for n,q in enumerate(clusters_ids):
+        index_q[q] = np.where(clustering == q)[0]
+
+    vertex_cluster_distance = {}
+    for i in xrange(N):
+        tmp = np.zeros( shape=[nb_clusters], dtype=float )
+        for n,q in enumerate(clusters_ids):
+            tmp[n] = sum([distance_matrix[i,j] for j in index_q[q] if i!=j])/(nb_ids_by_clusters[n]-1)
+
+        vertex_cluster_distance[i] = tmp
+
+    return vertex_cluster_distance
+
+
+def vertex_distance2cluster_center(distance_matrix, clustering):
+    """
+    Compute the distance between a vertex and the center of its group.
+    
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    N = len(clustering)
+
+    D_iq = vertex2clusters_distance(distance_matrix, clustering)
+    vertex_distance2center = {}
+    for i in xrange(N):
+        vertex_distance2center[i] = D_iq[i][clustering[i]]
+
+    return vertex_distance2center
+
+
+def isolation(distance_matrix, clustering, index = None):
+    """
+    Isolation, a vertex is isolated if the max distance to a member of its group if superior to the min distance to a member of another group.
+    """
+    N = len(clustering)
+    clusters_ids = list(set(clustering))
+    nb_clusters = len(clusters_ids)
+
+    if index is None:
+        index = xrange(N)
+
+    index_q = {}
+    for q in clusters_ids:
+        index_q[q] = np.where(clustering == q)[0]
+        index_not_q = np.where(clustering != q)[0]
+
+    isolated = {}
+    for i in index:
+        if max([distance_matrix[i,j] for j in index_q]) >  min([distance_matrix[i,j] for j in index_not_q if distance_matrix[i,j]!=0]):
+            isolated[i] = True
+        else:
+            isolated[i] = False
+
+    if len(index) == 1:
+        return isolated.values()
+    else:
+        return isolated
+
+
+def MDS(similarity, clustering, dimension=3):
+    """
+    Compute and display a Multi Dimensional Scaling of the dataset `similarity`.
+    """
+    if dimension!=2 and dimension!=3:
+        warnings.warn("We can only represent in 2D or 3D!")
+        return None
+    from sklearn import manifold
+    xy = manifold.MDS(n_components=dimension).fit_transform(similarity)
+    fig = plt.figure()
+    if dimension ==2:
+        plt.scatter(xy[:,0],xy[:,1], c=clustering, cmap=cm.jet)
+    else:
+        ax = Axes3D(fig)
+        ax.scatter(xy[:,0],xy[:,1],xy[:,2], c=clustering, marker='s', cmap=cm.jet)
+        ax_min = np.min([xy[:,0],xy[:,1],xy[:,2]]); ax_max=np.max([xy[:,0],xy[:,1],xy[:,2]])
+        ax.set_xlim3d(ax_min, ax_max)
+        ax.set_ylim3d(ax_min, ax_max)
+        ax.set_zlim3d(ax_min, ax_max)
+        ax.set_xlabel('X Label')
+        ax.set_ylabel('Y Label')
+        ax.set_zlabel('Z Label')
+
+    plt.title("Multi Dimensional Scaling")
+    plt.show()
+
+
+def plot_cluster_distances(cluster_distances):
+    """
+    Display a heat-map of cluster distances with matplotlib.
+    """
+    plt.imshow(cluster_distances, cmap=cm.jet, interpolation='nearest')
+
+    numrows, numcols = cluster_distances.shape
+    def format_coord(x, y):
+        col = int(x+0.5)
+        row = int(y+0.5)
+        if col>=0 and col<numcols and row>=0 and row<numrows:
+            z = cd[row,col]
+            return 'x=%1.4f, y=%1.4f, z=%1.4f'%(x, y, z)
+        else:
+            return 'x=%1.4f, y=%1.4f'%(x, y)
+
+    plt.format_coord = format_coord
+    plt.title("Cluster distances heat-map")
+    plt.colorbar()
+    plt.show()
