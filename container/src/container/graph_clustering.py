@@ -188,9 +188,12 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
         return None
 
     # -- Making sure all spatial variable asked for in `variable_list` are present in the `graph`:
-    for variable_name in variable_list:
-        if isinstance(variable_name,str):
-            assert variable_name in graph.vertex_property_names()
+    if isinstance(variable_list,str):
+        assert variable_list in graph.vertex_property_names()
+    if isinstance(variable_list,list):
+        for variable_name in variable_list:
+            if isinstance(variable_name,str):
+                assert variable_name in graph.vertex_property_names()
 
     # -- Handling multiple types of inputs:
     if isinstance(variable_weights,int) or isinstance(variable_weights,float): 
@@ -237,7 +240,7 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
                 variable_vector = [graph.vertex_property(variable_name)[vid] for vid in vtx_list]
             if isinstance(variable_name,dict):
                 variable_vector = [variable_name[vid] for vid in vtx_list]
-            variable_standard_distance_matrix[temporal_name] = standardisation(variable_vector, standardisation_method, variable_types[n])
+            variable_standard_distance_matrix[variable_name] = standardisation(variable_vector, standardisation_method, variable_types[n])
 
     # -- We compute the standardized distance matrix related to temporal variables:
     vtx_with_no_temporal_data = []
