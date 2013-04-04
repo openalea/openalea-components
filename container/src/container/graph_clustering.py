@@ -362,7 +362,7 @@ def within_cluster_distance(distance_matrix, clustering):
     D_within = {}
     for n,q in enumerate(clusters_ids):
         index_q = np.where(clustering == q)[0]
-        D_within[q] = sum( [distance_matrix[i,j] for i in index_q for j in index_q if i!=j] ) / ( (nb_ids_by_clusters[n]-1) * nb_ids_by_clusters[n])
+        D_within[q] = 2. * sum( [distance_matrix[i,j] for i in index_q for j in index_q if j>i] ) / ( (nb_ids_by_clusters[n]-1) * nb_ids_by_clusters[n])
 
     if nb_clusters == 1:
         return D_within.values()
@@ -444,7 +444,7 @@ def clusters_separation(distance_matrix, clustering):
     for q in clusters_ids:
         index_q = np.where(clustering == q)[0]
         index_not_q = np.where(clustering != q)[0]
-        separation[q] = min([distance_matrix[i,j] for i in index_q for j in index_not_q if not distance_matrix[i,j] == 0 ])
+        separation[q] = min([distance_matrix[i,j] for i in index_q for j in index_not_q ])
 
     if nb_clusters == 1:
         return separation.values()
@@ -462,9 +462,83 @@ def global_cluster_distance(distance_matrix, clustering):
 
     :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
     """
-    gcd_w = sum(within_cluster_distance(distance_matrix, clustering).values())
-    gcd_b = sum(between_cluster_distance(distance_matrix, clustering).values())
+    w = within_cluster_distance(distance_matrix, clustering)
+    b = between_cluster_distance(distance_matrix, clustering)
+
+    N = len(clustering)
+    clusters_ids = list(set(clustering))
+    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+
+    gcd_w = sum( [ (nb_ids_by_clusters[q]*(nb_ids_by_clusters[q]-1))/float(sum([nb_ids_by_clusters[l]*(nb_ids_by_clusters[l]-1) for l in clusters_ids if l != q])) * w[q] for q in clusters_ids] )
+    gcd_b = sum( [(N-nb_ids_by_clusters[q])*nb_ids_by_clusters[q]/float(sum([(N-nb_ids_by_clusters[l])*nb_ids_by_clusters[l] for l in clusters_ids if l != q])) * b[q] for q in clusters_ids] )
     return gcd_w, gcd_b
+
+
+def CH_estimator(k,w,b,N):
+    """
+    Index of Calinski and Harabasz (1974).
+    $$ \text{CH}(k) = \dfrac{B(k) / (k-1)}{W(k) / (n-k)} $$
+    where $B(k)$ and $W(k)$ are the between- and within-cluster sums of squares, with $k$ clusters.
+    The idea is to maximize $\text{CH}(k)$ over the number of clusters $k$. $\text{CH}(1)$ is not defined.
+
+    :Parameters:
+     - k: number of clusters;
+     - w: global WITHIN cluster distances;
+     - b: global BETWEEN cluster distances;
+     - N: population size.
+    """
+    return (b/(k-1))/(w/(N-k))
+
+def Hartigan_estimator(k,w_k,N):
+    """
+    Index of Hartigan (1975).
+    Hartigan (1975) proposed the statistic:
+    $$ \text{H}(k) = \left\{ \dfrac{W(k)}{W(k+1)} - 1 \right\} / (n-k-1)$$
+    The idea is to start with $k=1$ and to add a cluster as long as $\text{H}(k)$ is sufficiently large.\\
+    One can use an approximate $F$-distribution cut-off; instead Hartigan suggested that a cluster be added if $H(k) > 10$. Hence the estimated number of clusters is the smallest $k \geqslant 1$ such that $\text{H}(k) \leqslant 10$. This estimate is defined for $k=1$ and can potentially discriminate between one \textit{versus} more than one cluster.
+
+    :Parameters:
+     - k: number of clusters;
+     - w_k: DICTIONARY of global WITHIN cluster distances (must contain k and k+1);
+     - N: population size.
+    """
+    return (w_k[k]/w_k[k+1]-1)/(N-k-1)
+
+
+def clustering_estimators(distance_matrix, clustering_method, clustering_range=[1,20]):
+    """
+    Compute various estimators based on clustering results.
+    
+    :Parameters:
+     - distance_matrix (np.array): distance matrix to be used for clustering;
+     - clustering_method (str): clustering methods to be applyed, must be "Ward" or "Spectral"
+     - clustering_range (list): range of clusters to consider.
+    """
+    from sklearn import metrics
+    from sklearn.cluster import spectral_clustering, Ward
+    clustering, w, N = {}, {}, {}
+    CH, sil = {}, {}
+
+    for k in xrange(clustering_range[0], clustering_range[1]+1):
+        if clustering_method == "Ward":
+            ward = Ward(n_clusters=k).fit(distance_matrix)
+            clustering[k] = ward.labels_
+        if clustering_method == "Spectral":
+            beta = 1
+            similarity = np.exp(-beta * distance_matrix / distance_matrix.std())
+            clustering[k] = spectral_clustering( similarity, n_clusters=k )
+
+        N[k] = len(clustering[k])
+        if k!=1:
+            w[k], b = global_cluster_distance(distance_matrix, clustering[k])
+            CH[k] = CH_estimator(k,w[k],b,N[k])
+            sil[k] = metrics.silhouette_score(distance_matrix, clustering[k], metric='euclidean')
+        else:
+            w[k] = within_cluster_distance(distance_matrix, clustering[k])
+
+    Hartigan = dict( [(k, Hartigan_estimator(k,w,N[k]) ) for k in xrange(clustering_range[0], clustering_range[1])] )
+
+    return clustering, CH, Hartigan, sil
 
 
 def vertex2clusters_distance(distance_matrix, clustering):
@@ -503,7 +577,7 @@ def vertex2clusters_distance(distance_matrix, clustering):
 def vertex_distance2cluster_center(distance_matrix, clustering):
     """
     Compute the distance between a vertex and the center of its group.
-    
+
     :Parameters:
      - `distance_matrix` (np.array) - distance matrix used to create the clustering.
      - `clustering` (list) - list giving the resulting clutering.
@@ -520,9 +594,89 @@ def vertex_distance2cluster_center(distance_matrix, clustering):
     return vertex_distance2center
 
 
+def plot_vertex_distance2cluster_center(distance_matrix, clustering):
+    """
+    Plot the distance between a vertex and the center of its group.
+
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    vtx2center = vertex_distance2cluster_center(distance_matrix, clustering)
+
+    N = len(clustering)
+    clusters_ids = list(set(clustering))
+    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+
+    # -- Compute clusters index once and for all:
+    index_q = {}
+    for n,q in enumerate(clusters_ids):
+        index_q[q] = np.where(clustering == q)[0]
+        vector = [vtx2center[i] for i in index_q[q]]
+        vector.sort()
+        plt.plot( vector, label = "Cluster "+str(clusters_ids[n]) )
+        plt.axis([0,max(nb_ids_by_clusters), min(vtx2center.values()), max(vtx2center.values())])
+
+    plt.legend(ncol=3)
+
+
+def time_point_by_clusters(graph, distance_matrix, clustering):
+    """
+    Return the representativity of each time points (index+1) by clusters.
+
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+    """
+    N = len(clustering)
+    clusters_ids = list(set(clustering))
+    ids_by_clusters = dict( (q, np.where(clustering == q)[0]) for q in clusters_ids )
+    nb_ids_by_clusters = dict( (q, len(np.where(clustering == q)[0])) for q in clusters_ids )
+    index_time_points = list(set(graph.vertex_property('index').values()))
+
+    percent = {}
+    for q in clusters_ids:
+        for t in index_time_points:
+            nb = len([k for k in ids_by_clusters[q] if k in graph.vertex_ids_at_time(t)])
+            percent[(q,t)] = [nb/float(nb_ids_by_clusters[q]), nb]
+
+    return dict( ((q,t+1), percent[(q,t)]) for q in clusters_ids for t in index_time_points if percent[(q,t)][0] != 0)
+
+
+def forward_projection_match(graph, distance_matrix, clustering):
+    """
+    Compute the temporal evolution of ids of each clusters.
+    """
+    N = len(clustering)
+    clusters_ids = list(set(clustering))
+    ids_by_clusters = dict( (q, np.where(clustering == q)[0]) for q in clusters_ids )
+    nb_ids_by_clusters = dict( (q, len(np.where(clustering == q)[0])) for q in clusters_ids )
+    index_time_points = list(set(graph.vertex_property('index').values()))
+
+    
+    forward_projection_cluster = {}
+    for t in index_time_points[:-1]:
+        for vid in graph.vertex_ids_at_time(t):
+            if graph.has_children(vid):
+                children = graph.children(vid)
+                for vid_children in children:
+                    forward_projection_cluster[(t,clustering[vid])] = 1
+
+    return None
+
 def isolation(distance_matrix, clustering, index = None):
     """
     Isolation, a vertex is isolated if the max distance to a member of its group if superior to the min distance to a member of another group.
+
+    :Parameters:
+     - `distance_matrix` (np.array) - distance matrix used to create the clustering.
+     - `clustering` (list) - list giving the resulting clutering.
+
+    :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
     """
     N = len(clustering)
     clusters_ids = list(set(clustering))
@@ -547,6 +701,70 @@ def isolation(distance_matrix, clustering, index = None):
         return isolated.values()
     else:
         return isolated
+
+
+
+# An implementation of the gap statistic algorithm from Tibshirani, Walther, and Hastie's "Estimating the number of clusters in a data set via the gap statistic".
+#~ library(plyr)
+#~ library(ggplot2)
+
+#~ # Given a matrix `data`, where rows are observations and columns are individual dimensions, compute and plot the gap statistic (according to a uniform reference distribution).
+#~ def gap_statistic(data, min_num_clusters = 1, max_num_clusters = 10, num_reference_bootstraps = 10):
+    #~ num_clusters = xrange(min_num_clusters,max_num_clusters)
+    #~ actual_dispersions = maply(num_clusters, function(n) dispersion(data, n))
+    #~ ref_dispersions = maply(num_clusters, function(n) reference_dispersion(data, n, num_reference_bootstraps))
+    #~ mean_ref_dispersions = ref_dispersions[ , 1]
+    #~ stddev_ref_dispersions = ref_dispersions[ , 2]
+    #~ gaps = mean_ref_dispersions - actual_dispersions
+#~ 
+    #~ print(plot_gap_statistic(gaps, stddev_ref_dispersions, num_clusters))
+#~ 
+    #~ print("The estimated number of clusters is ", num_clusters[which.max(gaps)], ".", sep = ""))
+#~ 
+    #~ list(gaps = gaps, gap_stddevs = stddev_ref_dispersions)
+#~ 
+#~ 
+#~ # Plot the gaps along with error bars.
+#~ def plot_gap_statistic(gaps, stddevs, num_clusters) {
+    #~ plot(num_clusters, gaps, xlab = "# clusters", ylab = "gap", geom = "line", main = "Estimating the number of clusters via the gap statistic") + geom_errorbar(aes(num_clusters, ymin = gaps - stddevs, ymax = gaps + stddevs), size = 0.3, width = 0.2, colour = "darkblue")
+    #~ plt.plot(num_clusters, gaps, xlab = "# clusters", ylab = "gap")
+    #~ geom_errorbar(aes(num_clusters, ymin = gaps - stddevs, ymax = gaps + stddevs), size = 0.3, width = 0.2, colour = "darkblue")
+    #~ plt.title("Estimating the number of clusters via the gap statistic")
+#~ 
+#~ # Calculate log(sum_i(within-cluster_i sum of squares around cluster_i mean)).
+#~ def dispersion(data, num_clusters):
+    #~ # R's k-means algorithm doesn't work when there is only one cluster.
+    #~ if (num_clusters == 1):
+        #~ cluster_mean = np.mean(data, 0) #column wise mean
+        #~ distances_from_mean = aaply((data - cluster_mean)^2, 1, sum)
+        #~ log(sum(distances_from_mean))
+    #~ else:
+        #~ # Run the k-means algorithm `nstart` times. Each run uses at most `iter.max` iterations.
+        #~ k = kmeans(data, centers = num_clusters, nstart = 10, iter.max = 50)
+        #~ # Take the sum, over each cluster, of the within-cluster sum of squares around the cluster mean. Then take the log. This is `W_k` in TWH's notation.
+        #~ log(sum(k$withinss))
+#~ 
+#~ 
+#~ 
+#~ # For an appropriate reference distribution (in this case, uniform points in the same range as `data`), simulate the mean and standard deviation of the dispersion.
+#~ def reference_dispersion(data, num_clusters, num_reference_bootstraps):
+    #~ dispersions = maply(1:num_reference_bootstraps, function(i) dispersion(generate_uniform_points(data), num_clusters))
+    #~ mean_dispersion = mean(dispersions)
+    #~ stddev_dispersion = sd(dispersions) / sqrt(1 + 1 / num_reference_bootstraps) # the extra factor accounts for simulation error
+    #~ c(mean_dispersion, stddev_dispersion)
+#~ 
+#~ 
+#~ # Generate uniform points within the range of `data`.
+#~ def generate_uniform_points(data):
+    #~ # Find the min/max values in each dimension, so that we can generate uniform numbers in these ranges.
+    #~ mins = aaply(data, 2, min)
+    #~ maxs = apply(data, 2, max)
+#~ 
+    #~ num_datapoints = nrow(data)
+    #~ # For each dimension, generate `num_datapoints` points uniformly in the min/max range.
+    #~ uniform_pts = maply(1:length(mins), function(dim) runif(num_datapoints, min = mins[dim], max = maxs[dim]))
+    #~ uniform_pts = t(uniform_pts)
+
 
 
 def MDS(similarity, clustering, dimension=3):
@@ -596,3 +814,5 @@ def plot_cluster_distances(cluster_distances):
     plt.title("Cluster distances heat-map")
     plt.colorbar()
     plt.show()
+
+

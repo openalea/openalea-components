@@ -162,6 +162,15 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         return iter(self.children(vid))
 
+    def has_children(self, vid):
+        """
+        Return True if the vid `vid` has a child or children.
+        """
+        if self.children(vid) != set():
+            return True
+        else:
+            return False
+
     def parent(self, vid):
         """ Return parents of the vertex vid
         
@@ -183,6 +192,15 @@ class TemporalPropertyGraph(PropertyGraph):
         - `iterator` : the set of the children of the vertex vid
         """
         return iter(self.parent(vid))
+
+    def has_parent(self, vid):
+        """
+        Return True if the vid `vid` has a parent.
+        """
+        if self.parent(vid) != set():
+            return True
+        else:
+            return False
 
     def sibling(self, vid):
         """ Return sibling of the vertex vid
