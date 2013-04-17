@@ -24,6 +24,19 @@ from interface.property_graph import IPropertyGraph, PropertyError
 from scipy.sparse import csr_matrix
 from numpy.linalg import svd, lstsq
 
+
+def add_graph_vertex_property_from_dictionary(graph, name, dictionary):
+    """ 
+    Add a vertex property with name 'name' to the graph build from an image. 
+    The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels. 
+    """
+    if name in graph.vertex_properties():
+        raise ValueError('Existing vertex property %s' % name)
+
+    graph.add_vertex_property(name)
+    graph.vertex_property(name).update( dictionary )
+
+
 def keys_to_mother_id(graph, data, rank = 1):
     """
     Translate a dict with daughter ids as key, to a dict with mother ids as keys.
@@ -58,28 +71,6 @@ def keys_to_daughter_id(graph, data, rank = 1):
     return translated_dict
 
 
-def exist_relative_at_rank(graph, vid, rank):
-    """
-    Check if there is a relative (descendant or ancestor) of the 'vid' at 'rank'.
-    :Parameters:
-     - 'graph' (TPG): the TPG to be used for translation
-     - 'vid' (int): the initial point to look-out for rank existence.
-     - 'rank' (int): the rank to test.
-    """
-    if rank == 0 :
-        return True
-    if (rank > 0) :
-        try :
-            return graph.descendants(vid,rank)-graph.descendants(vid,rank-1) != set()
-        except:
-            return False
-    if (rank < 0) :
-        try :
-            return graph.ancestors(vid,abs(rank))-graph.ancestors(vid,abs(rank)-1) != set()
-        except:
-            return False
-
-
 def translate_ids_Graph2Image(graph, id_list):
     """
     Return a list which contains SpatialImage ids type translated from the TPG ids type `id_list`.
@@ -111,14 +102,15 @@ def translate_ids_Image2Graph(graph, id_list, time_point):
     if (not isinstance(id_list,list)) and (not isinstance(id_list,int)):
         raise ValueError('This is not an "int" or a "list" type variable.')
 
-    if isinstance(id_list,int):
-        if id_list in graph.vertex_ids_at_time(time_point):
-            return graph.vertex_property('old_label')[id_list]
-        else:
-            raise ValueError('%d is not in the graph @t%d' %id_list %time_point)
-
     graph_labels_at_time_point = graph.vertex_ids_at_time(time_point)
     Image2Graph_labels_at_time_point = dict( (v,k) for k,v in graph.vertex_property('old_label').iteritems() if k in graph_labels_at_time_point )
+
+    if isinstance(id_list,int):
+        if id_list in Image2Graph_labels_at_time_point:
+            return Image2Graph_labels_at_time_point[id_list]
+        else:
+            print 'Label {0} is not in the graph at t{1}'.format(id_list,time_point+1)
+            return []
 
     Image2Graph_labels, Image_labels_not_found = [], []
     for k in id_list:
@@ -299,7 +291,7 @@ def change(graph, vertex_property, vid, rank, edge_type):
 
 
 def __normalized_temporal_parameters(func):
-    def wrapped_function(graph, vertex_property, vids = None, rank = 1, labels_at_t_n = True, check_full_lineage = True, rank_lineage_check = None, verbose = False):
+    def wrapped_function(graph, vertex_property, vids = None, rank = 1, labels_at_t_n = False, check_exist_all_relative_at_rank = True, rank_lineage_check = None, verbose = False):
         """
         :Parameters:
         - 'graph' : a TPG.
@@ -319,14 +311,20 @@ def __normalized_temporal_parameters(func):
         # -- If a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
-        
+
         # -- If no vids provided we compute the function for all keys present in the vertex_property
+        no_warn = False
         if vids==None:
             vids = vertex_property.keys()
-        
+            no_warn = True
         if isinstance(vids,int):
             vids=[vids] # for single id, compute single result
-        
+
+        if rank<0:
+            if not labels_at_t_n:
+                rank = -rank
+            else:
+                raise ValueError("Rank should be positive if you want labels @t_n.")
         if rank_lineage_check == None:
             rank_lineage_check = rank
 
@@ -334,43 +332,38 @@ def __normalized_temporal_parameters(func):
             graph.graph_property('time_steps')
         except:
             warnings.warn("You did not defined the `time_steps` when creating the TemporalPropertyGraph.")
-            print("Use graph.add_graph_property('time_steps',time_steps) to add it.")
-            return None
+            raise ValueError("Use graph.add_graph_property('time_steps',time_steps) to add it.")
 
-        # -- For a list of ids, we create a dictionary of resulting values from function `func`.
-        temporal_func_mothers={}
-        out_of_range_index = []
+        # -- For a list of ids, we create a dictionary of resulting values from temporal function `func`.
+        temporal_func={}
         for n,vid in enumerate(vids):
             if verbose and n%10==0: print n,'/',len(vids)
             # -- We compute the `time_interval` each time in case `vids` have differents indexes:
             index_1 = graph.vertex_property('index')[vid]
             try:
-                time_interval = (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
+                time_interval = graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1]
             except:
-                out_of_range_index.append(vid)
                 continue #will go to the next `vid` if its 'index_1+rank' is out of range!
-            if check_full_lineage:
-                if full_lineage(graph, vid, rank_lineage_check): # Check if ALL descendants up to `rank_lineage_check` exists !
-                    temporal_func_mothers[vid] = func(graph, vertex_property, vid, rank, time_interval)
+            if check_exist_all_relative_at_rank:
+                if exist_all_relative_at_rank(graph, vid, rank_lineage_check): # Check if ALL descendants up to `rank_lineage_check` exists !
+                    temporal_func[vid] = func(graph, vertex_property, vid, rank, time_interval)
             else:
                 if exist_relative_at_rank(graph, vid, rank): # Check if there is at least one descendants for `vid` at `rank`!
-                    temporal_func_mothers[vid] = func(graph, vertex_property, vid, rank, time_interval)
+                    temporal_func[vid] = func(graph, vertex_property, vid, rank, time_interval)
 
         # -- If there was any problems with some vis, we print it before returning the results:
-        if out_of_range_index != []:
-            print "These vids were out of range in the 'index' dictionary (probably no descendant): ", out_of_range_index
+        omit = list( set(vids) - set(temporal_func.keys()) )
+        if omit != [] and not no_warn:
+            if len(omit)<=20 or verbose:
+                print "Some of the `vids` have been omitted: ", omit
+            else:
+                print "Some of the `vids` have been omitted."
 
         # -- Now we return the results of temporal differentiation function:
         if labels_at_t_n: 
-            return temporal_func_mothers
+            return temporal_func
         else:
-            temporal_func_daughters={}
-            print "You have asked for labels @ t_n+"+str(rank)
-            for vid in temporal_func_mothers:
-                vid_descendants = graph.descendants(vid ,rank)-graph.descendants(vid,rank-1)
-                for id_descendant in vid_descendants:
-                    temporal_func_daughters[id_descendant]=temporal_func_mothers[vid]
-            return temporal_func_daughters
+            return translate_keys2daughters_ids(graph, temporal_func)
 
     return  wrapped_function
 
@@ -390,16 +383,16 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
     """
     if rank == 1:
         vid_descendants = graph.children(vid)
-    else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+        vid_parent = vid
+    # - If rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+    if rank > 1:
         vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
+        vid_parent = vid
     
-    nb_descendants = len(vid_descendants)
-    descendants_value = 0
-    vid_value = vertex_property[vid]
-    for id_descendant in vid_descendants:
-        descendants_value = descendants_value + vertex_property[id_descendant]
+    parent_value = vertex_property[vid_parent]
+    descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     
-    return (descendants_value - vid_value) / float(time_interval)
+    return (descendants_value - parent_value) / float(time_interval)
 
 
 @__normalized_temporal_parameters
@@ -416,10 +409,32 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     :Return:
     - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    return temporal_change(graph, vertex_property, vid, rank).values()[0] / float(vertex_property[vid]) / float(time_interval)
+    return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
 
 
-def full_lineage(graph, vid, rank):
+def exist_relative_at_rank(graph, vid, rank):
+    """
+    Check if there is a relative (descendant or ancestor) of the 'vid' at 'rank'.
+    :Parameters:
+     - 'graph' (TPG): the TPG to be used for translation
+     - 'vid' (int): the initial point to look-out for rank existence.
+     - 'rank' (int): the rank to test.
+    """
+    if rank == 0 :
+        return True
+    if (rank > 0) :
+        try :
+            return graph.descendants(vid,rank)-graph.descendants(vid,rank-1) != set()
+        except:
+            return False
+    if (rank < 0) :
+        try :
+            return graph.ancestors(vid,abs(rank))-graph.ancestors(vid,abs(rank)-1) != set()
+        except:
+            return False
+
+
+def exist_all_relative_at_rank(graph, vid, rank):
     """
     Check if lineage is complete over several ranks. 
     i.e. every decendants cells from `vid` have a lineage up to rank `rank`.
@@ -430,33 +445,38 @@ def full_lineage(graph, vid, rank):
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
     """
-    # -- We create a first list of descendants at rank 1.
-    vids_descendants={}
-    vids_descendants[1] = graph.descendants(vid,1)
-    vids_descendants[1].remove(vid)
-    
-    # -- First thing you want to know is if there is a lineage at least at the first order !
-    if len(vids_descendants[1]) < 1:
+    if rank == 0 or not exist_relative_at_rank(graph, vid, rank):
         return False
-    
-    # -- If rank == 1 (and there is a lineage but we already did the test!) we suppose that it has been correctly done !
-    if rank == 1:
+
+    if rank == 1 or rank == -1:
+        return exist_relative_at_rank(graph, vid, rank)
+
+    if (rank > 0):
+        descendants_at_rank = {}
+        descendants_at_rank[1] = graph.children(vid)
+        for r in xrange(2,rank+1):
+            for v in descendants_at_rank[r-1]:
+                if graph.children(v) == set():
+                    return False
+                if descendants_at_rank.has_key(r):
+                    descendants_at_rank[r].update(graph.children(v))
+                else:
+                    descendants_at_rank[r] = graph.children(v)
         return True
-    
-    # -- To check a full lineage @rank_n :
-    for r in xrange(2,rank+1):
-        len_lineage_at_r = 0
-        for v in vids_descendants[r-1]: # for every mother cell @ rank_n-1 (n>2),
-            if len(graph.descendants(v,1)) > 1: # we verify she has a daughter @ rank_n
-                len_lineage_at_r += 1
-        if len_lineage_at_r != len(vids_descendants[r-1]):
-            #~ print len_lineage_at_r,'/', len(vids_descendants[r-1])
-            return False
-        else:
-            # Retreive cells only at rank_n-1: (not all cells between rank 1 and `rank`)
-            vids_descendants[r] = graph.descendants(vid,r)-graph.descendants(vid,r-1)
-    
-    return True
+
+    if (rank < 0):
+        rank = -rank
+        descendants_at_rank = {}
+        descendants_at_rank[1] = graph.parent(vid)
+        for r in xrange(2,rank+1):
+            for v in descendants_at_rank[r-1]:
+                if graph.parent(v) == set():
+                    return False
+                if descendants_at_rank.has_key(r):
+                    descendants_at_rank[r].update(graph.parent(v))
+                else:
+                    descendants_at_rank[r] = graph.parent(v)
+        return True
 
 
 def time_point_property(graph, time_point, vertex_property, only_lineaged = False, as_mother = False, as_daughter = False):
@@ -506,7 +526,7 @@ def time_point_property_by_regions(graph, time_point, vertex_property, only_line
     return property_by_regions
 
 
-def to_daughters_ids(graph, dictionary):
+def translate_keys2daughters_ids(graph, dictionary):
     """
     Translate keys of a dictionary to daughter ids according to the graph (Temporal Property Graph).
     """
@@ -517,11 +537,11 @@ def to_daughters_ids(graph, dictionary):
         if vid_descendants != set():
             for id_descendant in vid_descendants:
                 dictionary_daughters[id_descendant]=dictionary[vid]
-        else:
+        elif graph.vertex_property('index')[vid] < graph.nb_time_points-1: #if `vid``belong to the last time point, it's perfectly normal that there is no descendants
             no_descendants.append(vid)
 
     if no_descendants!=[]:
-        warning.warn("No daughters found for those vertex:"+str(no_descendants))
+        warnings.warn("No daughter found for those vertex:"+str(no_descendants))
 
     return dictionary_daughters
 

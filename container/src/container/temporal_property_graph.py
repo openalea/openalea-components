@@ -43,6 +43,7 @@ class TemporalPropertyGraph(PropertyGraph):
         self.add_vertex_property('old_label')
         self.add_vertex_property('index')
         self._old_to_new_ids = []
+        self.nb_time_points = 0
 
 
     def extend(self, graphs, mappings, time_steps = None):
@@ -65,6 +66,7 @@ class TemporalPropertyGraph(PropertyGraph):
         #~ len(mappings) = self.graph_property('nb_time_points')
         for g, m in zip(graphs[1:],mappings):
             self.append(g,m)
+            self.nb_time_points += 1
 
         if time_steps is not None:
             assert len(graphs) == len(time_steps)
