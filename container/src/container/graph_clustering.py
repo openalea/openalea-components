@@ -19,6 +19,7 @@
 import warnings
 import numpy as np
 from numpy import ndarray
+import copy
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from mpl_toolkits.mplot3d.axes3d import Axes3D
@@ -176,14 +177,14 @@ def csr_matrix_from_graph(graph, vids2keep):
     return csr_matrix((data,(row,col)), shape=(N,N))
 
 
-def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[], variable_types=[], spatial_weight=0., temporal_list=[], temporal_weights=[], temporal_types=[], standardisation_method = "L1", only_lineaged_vertices = True, rank = 1 ):
+def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[], variable_types=[], topo_weight=0., temporal_list=[], temporal_weights=[], temporal_types=[], standardisation_method = "L1", only_lineaged_vertices = True, rank = 1 ):
     """
     :Parameters:
      - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from which to extract spatial, spatio-temporal and topological/euclidean distance variables.
      - `variable_list` (list) - list of `vertex_property_names` related to spatial information (ex. volume).
      - `variable_weights` (list) - list of weights related to spatial information (ex. volume). If only an integer is given for several variables (in `variable_list`), we divide it by the number of variables in `variable_list`.
      - `variable_types` (list) - list of variable types. Can be "Ordinal" or "Numeric".
-     - `spatial_weight` (int) - weight related to topological/euclidian distance.
+     - `topo_weight` (int) - weight related to topological/euclidian distance.
      - `temporal_list` (list) - list of `vertex_property_names` related to spatio-temporal information (ex. volumetric growth).
      - `temporal_weights` (list) - list of weights related to spatio-temporal information (ex. volumetric growth). If only an integer is given for several variables (in `temporal_list`), we divide it by the number of variables in `temporal_list`.
 
@@ -193,12 +194,15 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
      - One can provide a vector (type list) of spatial or/and spatio-temporal data => NEED to be detected before creating the `vtx_list` and would force to provide this list of vertex!!! (or we could use a dictionary)  NOT DONE YET !!!
     """
     # -- Taking care of "stupid" cases:
-    if float(spatial_weight) == 1.:
+    if topo_weight == []: topo_weight = 0.
+    if variable_weights == 0.: variable_weights = []
+    if temporal_weights == 0.: temporal_weights = []
+    if float(topo_weight) == 1.:
         warnings.warn("No topological/euclidean distance between each time point !!")
-    if isinstance(spatial_weight,list) and len(spatial_weight) <= 1:
-        spatial_weight = spatial_weight[0]
-    elif not isinstance(spatial_weight,float):
-        raise ValueError("Check your value for `spatial_weight`, should be an float in [0,1[.")
+    if isinstance(topo_weight,list) and len(topo_weight) == 1:
+        topo_weight = float(topo_weight[0])
+    elif not isinstance(topo_weight,float):
+        raise ValueError("Check your value for `topo_weight`, should be an float in [0.,1.].")
 
     # -- Making sure all spatial variable asked for in `variable_list` are present in the `graph`:
     if isinstance(variable_list,str):
@@ -212,7 +216,7 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
     if isinstance(variable_list,str) or isinstance(variable_list,dict): variable_list = [variable_list]
     if isinstance(variable_types,str): variable_types = [variable_types]
     if isinstance(variable_weights,int) or isinstance(variable_weights,float): 
-        variable_weights = [variable_weights]
+        variable_weights = [float(variable_weights)]
     nb_variables = len(variable_list)
     if nb_variables != 0:
         assert len(variable_list)==len(variable_types)
@@ -227,7 +231,7 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
     if isinstance(temporal_types,str): temporal_types = [temporal_types]
     nb_temporal_variables = len(temporal_list)
     if isinstance(temporal_weights,int) or isinstance(temporal_weights,float):
-        temporal_weights = [temporal_weights]
+        temporal_weights = [float(temporal_weights)]
     if nb_temporal_variables != 0:
         assert len(temporal_list)==len(temporal_types)
         # - If only an integer is given for several temporal variables (in `temporal_list`), we divide it by the number of temporal variable in `temporal_list`:
@@ -236,7 +240,7 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
         if len(temporal_weights) != nb_temporal_variables:
             raise ValueError("The list `temporal_weights` and `temporal_list` should be of the same length or len(temporal_weights)==1")
 
-    assert sum(variable_weights)+sum(temporal_weights)+spatial_weight==1.
+    assert sum(variable_weights)+sum(temporal_weights)+topo_weight==1.
 
     # -- Creating the list of vertices:
     min_index = min(graph.vertex_property('index').values())
@@ -258,9 +262,10 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
             if isinstance(variable_name,dict):
                 variable_vector = [variable_name[vid] if variable_name.has_key(vid) else None for vid in vtx_list]# we need to do that if we want to have all matrix ordered the same way
             variable_standard_distance_matrix[n] = standardisation(variable_vector, standardisation_method, variable_types[n])
+    if nb_variables != 0 and variable_weights[0] == 1.: # there is no data to 're-norm'...
+        return vtx_list, variable_standard_distance_matrix[0]
 
     # -- We compute the standardized distance matrix related to temporal variables:
-    vtx_with_no_temporal_data = []
     if nb_temporal_variables != 0:
         print("Computing the standardized distance matrix related to temporal variables...")
         # If we want to work with temporally differentiated variables, we will have to filter vertex without parent (since we assign spatio-temporal variable @ t_n+1):
@@ -268,9 +273,6 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
         for n, temporal_name in enumerate(temporal_list):
             if isinstance(temporal_name,dict):
                 dict_temporal = temporal_name
-                #~ missing_temporal_data[n] = [vid for vid in vtx_list if not dict_temporal.has_key(vid)]
-                #~ if missing_temporal_data[n] != []:
-                    #~ warnings.warn("Some temporally linked vertex are missing in your temporal dictionary #{0} !!".format(n))
             elif isinstance(temporal_name,str):
                 from openalea.container.temporal_graph_analysis import temporal_change
                 dict_temporal = temporal_change(graph, temporal_name, vtx_list, rank, labels_at_t_n = False)
@@ -278,17 +280,15 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
                 raise ValueError("Unrecognized type of data.")
             # - Now we create the 'vector' of data sorted by vertices to create the distance matrix:
             temporal_distance_list = [dict_temporal[vid] if dict_temporal.has_key(vid) else None for vid in vtx_list]# we need to do that if we want to have all matrix ordered the same way
-            #~ temporal_distance_list = []
-            #~ for vid in vtx_list:# we need to do that if we want to have all matrix ordered the same way
-                #~ if dict_temporal.has_key(vid):
-                    #~ temporal_distance_list.append(dict_temporal[vid])
-                #~ if missing_temporal_data.has_key(n) and vid in missing_temporal_data[n]:
-                    #~ temporal_distance_list.append(None)
-            #~ temporal_standard_distance_matrix[n] = standardisation(distance_matrix_from_vector(temporal_distance_list, temporal_types[n]), standardisation_method)
             temporal_standard_distance_matrix[n] = standardisation(temporal_distance_list, standardisation_method, temporal_types[n])
 
+    if sum(temporal_weights) == 1.:
+        warnings.warn("You have asked only for a pairwise distance matrix based on temporally differentiated variables affected @t_n+1. There will be no distances for the first time-point!")
+    if nb_temporal_variables != 0 and temporal_weights[0] == 1.: # there is no data to 're-norm'...
+        return vtx_list, temporal_standard_distance_matrix[0]
+
     # -- We compute the standardized topological distance matrix:
-    if spatial_weight != 0.:
+    if topo_weight != 0.:
         print("Computing the standardized topological distance matrix...")
         import time
         t = time.time()
@@ -309,18 +309,15 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
         mat_topo_dist_rank_standard = standardisation(mat_topo_dist_rank, "L1")
     else:
         mat_topo_dist_rank_standard = np.zeros( [N,N], dtype=int ) # `mat_topo_dist_rank_standard``should exist, but the values will not be used !!
-
-    # -- If sum(temporal_weights)==1 : there is no spatial nor topological data to 're-norm'...
-    if sum(temporal_weights) == 1:
-        warnings.warn("You have asked only for a pairwise distance matrix based on temporally differentiated variables affected @t_n+1. There will be no distances for the first time-point!")
-        D = sum([temporal_weights[n]*temporal_standard_distance_matrix[n] for n in xrange(len(temporal_list))])
-        return vtx_list, D
+    if topo_weight == 1.:
+        return vtx_list, mat_topo_dist_rank_standard
 
     def renorm(line, column, mat_topo, var_mat, temp_mat, w_topo, w_var, w_temp):
         w_renorm_topo = 0.
-        if np.isnan(mat_topo[i,j]):
-            w_renorm_topo = w_topo
-            w_topo = 0.
+        if w_topo != 0.:
+            if np.isnan(mat_topo[i,j]):
+                w_renorm_topo = w_topo
+                w_topo = 0.
 
         w_renorm_var = 0.
         for n in var_mat:
@@ -334,23 +331,35 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
                 w_renorm_temp += w_temp[n]
                 w_temp[n] = 0.
 
-        renorm = (1-(w_renorm_topo+w_renorm_var+w_renorm_temp))
-        return w_topo/renorm, np.array(w_var)/renorm, np.array(w_temp)/renorm
+        renorm = (1.-(w_renorm_topo+w_renorm_var+w_renorm_temp))
+        if renorm != 0.:
+            return w_topo/renorm, np.array(w_var)/renorm if w_var!=[] else [], np.array(w_temp)/renorm if w_temp!=[] else []
+        else:
+            return w_topo, w_var, w_temp
 
-    print("Creating the final pairwise weighted standard distance matrix...")
+    print("Creating the global weighted pairwise standard distance matrix...")
     # - Replacing nan by zeros for computation.
     mat_topo = np.nan_to_num(mat_topo_dist_rank_standard)
-    var_mat = [np.nan_to_num(variable_standard_distance_matrix[n]) for n in xrange(len(variable_standard_distance_matrix))]
-    temp_mat = [np.nan_to_num(temporal_standard_distance_matrix[n]) for n in xrange(len(temporal_standard_distance_matrix))]
+    if nb_variables != 0.:
+        var_mat = [np.nan_to_num(variable_standard_distance_matrix[n]) for n in xrange(len(variable_standard_distance_matrix))]
+    else:
+        var_mat, variable_standard_distance_matrix = [], []
+    if nb_temporal_variables != 0.:
+        temp_mat = [np.nan_to_num(temporal_standard_distance_matrix[n]) for n in xrange(len(temporal_standard_distance_matrix))]
+    else:
+        temp_mat, temporal_standard_distance_matrix = [], []
+
+    # Finally making the global weighted pairwise standard distance matrix:
     D = np.zeros( shape = [N,N], dtype=float )
+    w_mat = np.zeros( shape = [N,N], dtype=float )
     for i in xrange(D.shape[0]):
         for j in xrange(D.shape[1]):
             if i>j: #D[i,j]=D[j,i] and if i==j, D[i,j]=D[j,i]=0
                 # - Computing weight according to missing values.
-                w_topo, w_var, w_temp = renorm(i,j,mat_topo_dist_rank_standard, variable_standard_distance_matrix, temporal_standard_distance_matrix, spatial_weight, variable_weights, temporal_weights)
+                w_topo, w_var, w_temp = renorm(i,j,mat_topo_dist_rank_standard, variable_standard_distance_matrix, temporal_standard_distance_matrix, copy.copy(topo_weight), copy.copy(variable_weights), copy.copy(temporal_weights))
                 # - Pairwise weighted standard distance matrix
                 D[i,j] = D[j,i] = w_topo * mat_topo[i,j] + sum([w_var[n]*var_mat[n][i,j] for n in xrange(len(w_var))]) + sum([w_temp[n]*temp_mat[n][i,j] for n in xrange(len(w_temp))])
-
+    
     return vtx_list, D
 
 
@@ -656,6 +665,7 @@ def plot_vertex_distance2cluster_center(distance_matrix, clustering):
 
     # -- Compute clusters index once and for all:
     index_q = {}
+    fig = plt.figure()
     for n,q in enumerate(clusters_ids):
         index_q[q] = np.where(clustering == q)[0]
         vector = [vtx2center[i] for i in index_q[q]]
@@ -853,6 +863,7 @@ def plot_cluster_distances(cluster_distances):
     """
     Display a heat-map of cluster distances with matplotlib.
     """
+    fig = plt.figure()
     plt.imshow(cluster_distances, cmap=cm.jet, interpolation='nearest')
 
     numrows, numcols = cluster_distances.shape
@@ -879,10 +890,11 @@ def distance_matrix_histogram(distance_matrix, frequency = True, bins = None):
     if bins == None:
         bins = np.floor_divide(N,3)
 
-    plt.hist([distance_matrix[i,j] for i in xrange(N) for j in xrange(N) if j>i], bins=bins, normed = True if frequency else False)
+    fig = plt.figure()
+    plt.hist([distance_matrix[i,j] for i in xrange(N) for j in xrange(N) if j>i and not np.isnan(distance_matrix[i,j])], bins=bins, normed = False if frequency else True)
     plt.title("Distance matrix Histogram")
     plt.xlabel("Pairwise distance")
-    plt.ylabel("Frequency" if frequency else "Counts")
+    plt.ylabel("Frequency" if frequency else "Relative Frequency")
     
 
 def sorted_k_dist_graph(dist_matrix, k =None, plot=True, filled=False, rstride=20, cstride=20):
@@ -950,4 +962,5 @@ def sorted_k_dist_graph(dist_matrix, k =None, plot=True, filled=False, rstride=2
 
         plt.show()
 
-    return None
+    return sorted_k_dist
+
