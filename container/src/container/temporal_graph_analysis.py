@@ -20,6 +20,7 @@ import warnings
 import types
 import numpy as np
 from interface.property_graph import IPropertyGraph, PropertyError
+import matplotlib.pyplot as plt
 
 from scipy.sparse import csr_matrix
 from numpy.linalg import svd, lstsq
@@ -125,7 +126,7 @@ def translate_ids_Image2Graph(graph, id_list, time_point):
 
     return Image2Graph_labels
 
-def translate_keys_Graph2Image(graph, dictionary):
+def translate_keys_Graph2Image(graph, dictionary, time_point):
     """
     Return a dictionary which keys are SpatialImage ids type .
     Initial keys are graph ids type and need to be translated into SpatialImage ids type.
@@ -140,7 +141,7 @@ def translate_keys_Graph2Image(graph, dictionary):
     if not isinstance(dictionary,dict):
         raise ValueError('This is not a "dict" type variable.')
     
-    return dict( (graph.vertex_property('old_label')[k], dictionary[k]) for k in dictionary )
+    return dict( (graph.vertex_property('old_label')[k], dictionary[k]) for k in dictionary if graph.vertex_property('index')[k] == time_point )
 
 def translate_keys_Image2Graph(graph, dictionary, time_point):
     """
@@ -495,12 +496,11 @@ def time_point_property(graph, time_point, vertex_property, only_lineaged = Fals
         vertex_property = graph.vertex_property(vertex_property)
         
     if time_point not in graph.vertex_property('index').values():
-        import warnings
-        warnings.warn(str(time_point)+"not in"+str(graph))
+        raise ValueError(str(time_point)+"not in"+str(graph))
 
     vids_at_time = graph.vertex_ids_at_time(time_point, only_lineaged, as_mother, as_daughter)
     
-    return dict([(i,vertex_property[i]) for i in vertex_property if i in vids_at_time])
+    return dict([(i,vertex_property[i]) for i in vids_at_time])
     
 
 def time_point_property_by_regions(graph, time_point, vertex_property, only_lineaged = False, as_mother = False, as_daughter = False):
@@ -524,6 +524,53 @@ def time_point_property_by_regions(graph, time_point, vertex_property, only_line
         property_by_regions[region_name] = dict( (k,v) for k,v in extracted_property.iteritems() if graph.vertex_property('regions').has_key(k) and (graph.vertex_property('regions')[k][0]==region_name) )
     
     return property_by_regions
+
+
+def histogram_property_by_time_points(graph, vertex_property, time_points=None, vids=None, **kwargs):
+    """
+    Display an histogram or barplot of the provided `vertex_property` by `time_points`.
+    """
+    property_name = None
+    if isinstance(vertex_property,str):
+        assert vertex_property in list(graph.vertex_properties())
+        property_name = vertex_property
+        vertex_property = graph.vertex_property(vertex_property)
+    
+    if time_points is None:
+        time_points = xrange(graph.nb_time_points)
+    if vids is None:
+        vids = [vid for vid in graph.vertices() if vid in vertex_property]
+
+    ppt_kwargs = {}
+    if 'only_lineaged' in kwargs: ppt_kwargs.update({'only_lineaged':kwargs['only_lineaged']})
+    if 'as_mother' in kwargs: ppt_kwargs.update({'as_mother':kwargs['as_mother']})
+    if 'as_daughter' in kwargs: ppt_kwargs.update({'as_daughter':kwargs['as_daughter']})
+    data = []
+    for tp in time_points:
+        data.append(time_point_property(graph, tp, vertex_property,**ppt_kwargs).values())
+
+    h_kwargs= {}
+    if 'bins' in kwargs: h_kwargs.update({'bins':kwargs['bins']})
+    if 'normed' in kwargs: h_kwargs.update({'normed':kwargs['normed']})
+    if 'histtype' in kwargs: h_kwargs.update({'histtype':kwargs['histtype']})
+    
+    fig = plt.figure()
+    n, bins, patches = plt.hist(data, label = ["time point #{}".format(tp) for tp in time_points], **h_kwargs)
+    if kwargs.has_key('title'):
+        plt.title(kwargs['title'])
+    elif property_name is not None:
+        plt.title("Histogram of {0} property".format(property_name))
+    if kwargs.has_key('xlabel'):
+        plt.xlabel(kwargs['xlabel'])
+    elif property_name is not None:
+        plt.xlabel(property_name)
+    if h_kwargs.has_key('normed') and h_kwargs['normed']:
+        plt.ylabel("Relative Frequency")
+    elif h_kwargs.has_key('normed') and not h_kwargs['normed']:
+        plt.ylabel("Frequency")
+    plt.legend()
+
+    return n, bins, patches
 
 
 def translate_keys2daughters_ids(graph, dictionary):
@@ -755,6 +802,7 @@ def project_2D_strain_cross_in_3D(graph, xyz_t1, xyz_t2, N):
     lsq=lstsq(centered_coord_t1,centered_coord_t2)
     ##  Singular Value Decomposition (SVD) of A.
     R,D_A,Q=svd(lsq[0])
+    D_A = D_A**2
     ##  Getting back in 3D: manually adding an extra dimension.
     R=np.hstack([np.vstack([R,[0,0]]),[[0],[0],[1]]])
     D_A=np.hstack([np.vstack([np.diag(D_A),[0,0]]),[[0],[0],[0]]])
@@ -774,6 +822,7 @@ def strain_rate(graph, strain_mat):
     for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
         R,D_A,Q=svd(strain_mat[vid])
+        D_A = D_A**2
         # Compute Strain Rates :
         sr[vid] = np.log(D_A)/float(time_interval(graph, vid, rank =1))
 
@@ -787,6 +836,7 @@ def areal_strain_rate(graph, strain_mat):
     for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
         R,D_A,Q=svd(strain_mat[vid])
+        D_A = D_A**2
         # Compute Strain Rates and Areal Strain Rate:
         asr[vid] = sum(np.log(D_A[0:2])/float(time_interval(graph, vid, rank =1)))
 
@@ -800,6 +850,7 @@ def volumetric_strain_rate(graph, strain_mat):
     for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
         R,D_A,Q=svd(strain_mat[vid])
+        D_A = D_A**2
         # Compute Strain Rates and Areal Strain Rate:
         vsr[vid] = sum(np.log(D_A)/float(time_interval(graph, vid, rank =1)))
 
@@ -814,6 +865,7 @@ def strain_anisotropy(graph, strain_mat):
     for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
         R,D_A,Q = svd(strain_mat[vid])
+        D_A = D_A**2
         # Compute Strain Rates :
         strain_rate = D_A/float(time_interval(graph, vid, rank =1))
         anisotropy[vid] = (strain_rate[0]-strain_rate[1])/(strain_rate[0]+strain_rate[1])
@@ -835,6 +887,7 @@ def anisotropy_ratio(strain_mat):
     for vid in strain_mat:
         ##  Singular Value Decomposition (SVD) of A.
         R,D_A,Q = svd(strain_mat[vid])
+        D_A = D_A**2
         if len(D_A) == 3:
             anisotropy_ratio[vid] = [ D_A[0]/D_A[1], D_A[1]/D_A[2], D_A[0]/D_A[2] ]
         else:
