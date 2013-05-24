@@ -51,10 +51,13 @@ class PropertyGraph(IPropertyGraph, Graph):
         return self._vertex_property
     # vertex_properties.__doc__ = IPropertyGraph.vertex_properties.__doc__
 
-    def vertex_property(self, property_name):
+    def vertex_property(self, property_name, vids = None):
         """todo"""
         try:
-            return self._vertex_property[property_name]
+            if vids is not None:
+                return dict([(k,v) for k,v in self._vertex_property[property_name].iteritems() if k in vids])
+            else:
+                return self._vertex_property[property_name]
         except KeyError:
             raise PropertyError("property %s is undefined on vertices"
                                 % property_name)
@@ -546,7 +549,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         return iter(self.neighborhood(vid, n, edge_type))    
 
 
-    def topological_distance(self, vid, edge_type = None, edge_dist = lambda x,y : 1, max_depth=float('inf'), full_dict=True):
+    def topological_distance(self, vid, edge_type = None, edge_dist = lambda x,y : 1, max_depth=float('inf'), full_dict=True, return_inf = True):
         """ Return the distances of each vertices at the vertex vid according a cost function
         
         :Parameters:
@@ -555,6 +558,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         - `edge_dist` : the cost function
         - `max_depth` : the maximum depth that we want to reach
         - `full_dict` : if True this function will return the entire dictionary (with inf values)
+        - `return_inf` : if True (default) return 'inf' values, else 'nan'.
 
         :Returns:
         - `dist_dict` : a dictionary of the distances, key : vid, value : distance
@@ -565,9 +569,10 @@ class PropertyGraph(IPropertyGraph, Graph):
         reduced_dist={}
         reduced_dist[vid]=0
         Q=[]
-        infinity = float('inf')
+
+        infinite_distance = float('inf')
         for k in self._vertices.iterkeys():
-            dist[k] = infinity
+            dist[k] = infinite_distance
             heappush(Q, (dist[k], k))
 
         dist[vid]=0
@@ -578,21 +583,27 @@ class PropertyGraph(IPropertyGraph, Graph):
         while (len(treated)!=n and modif):
             modif = False
             actualVid = heappop(Q)
-            while actualVid[1] in treated and actualVid[0] == float('inf'):
+            while actualVid[1] in treated and actualVid[0] == infinite_distance:
                 actualVid = heappop(Q)
 
-            if actualVid[0] != float('inf'):
+            if actualVid[0] != infinite_distance:
                 actualVid = actualVid[1]
                 treated.add(actualVid)
             
                 for neighb in self.iter_neighbors(actualVid, edge_type):
-                    if ((dist[neighb] > dist[actualVid] + edge_dist(neighb, actualVid))
-                        & (dist[actualVid] + edge_dist(neighb, actualVid) < max_depth+1 ) ):
-                        dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
-                        reduced_dist[neighb]=dist[actualVid] + edge_dist(neighb, actualVid)
-                        heappush(Q, (dist[neighb], neighb))
+                    dist_neighb = dist[neighb]
+                    if (((dist_neighb == infinite_distance) or (dist_neighb > dist[actualVid] + edge_dist(neighb, actualVid)))
+                          and (dist[actualVid] + edge_dist(neighb, actualVid) < max_depth+1 ) ):
+                        
+                        dist_neighb = dist[actualVid] + edge_dist(neighb, actualVid)
+                        dist[neighb] = dist_neighb
+                        reduced_dist[neighb] = dist_neighb
+                        heappush(Q, (dist_neighb, neighb))
                     modif = True
         #~ return (reduced_dist, dist)[full_dict], Q
+        if not return_inf:
+            dist = dict( [(k,(v if v != infinite_distance else np.nan)) for k,v in dist.iteritems()] )
+
         return (reduced_dist, dist)[full_dict]
 
 

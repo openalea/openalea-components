@@ -97,6 +97,7 @@ def standardisation(data, norm, variable_types = None, verbose = False):
     nan_index = np.isnan(distance_matrix)
     if True in nan_index:
         nb_missing_values = len(np.where(nan_index is True)[0])
+        distance_matrix = np.nan_to_num(distance_matrix)
         #~ warnings.warn("It seems there are {0} missing values to take into account!".format(np.sqrt(nb_missing_values)))
     else:
         nb_missing_values = 0.
@@ -177,7 +178,7 @@ def csr_matrix_from_graph(graph, vids2keep):
     return csr_matrix((data,(row,col)), shape=(N,N))
 
 
-def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[], variable_types=[], topo_weight=0., temporal_list=[], temporal_weights=[], temporal_types=[], standardisation_method = "L1", only_lineaged_vertices = True, rank = 1 ):
+def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[], variable_types=[], topo_weight=0., temporal_list=[], temporal_weights=[], temporal_types=[], standardisation_method = "L1", only_lineaged_vertices = True, vids = None, rank = 1 ):
     """
     :Parameters:
      - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from which to extract spatial, spatio-temporal and topological/euclidean distance variables.
@@ -243,14 +244,13 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
     assert sum(variable_weights)+sum(temporal_weights)+topo_weight==1.
 
     # -- Creating the list of vertices:
-    min_index = min(graph.vertex_property('index').values())
-    max_index = max(graph.vertex_property('index').values())
     # -- We keep vertex ids only if they are temporally linked in the graph at `rank` or -`rank`
-    vtx_list = [vid for vid in graph.vertices() if exist_relative_at_rank(graph, vid, rank) or exist_relative_at_rank(graph, vid, -rank)]
+    if vids is None:
+        vtx_list = [vid for vid in graph.vertices() if exist_relative_at_rank(graph, vid, rank) or exist_relative_at_rank(graph, vid, -rank)]
+    else:
+        vtx_list = [vid for vid in vids if exist_relative_at_rank(graph, vid, rank) or exist_relative_at_rank(graph, vid, -rank)]
     N = len(vtx_list)
-
     index = dict( (vid,graph.vertex_property('index')[vid]) for vid in vtx_list )
-    #~ nb_individuals_index = [sum(np.array(index.values())==t) for t in xrange(max_index)]
 
     # -- We compute the standardized distance matrix related to spatial variables:
     if nb_variables != 0:
@@ -293,17 +293,10 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
         import time
         t = time.time()
         # - Extraction of the topological distance between all vertex of a time point:
-        topo_dist = dict( [(vid, graph.topological_distance(vid, 's', full_dict=False)) for vid in vtx_list] )
+        topo_dist = dict( [(vid, graph.topological_distance(vid, 's',return_inf=False)) for vid in vtx_list] )
         print "Time to compute the topological distances: {0}s".format(time.time() - t)
         # - Transformation into a distance matrix
-        mat_topo_dist_rank = np.zeros( [N,N], dtype=float )
-        mat_topo_dist_rank.fill(None)
-        for i,vid in enumerate(topo_dist.keys()):
-            for j,vid2 in enumerate(topo_dist.keys()):
-                if i == j: # the topological distance of a vertex from itself is 0.
-                    mat_topo_dist_rank[i,j] = 0
-                if i > j and topo_dist[vid].has_key(vid2):
-                    mat_topo_dist_rank[i,j] = mat_topo_dist_rank[j,i] = topo_dist[vid][vid2]
+        mat_topo_dist_rank = np.array([[(topo_dist[i][j] if i!=j else 0) for i in vtx_list] for j in vtx_list])
 
         # - Topological distance standardisation
         mat_topo_dist_rank_standard = standardisation(mat_topo_dist_rank, "L1")
@@ -311,6 +304,7 @@ def weighted_global_distance_matrix(graph, variable_list=[], variable_weights=[]
         mat_topo_dist_rank_standard = np.zeros( [N,N], dtype=int ) # `mat_topo_dist_rank_standard``should exist, but the values will not be used !!
     if topo_weight == 1.:
         return vtx_list, mat_topo_dist_rank_standard
+        #~ return vtx_list, mat_topo_dist_rank
 
     def renorm(line, column, mat_topo, var_mat, temp_mat, w_topo, w_var, w_temp):
         w_renorm_topo = 0.
@@ -440,6 +434,9 @@ def between_cluster_distance(distance_matrix, clustering):
     nb_clusters = len(clusters_ids)
     nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
 
+    if 1 in nb_ids_by_clusters:
+        raise ValueError("A cluster contain only one element!")
+
     D_between = {}
     for n,q in enumerate(clusters_ids):
         index_q = np.where(clustering == q)[0]
@@ -558,7 +555,7 @@ def Hartigan_estimator(k,w_k,N):
     return (w_k[k]/w_k[k+1]-1)/(N-k-1)
 
 
-def clustering_estimators(distance_matrix, clustering_method, clustering_range=[1,20]):
+def clustering_estimators(distance_matrix, clustering_method, clustering_range=[1,10]):
     """
     Compute various estimators based on clustering results.
     

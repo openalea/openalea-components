@@ -305,6 +305,8 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         Return vertices ids corresponding to a given time point in the TPG.
         """
+        if only_lineaged and (not as_mother and not as_daughter):
+            as_mother = as_daughter = True
         if as_mother or as_daughter:
             only_lineaged = True
         
