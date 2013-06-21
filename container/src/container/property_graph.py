@@ -22,6 +22,7 @@ __revision__ = " $Id$ "
 from interface.property_graph import IPropertyGraph, PropertyError
 from graph import Graph, InvalidVertex, InvalidEdge
 import numpy as np
+import warnings
 
 VertexProperty, EdgeProperty, GraphProperty = range(3)
 VertexIdType, EdgeIdType, ValueType = range(3)
@@ -654,6 +655,10 @@ class PropertyGraph(IPropertyGraph, Graph):
         """
         add a set of vertices to a region
         """
+        if not "regions" in self._vertex_property:
+            warnings.warn("Property 'regions' is not defined on vertex. Adding it!")
+            self._vertex_property["regions"] = {}
+
         for vid in vids:
             if self._vertex_property["regions"].has_key(vid):
                 self._vertex_property["regions"][vid].append(region_name)
@@ -678,8 +683,9 @@ class PropertyGraph(IPropertyGraph, Graph):
         add a set of vertices to a region
         """
         if not region_name in self._graph_property:
-            raise PropertyError("property %s is not defined on graph"
-                                % region_name)
+            #~ raise PropertyError("property %s is not defined on graph" % region_name)
+            warnings.warn("Property %s is not defined on graph. Adding it!" % region_name)
+            self._graph_property[region_name] = vids
         
         self._add_vertex_to_region(self.__to_set(vids), region_name)
 

@@ -29,7 +29,8 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 from sklearn.cluster import SpectralClustering, Ward, DBSCAN
-
+from sklearn import metrics
+from openalea.container.temporal_graph_analysis import translate_keys_Image2Graph
 
 def distance_matrix_from_vector(data, variable_types, no_dist_index = []):
     """
@@ -477,8 +478,9 @@ class Clusterer:
             else:
                 raise ValueError("You have to provide the number of clusters you want for the Ward method.")
 
+        self._clustering = clustering_labels
         if ids is not None:
-            return dict([ (label,clustering_labels[n]+1) for n,label in enumerate(ids) ])
+            return dict([ (label,clustering_labels[n]) for n,label in enumerate(ids) ])
         else:
             return clustering_labels
 
@@ -487,9 +489,11 @@ class Clusterer:
 class ClusteringChecker:
     """
     """
-    def __init__(self, distance_matrix, clustering):
+    def __init__(self, vtx_list, distance_matrix, clustering):
+        self.vtx_list = vtx_list
         self.distance_matrix = distance_matrix
         self.clustering = clustering
+
     def cluster_distance_matrix(self):
         """
         Function computing distance between clusters.
@@ -655,3 +659,29 @@ class ClusteringChecker:
         gcd_w = sum( [ (nb_ids_by_clusters[q]*(nb_ids_by_clusters[q]-1))/float(sum([nb_ids_by_clusters[l]*(nb_ids_by_clusters[l]-1) for l in clusters_ids if l != q])) * w[q] for q in clusters_ids] )
         gcd_b = sum( [(N-nb_ids_by_clusters[q])*nb_ids_by_clusters[q]/float(sum([(N-nb_ids_by_clusters[l])*nb_ids_by_clusters[l] for l in clusters_ids if l != q])) * b[q] for q in clusters_ids] )
         return gcd_w, gcd_b
+
+
+    def adjusted_rand_score(self, dict_labels_expert, groups2compare = []):
+        """
+        :Parameters:
+         - dict_labels_expert (dict) - expert defined regions / clusters in wich keys are labels
+         - groups2compare (list) - pair(s) of groups id to compare, with first the expert id then the predicted ex. [0,6] or [[0,6],[4,3]]
+        """
+        groups2compare = np.array(groups2compare, ndmin=2)
+        not_found = []
+        labels_true, labels_pred = [], []
+        max1 = max(dict_labels_expert.values())+1
+        max2 = max(self.clustering.values())+1
+        for k,v in dict_labels_expert.iteritems():
+            if self.clustering.has_key(k):
+                v2 = self.clustering[k]
+                labels_true.append(v if (v in groups2compare[:,0]) else max1)
+                labels_pred.append(v2 if (v2 in groups2compare[:,1]) else max2)
+                #~ labels_pred.append(v2)
+            else:
+                not_found.append(k)
+
+        if not_found != []:
+            warnings.warn("These labels were not found in the clustering result: {}".format(not_found))
+
+        return metrics.adjusted_rand_score(labels_true, labels_pred)
