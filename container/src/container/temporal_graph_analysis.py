@@ -19,6 +19,7 @@
 import warnings
 import types
 import numpy as np
+import copy
 from interface.property_graph import IPropertyGraph, PropertyError
 import matplotlib.pyplot as plt
 
@@ -126,7 +127,7 @@ def translate_ids_Image2Graph(graph, id_list, time_point):
 
     return Image2Graph_labels
 
-def translate_keys_Graph2Image(graph, dictionary, time_point):
+def translate_keys_Graph2Image(graph, dictionary, time_point=None):
     """
     Return a dictionary which keys are SpatialImage ids type .
     Initial keys are graph ids type and need to be translated into SpatialImage ids type.
@@ -140,8 +141,18 @@ def translate_keys_Graph2Image(graph, dictionary, time_point):
     """
     if not isinstance(dictionary,dict):
         raise ValueError('This is not a "dict" type variable.')
-    
-    return dict( (graph.vertex_property('old_label')[k], dictionary[k]) for k in dictionary if graph.vertex_property('index')[k] == time_point )
+
+    translated_dict = {}
+    if time_point is None:
+        for k in dictionary:
+            if not dictionary.has_key(k):
+                translated_dict[graph.vertex_property('old_label')[k]] = dictionary[k]
+            else:
+                raise KeyError("The dictionary you want to translate contain label from more than one time point, found redundant keys!")
+
+        return translated_dict
+    else:
+        return dict( (graph.vertex_property('old_label')[k], dictionary[k]) for k in dictionary if graph.vertex_property('index')[k] == time_point )
 
 def translate_keys_Image2Graph(graph, dictionary, time_point):
     """
@@ -367,6 +378,35 @@ def __normalized_temporal_parameters(func):
             return translate_keys2daughters_ids(graph, temporal_func)
 
     return  wrapped_function
+    
+
+@__normalized_temporal_parameters
+def temporal_rate(graph, vertex_property, vid, rank, time_interval):
+    """
+    Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
+    
+    :Parameters:
+    - 'graph' : a TPG.
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
+    - 'vid' : a vertex id.
+    - 'rank' : neighborhood at distance 'rank' will be used.
+    
+    :Return:
+    - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
+    """
+    if rank == 1:
+        vid_descendants = graph.children(vid)
+        vid_parent = vid
+    # - If rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+    if rank > 1:
+        vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
+        vid_parent = vid
+    
+    parent_value = vertex_property[vid_parent]
+    descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
+    
+    return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
+
 
 @__normalized_temporal_parameters
 def temporal_change(graph, vertex_property, vid, rank, time_interval):
@@ -411,6 +451,45 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
     return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
+
+
+def vertex_gaussian_curvature( graph ):
+    """
+    Gaussian curvature is the product of principal curvatures 'k1*k2'.
+    """    
+    return dict([ (vid, curv_values[0] * curv_values[0]) for vid, curv_values in graph.vertex_property('epidermis_wall_principal_curvature_values').iteritems()])
+
+def division_rate(graph, rank=1, parent_ids = False):
+    """
+    :Parameters:
+     - 'graph' (TGP) - a TPG.
+     - 'rank' (int) - children at distance 'rank' will be used.
+     - 'parent_ids' (bool) - specify if the division rate values returned should be associated with parent ids or children ids.
+    
+    :Return:
+     - div_rate = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
+    """
+    if (rank > 1) and (parent_ids is False):
+        raise ValueError("The translation function `translate_keys2daughters_ids` doesn't work for rank != 1.")
+
+    div_rate = {}
+    for vid in graph.vertices():
+        index_1 = graph.vertex_property('index')[vid]
+        try:
+            time_interval = graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1]
+        except:
+            continue #will go to the next `vid` if its 'index_1+rank' is out of range!
+
+        descendants=graph.descendants(vid,rank)-set([vid])
+        if descendants == set([]):
+            div_rate[vid] = 0
+        else:
+            div_rate[vid] = (len(descendants) - 1) / float(time_interval)
+
+    if parent_ids: 
+        return div_rate
+    else:
+        return translate_keys2daughters_ids(graph, div_rate)
 
 
 def exist_relative_at_rank(graph, vid, rank):
@@ -500,7 +579,7 @@ def time_point_property(graph, time_point, vertex_property, only_lineaged = Fals
 
     vids_at_time = graph.vertex_ids_at_time(time_point, only_lineaged, as_mother, as_daughter)
     
-    return dict([(i,vertex_property[i]) for i in vids_at_time])
+    return dict([(i,vertex_property[i]) for i in vids_at_time if vertex_property.has_key(i)])
     
 
 def time_point_property_by_regions(graph, time_point, vertex_property, only_lineaged = False, as_mother = False, as_daughter = False):
@@ -593,6 +672,26 @@ def translate_keys2daughters_ids(graph, dictionary):
     return dictionary_daughters
 
 
+def translate_list2daughters_ids(graph, ids_list):
+    """
+    Translate keys of a dictionary to daughter ids according to the graph (Temporal Property Graph).
+    """
+    list_daughters=[]
+    no_descendants=[]
+    for vid in ids_list:
+        vid_descendants = graph.descendants(vid ,1)-graph.descendants(vid,0)
+        if vid_descendants != set():
+            for id_descendant in vid_descendants:
+                list_daughters.append(id_descendant)
+        elif graph.vertex_property('index')[vid] < graph.nb_time_points-1: #if `vid``belong to the last time point, it's perfectly normal that there is no descendants
+            no_descendants.append(vid)
+
+    if no_descendants!=[]:
+        warnings.warn("No daughter found for those vertex:"+str(no_descendants))
+
+    return list_daughters
+
+
 def weighted_mean( values, weights ):
     """
     Function computing a weighted mean of `values` according to `weights`.
@@ -620,6 +719,8 @@ def __strain_parameters(func):
         # Check if cells landmarks have been recovered ans stored in the graph structure:
         if use_projected_anticlinal_wall:
             assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
+            assert 'epidermis_wall_median' in graph.vertex_property_names()
+            assert 'epidermis_surface' in graph.vertex_property_names()
         else:
             assert 'wall_median' in graph.edge_property_names()
             assert 'unlabelled_wall_median' in graph.vertex_property_names()
@@ -632,49 +733,58 @@ def __strain_parameters(func):
             vids=[vids]
 
         # -- If the vid is not associated through time it's not possible to compute the strain.
+        tmp = copy.copy(vids)
         for vid in vids:
             if graph.descendants(vid, 1) == set([vid]):
-                vids.remove(vid)
+                tmp.remove(vid)
 
+        vids = tmp
         if use_projected_anticlinal_wall:
             spatial_vertices_edge = dict( [(tuple(sorted(v)),k) for k,v in graph._edges.iteritems() if k in graph.edges(edge_type='s')] )
-            # Next line need to be changed: we should create a smaller dict by looking in something smaller than all graphs edges!!!
+            # Next line could be changed: we could create a smaller dict by looking in something smaller than all graphs edges!!!
             wall_median_2 = dict( ( tuple(sorted(graph.edge_vertices(eid))), graph.edge_property('projected_anticlinal_wall_median')[eid]) for eid in graph.edges(edge_type='s') if graph.edge_property('projected_anticlinal_wall_median').has_key(eid) )
-            strain_mat = {}
+            stretch_mat = {}
 
             for n,vid in enumerate(vids):
                 if verbose and n%10==0: print n, " / ", len(vids)
-                missing_data=False
+                missing_data = False
                 spatial_edges = list(graph.edges( vid, 's' ))
                 # We create the dictionary of medians associate over time: {(label_1,label_2):[x,y,z]} with label_1<label_2 and label_1&label_2 in the first layer !
                 wall_median = dict( ( tuple(sorted(graph.edge_vertices(eid))), graph.edge_property('projected_anticlinal_wall_median')[eid] ) for eid in spatial_edges if graph.edge_property('projected_anticlinal_wall_median').has_key(eid) )
 
-                # Now we want to associate median related over time:
+                # -- Now we want to associate landmarks over time:
                 xyz_t1, xyz_t2 = [], []
-                descendants_vid = graph.descendants(vid,1)-set([vid])
+                descendants_vid = list(graph.descendants(vid,1)-set([vid]))
                 neighbors_t1 = [nei for nei in list(graph.neighbors(vid,'s')) if wall_median.has_key(tuple(sorted([nei,vid])))]
-                # -- Now we need to find the time correspondance between each median:
+                # - Using barycenter of the epidermis wall :
+                xyz_t1.append(np.array(graph.vertex_property('epidermis_wall_median')[vid]))
+                if len(descendants_vid)>1:
+                    xyz_t2.append(weighted_mean( [graph.vertex_property('epidermis_wall_median')[desc_id_cp] for desc_id_cp in descendants_vid], [graph.vertex_property('epidermis_surface')[desc_id_cp] for desc_id_cp in descendants_vid if graph.vertex_property('epidermis_surface').has_key(desc_id_cp)] ))
+                else:
+                    xyz_t2.append(np.array(graph.vertex_property('epidermis_wall_median')[descendants_vid[0]]))
+
+                # - Now we need to find the time correspondance between each median:
                 for neighbor in neighbors_t1:
                     descendants_neighbor = [desc_nei for desc_nei in graph.descendants(neighbor,1)-set([neighbor])]
-                    nei = list(descendants_vid | set(descendants_neighbor))
-                    # -- In order to find the decendants that share the 'same' wall we have to find those from each (two) groups that have a topological distance of 1:
+                    nei = list(set(descendants_vid) | set(descendants_neighbor))
+                    # - In order to find the decendants that share the 'same' wall we have to find those from each (two) groups that have a topological distance of 1:
                     topological_distance = dict( ((vtx_id, graph.topological_distance(vtx_id, 's', full_dict=False))) for vtx_id in nei )
                     neighbors_descendants = []
                     for nei_1 in descendants_vid:
                         for nei_2 in descendants_neighbor:
                             if wall_median_2.has_key(tuple(sorted((nei_1,nei_2)))) and topological_distance[nei_1][nei_2] == 1:
                                 neighbors_descendants.append(tuple(sorted((nei_1,nei_2))))
-
+                    # - If correspondance is found we retreive landmarks coordiantes
                     if neighbors_descendants != [] and len([wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants])==len(neighbors_descendants):
                         id_couple = (min(vid,neighbor),max(vid,neighbor))
                         xyz_t1.append(np.array(wall_median[id_couple]))
+                        # - We compute a weighted average for the t_n+1 landmark if the cell has divided: x,y,z = sum_i{ wall_surface_i * [x_i,y_i,z_i] }
                         xyz_t2.append(weighted_mean( [wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants], [graph.edge_property('wall_surface')[spatial_vertices_edge[desc_id_cp]] for desc_id_cp in neighbors_descendants if graph.edge_property('wall_surface').has_key(spatial_vertices_edge[desc_id_cp])] ))
-                    else:
-                        missing_data=True
-                if not missing_data and xyz_t1 != []:
+
+                if not missing_data:
                     assert len(xyz_t1) == len(xyz_t2)
                     N = len(xyz_t1)
-                    strain_mat[vid] = func(graph, xyz_t1, xyz_t2, N, dimension = 2)
+                    stretch_mat[vid] = func(graph, xyz_t1, xyz_t2)
         else:
             ############################################################
             # If graph.vertex_property('unlabelled_wall_median')[vid] is None, it means we should not compute a 3D strain for this cell !!!
@@ -683,7 +793,7 @@ def __strain_parameters(func):
             spatial_vertices_edge = dict( ((min(v[0],v[1]),max(v[0],v[1])),k) for k,v in graph._edges.iteritems() if k in graph.edges(edge_type='s'))
             # Next line need to be changed: we should create a smaller dict by looking in something smaller than all graphs edges!!!
             wall_median_2 = dict( ( (min(graph.edge_vertices(eid)[0],graph.edge_vertices(eid)[1]),max(graph.edge_vertices(eid)[0],graph.edge_vertices(eid)[1])) ,graph.edge_property('wall_median')[eid]) for eid in graph.edges(edge_type='s') if graph.edge_property('wall_median').has_key(eid) )
-            strain_mat = {}
+            stretch_mat = {}
             for n,vid in enumerate(vids):
                 if verbose and n%10==0: print n, " / ", len(vids)
                 missing_data=False
@@ -728,45 +838,33 @@ def __strain_parameters(func):
                 if not missing_data:
                     assert len(xyz_t1) == len(xyz_t2)
                     N = len(xyz_t1)
-                    strain_mat[vid] = func(graph, xyz_t1, xyz_t2, N, dimension = 3)
+                    stretch_mat[vid] = func(graph, xyz_t1, xyz_t2)
 
         # -- Now we return the results of temporal differentiation function:
         if labels_at_t_n: 
-            return strain_mat
+            return stretch_mat
         else:
-            strain_mat_daughters={}
+            stretch_mat_daughters={}
             print "You have asked for labels @ t_n+1"
-            for vid in strain_mat:
+            for vid in stretch_mat:
                 vid_descendants = graph.descendants(vid ,1)-graph.descendants(vid,0)
                 for id_descendant in vid_descendants:
-                    strain_mat_daughters[id_descendant]=strain_mat[vid]
-            return strain_mat_daughters
+                    stretch_mat_daughters[id_descendant]=stretch_mat[vid]
+            return stretch_mat_daughters
 
     return  wrapped_function
 
 @__strain_parameters
-def strain_matrix(graph, xyz_t1, xyz_t2, N, dimension):
+def stretch_matrix(graph, xyz_t1, xyz_t2):
     """
-    Compute the strain matrix.
+    Compute the stretch / deformation matrix.
     """
-    # -- We start by making sure we can compute the strain matrix in the dimensionnality provided.
-    assert 1 <= dimension <= 3 and "You can only compute the strain in 1D, 2D or 3D!"
-
     ## Compute the centroids:
     c_t1 = np.mean(xyz_t1,0)
     c_t2 = np.mean(xyz_t2,0)
     ## Compute the centered matrix:
     centered_coord_t1=np.array(xyz_t1-c_t1)
     centered_coord_t2=np.array(xyz_t2-c_t2)
-    if dimension != 3:
-        ## Compute the Singular Value Decomposition (SVD) of centered coordinates:
-        U_t1,D_t1,V_t1=svd(centered_coord_t1, full_matrices=False)
-        U_t2,D_t2,V_t2=svd(centered_coord_t2, full_matrices=False)
-        ## Projection of the vertices' xyz 3D co-ordinate into the 2D subspace defined by the 2 first eigenvector
-        #(the third eigenvalue is really close from zero confirming the fact that all the vertices are close from the plane -true for external part of L1, not for inner parts of the tissue).
-        centered_coord_t1=np.array( np.dot(U_t1[:,0:dimension],np.dot(np.diag(D_t1)[0:dimension,0:dimension],V_t1[0:dimension,0:dimension]) ))
-        centered_coord_t2=np.array( np.dot(U_t2[:,0:dimension],np.dot(np.diag(D_t2)[0:dimension,0:dimension],V_t2[0:dimension,0:dimension]) ))
-
     ## Least-square estimation of A.
     #A is the transformation matrix in the regression equation between the centered vertices position of two time points:
     lsq=lstsq(centered_coord_t1,centered_coord_t2)
@@ -774,126 +872,102 @@ def strain_matrix(graph, xyz_t1, xyz_t2, N, dimension):
 
     return A
 
-@__strain_parameters
-def project_2D_strain_cross_in_3D(graph, xyz_t1, xyz_t2, N):
+def strain_orientations(stretch_mat, nb_directions=None, after_deformation=True):
     """
-    
-    :WARNING:
-        Use this function only if you have used anticlinal wall to compute the strain matrix !
+    Return the strain main directions after deformation (default) or before.
     """
-    # -- We start by making sure we can compute the strain matrix in the dimensionnality provided.
-    assert 1 <= dimension <= 3 and "You can only compute the strain in 1D, 2D or 3D!"
+    if nb_directions is None:
+        nb_directions = 3
 
-    ## Compute the centroids:
-    c_t1 = np.mean(xyz_t1,0)
-    c_t2 = np.mean(xyz_t2,0)
-    ## Compute the centered matrix:
-    centered_coord_t1=np.array(xyz_t1-c_t1)
-    centered_coord_t2=np.array(xyz_t2-c_t2)
-    ## Compute the Singular Value Decomposition (SVD) of centered coordinates:
-    U_t1,D_t1,V_t1=svd(centered_coord_t1, full_matrices=False)
-    U_t2,D_t2,V_t2=svd(centered_coord_t2, full_matrices=False)
-    ## Projection of the vertices' xyz 3D co-ordinate into the 2D subspace defined by the 2 first eigenvector
-    #(the third eigenvalue is really close from zero confirming the fact that all the vertices are close from the plane -true for external part of L1, not for inner parts of the tissue).
-    centered_coord_t1=np.array( np.dot(U_t1[:,0:2],np.dot(np.diag(D_t1)[0:2,0:2],V_t1[0:2,0:2]) ))
-    centered_coord_t2=np.array( np.dot(U_t2[:,0:2],np.dot(np.diag(D_t2)[0:2,0:2],V_t2[0:2,0:2]) ))
-    ## Compute the Singular Value Decomposition (SVD) of the least-square estimation of A.
-    #A is the (linear) transformation matrix in the regression equation between the centered vertices position of two time points:
-    lsq=lstsq(centered_coord_t1,centered_coord_t2)
-    ##  Singular Value Decomposition (SVD) of A.
-    R,D_A,Q=svd(lsq[0])
-    D_A = D_A**2
-    ##  Getting back in 3D: manually adding an extra dimension.
-    R=np.hstack([np.vstack([R,[0,0]]),[[0],[0],[1]]])
-    D_A=np.hstack([np.vstack([np.diag(D_A),[0,0]]),[[0],[0],[0]]])
-    Q=np.hstack([np.vstack([Q,[0,0]]),[[0],[0],[1]]])
-    ##  Getting back in 3D: strain of cell c represented at each time point.
-    strain_cross_t1 = np.dot(np.dot(np.dot(np.dot(V_t1.T, R.T), D_A), R), V_t1)
-    strain_cross_t2 = np.dot(np.dot(np.dot(np.dot(V_t2.T, Q.T), D_A), Q), V_t2)
+    directions = {}
+    for vid in stretch_mat:
+        ##  Singular Value Decomposition (SVD) of A.
+        R,D_A,Q=svd(stretch_mat[vid])
+        # Compute Strain Rates :
+        if after_deformation:
+            directions[vid] = Q[:nb_directions,:]
+        else:
+            directions[vid] = R[:,:nb_directions]
 
-    return strain_cross_t1, strain_cross_t2
+    return directions
 
-def strain_rate(graph, strain_mat):
+def strain_rates(graph, stretch_mat):
     """
-    Compute the strain rate: sr[c][i] = np.log(D_A[i])/deltaT, for i = [0,1] if 2D, i = [0,1,2] if 3D.
+    Return the strain rate: sr[c][i] = np.log(D_A[i])/deltaT, for i = [0,1] if 2D, i = [0,1,2] if 3D.
     Dimensionnality is imposed by the one of the strain matrix.
     """
     sr = {}
-    for vid in strain_mat:
+    for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q=svd(strain_mat[vid])
-        D_A = D_A**2
+        R,D_A,Q=svd(stretch_mat[vid])
         # Compute Strain Rates :
         sr[vid] = np.log(D_A)/float(time_interval(graph, vid, rank =1))
 
     return sr
 
-def areal_strain_rate(graph, strain_mat):
+def areal_strain_rates(graph, stretch_mat):
     """
     Compute the areal strain rate: asr[c] = sum_i(np.log(D_A[i])/deltaT), for i = [0,1].
     """
     asr = {}
-    for vid in strain_mat:
+    for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q=svd(strain_mat[vid])
-        D_A = D_A**2
+        R,D_A,Q=svd(stretch_mat[vid])
         # Compute Strain Rates and Areal Strain Rate:
         asr[vid] = sum(np.log(D_A[0:2])/float(time_interval(graph, vid, rank =1)))
 
     return asr
 
-def volumetric_strain_rate(graph, strain_mat):
+def volumetric_strain_rates(graph, stretch_mat):
     """
     Compute the volumetric strain rate: asr[c] = sum_i(np.log(D_A[i])/deltaT), for i = [0,1,2].
     """
     vsr = {}
-    for vid in strain_mat:
+    for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q=svd(strain_mat[vid])
-        D_A = D_A**2
+        R,D_A,Q=svd(stretch_mat[vid])
         # Compute Strain Rates and Areal Strain Rate:
         vsr[vid] = sum(np.log(D_A)/float(time_interval(graph, vid, rank =1)))
 
     return vsr
 
-def strain_anisotropy(graph, strain_mat):
+def strain_anisotropy(graph, stretch_mat):
     """
     Compute the "Growth" Anisotropy = (sr1-sr2)/(sr1+sr2)
     Dimensionnality is imposed by the one of the strain matrix.
     """
     anisotropy = {}
-    for vid in strain_mat:
+    for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q = svd(strain_mat[vid])
-        D_A = D_A**2
+        R,D_A,Q = svd(stretch_mat[vid])
         # Compute Strain Rates :
         strain_rate = D_A/float(time_interval(graph, vid, rank =1))
         anisotropy[vid] = (strain_rate[0]-strain_rate[1])/(strain_rate[0]+strain_rate[1])
 
     return anisotropy
 
-def anisotropy_ratio(strain_mat):
+def anisotropy_ratios(stretch_mat):
     """
     Anisotropy ratio :
-     R, strain_values, Q = svd( strain_mat ), then
+     R, strain_values, Q = svd( stretch_mat ), then
     -if 2D:
         return strain_values[0]/strain_values[1]
     - if 3D:
         return [ sv[0]/sv[1], sv[1]/sv[2], sv[0]/sv[2] ]
 
-    Dimensionnality is imposed by the one of the strain matrix `strain_mat`.
+    Dimensionnality is imposed by the one of the strain matrix `stretch_mat`.
     """
     anisotropy_ratio = {}
-    for vid in strain_mat:
+    for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q = svd(strain_mat[vid])
-        D_A = D_A**2
+        R,D_A,Q = svd(stretch_mat[vid])
         if len(D_A) == 3:
             anisotropy_ratio[vid] = [ D_A[0]/D_A[1], D_A[1]/D_A[2], D_A[0]/D_A[2] ]
         else:
             anisotropy_ratio[vid] = D_A[0]/D_A[1]
 
     return anisotropy_ratio
+
 
 def time_interval(graph,vid,rank=1):
     """
