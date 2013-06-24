@@ -661,27 +661,136 @@ class ClusteringChecker:
         return gcd_w, gcd_b
 
 
-    def adjusted_rand_score(self, dict_labels_expert, groups2compare = []):
-        """
-        :Parameters:
-         - dict_labels_expert (dict) - expert defined regions / clusters in wich keys are labels
-         - groups2compare (list) - pair(s) of groups id to compare, with first the expert id then the predicted ex. [0,6] or [[0,6],[4,3]]
-        """
-        groups2compare = np.array(groups2compare, ndmin=2)
-        not_found = []
-        labels_true, labels_pred = [], []
-        max1 = max(dict_labels_expert.values())+1
-        max2 = max(self.clustering.values())+1
-        for k,v in dict_labels_expert.iteritems():
-            if self.clustering.has_key(k):
-                v2 = self.clustering[k]
-                labels_true.append(v if (v in groups2compare[:,0]) else max1)
-                labels_pred.append(v2 if (v2 in groups2compare[:,1]) else max2)
-                #~ labels_pred.append(v2)
+    def __score_param(func):
+        def wrapped_function(self, dict_labels_expert, groups2compare = []):
+            """
+            Wrapped function for clustering score computation according to the knowledge of the ground truth class assignments.
+
+            :Parameters:
+             - dict_labels_expert (dict) - expert defined regions / clusters in wich keys are labels
+             - groups2compare (list) - pair(s) of groups id to compare, with first the expert id then the predicted id ex. [0,6] or [[0,6],[4,3]]
+            """
+            if groups2compare != []:
+                compare_groups = True
+                groups2compare = np.array(groups2compare, ndmin=2)
             else:
-                not_found.append(k)
+                compare_groups = False
 
-        if not_found != []:
-            warnings.warn("These labels were not found in the clustering result: {}".format(not_found))
+            not_found = []
+            labels_true, labels_pred = [], []
+            max1 = max(dict_labels_expert.values())+1
+            max2 = max(self.clustering.values())+1
+            for k,v in dict_labels_expert.iteritems():
+                if self.clustering.has_key(k):
+                    v2 = self.clustering[k]
+                    if compare_groups:
+                        labels_true.append(v if (v in groups2compare[:,0]) else max1)
+                        labels_pred.append(v2 if (v2 in groups2compare[:,1]) else max2)
+                        #~ labels_pred.append(v2)
+                    else:
+                        labels_true.append(v)
+                        labels_pred.append(v2)
+                else:
+                    not_found.append(k)
 
+            if not_found != []:
+                warnings.warn("These labels were not found in the clustering result: {}".format(not_found))
+
+            return func(labels_true, labels_pred)
+        return wrapped_function
+
+
+    @__score_param
+    def adjusted_rand_score(labels_true, labels_pred):
+        """
+        The Adjusted Rand Index (ARI) is a function that measures the similarity of the two assignments, ignoring permutations and with chance normalization.
+
+        :Parameters:
+         - `labels_true` (list) - knowledge of the ground truth class assignments
+         - `labels_pred` (list) - clustering algorithm assignments of the same samples
+
+        :Notes:
+         - Random (uniform) label assignments have a ARI score close to 0.0.
+         - Bounded range [-1, 1]. Negative values are bad (independent labelings), similar clusterings have a positive ARI, 1.0 is the perfect match score.
+         - No assumption is made on the cluster structure: can be used to compare clustering algorithms such as k-means which assumes isotropic blob shapes with results of spectral clustering algorithms which can find cluster with "folded" shapes.
+        """
         return metrics.adjusted_rand_score(labels_true, labels_pred)
+
+    @__score_param
+    def adjusted_mutual_info_score(labels_true, labels_pred):
+        """
+        The Mutual Information (NMI and AMI) is a function that measures the agreement of the two assignments, ignoring permutations.
+        Adjusted Mutual Information (AMI) was proposed more recently than NMI and is normalized against chance.
+
+        :Parameters:
+         - `labels_true` (list) - knowledge of the ground truth class assignments
+         - `labels_pred` (list) - clustering algorithm assignments of the same samples
+
+        :Note:
+         - Random (uniform) label assignments have a AMI score close to 0.0.
+        """
+        return metrics.adjusted_mutual_info_score(labels_true, labels_pred)
+
+    @__score_param
+    def normalized_mutual_info_score(labels_true, labels_pred):
+        """
+        The Mutual Information (NMI and AMI) is a function that measures the agreement of the two assignments, ignoring permutations.
+        Normalized Mutual Information (NMI) is often used in the literature, but it is NOT normalized against chance.
+        """
+        return metrics.normalized_mutual_info_score(labels_true, labels_pred)
+
+    @__score_param
+    def homogeneity_score(labels_true, labels_pred):
+        """
+        Homogeneity: each cluster contains only members of a single class.
+        Bounded below by 0.0 and above by 1.0 (higher is better).
+
+        :Parameters:
+         - `labels_true` (list) - knowledge of the ground truth class assignments
+         - `labels_pred` (list) - clustering algorithm assignments of the same samples
+
+        :Note:
+         - homogeneity_score(a, b) == completeness_score(b, a)
+        """
+        return metrics.homogeneity_score(labels_true, labels_pred)
+
+    @__score_param
+    def completeness_score(labels_true, labels_pred):
+        """
+        Completeness: all members of a given class are assigned to the same cluster.
+        Bounded below by 0.0 and above by 1.0 (higher is better).
+
+        :Parameters:
+         - `labels_true` (list) - knowledge of the ground truth class assignments
+         - `labels_pred` (list) - clustering algorithm assignments of the same samples
+
+        :Note:
+         - homogeneity_score(a, b) == completeness_score(b, a)
+        """
+        return metrics.completeness_score(labels_true, labels_pred)
+
+    @__score_param
+    def v_measure_score(labels_true, labels_pred):
+        """
+        Harmonic mean of homogeneity and completeness_score is called V-measure.
+
+        :Parameters:
+         - `labels_true` (list) - knowledge of the ground truth class assignments
+         - `labels_pred` (list) - clustering algorithm assignments of the same samples
+
+        :Note:
+         - `v_measure_score` is symmetric, it can be used to evaluate the agreement of two independent assignments on the same dataset.
+        """
+        return metrics.v_measure_score(labels_true, labels_pred)
+
+    @__score_param
+    def homogeneity_completeness_v_measure(labels_true, labels_pred):
+        """
+        Homogeneity, completensess and V-measure can be computed at once using homogeneity_completeness_v_measure
+
+        :Parameters:
+         - `labels_true` (list) - knowledge of the ground truth class assignments
+         - `labels_pred` (list) - clustering algorithm assignments of the same samples
+        """
+        return metrics.homogeneity_completeness_v_measure(labels_true, labels_pred)
+
