@@ -975,7 +975,24 @@ def time_interval(graph,vid,rank=1):
     """
     index_1 = graph.vertex_property('index')[vid]
     return (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
-    
+
+
+def sibling_volume_ratio(graph):
+    """
+    """
+    svr={}
+    used_vtx = []
+    for vtx in graph.vertices():
+        sibling = graph.sibling(vtx)
+        if sibling is not None and len(sibling)==1 and list(graph.sibling(vtx))[0] not in used_vtx:
+            used_vtx.append(vtx)
+            sibling = list(graph.sibling(vtx))[0]
+            ratio = graph.vertex_property('volume')[vtx]/graph.vertex_property('volume')[sibling]
+            if ratio >=1:
+                svr[sibling,vtx]=1./ratio
+            else:
+                svr[vtx,sibling]=ratio
+    return svr
 
 def triplot(graphs_list, values2plot, labels_list=None, values_name="",normed=False):
     """
