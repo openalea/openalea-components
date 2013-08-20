@@ -696,7 +696,7 @@ class ClusteringChecker:
         self._clusters_ids = list(set(self._clustering))
         self._nb_clusters = len(self._clusters_ids)
         self._nb_ids_by_clusters = [len(np.where(self._clustering == q)[0]) for q in self._clusters_ids]
-        self._ids_by_clusters = dict( (q, np.where(self._clustering == q)[0]) for q in self._clusters_ids )
+        self._ids_by_clusters = dict( (q, [self._vtx_list[k] for k in np.where(self._clustering == q)[0]]) for q in self._clusters_ids )
 
 
     def cluster_distance_matrix(self):
@@ -971,7 +971,7 @@ class ClusteringChecker:
                 nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_ids_at_time(t)])
                 percent[(q,t)] = [nb/float(self._nb_ids_by_clusters[q]), nb]
 
-        return dict( ((q,t+1), percent[(q,t)]) for q in self._clusters_ids for t in index_time_points if percent[(q,t)][0] != 0)
+        return dict( ((q,t), percent[(q,t)]) for q in self._clusters_ids for t in index_time_points if percent[(q,t)][0] != 0)
 
 
     def time_point_by_clusters(self, graph):
@@ -992,7 +992,7 @@ class ClusteringChecker:
                 nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_ids_at_time(t)])
                 percent[(t,q)] = [nb/float(self._nb_ids_by_clusters[q]), nb]
 
-        return dict( ((t+1,q), percent[(t,q)]) for q in self._clusters_ids for t in index_time_points if percent[(t,q)][0] != 0)
+        return dict( ((t,q), percent[(t,q)]) for q in self._clusters_ids for t in index_time_points if percent[(t,q)][0] != 0)
 
 
     def forward_projection_match(self, graph):
@@ -1079,4 +1079,120 @@ class ClusteringChecker:
 
         plt.legend(ncol=3)
 
+    def clustered_temporal_property_graph(self, graph):
+        """
+        Clustered version of the temporal_property_graph `graph`
+        """
+        # - Start by retreiving the representativity of each time points (index) and clusters
+        tp_c = self.time_point_by_clusters(graph)
+
+        # -- Create a list of spatial `graphs` at each time point (no spatial relation taken into account!)
+        from openalea.container.property_graph import PropertyGraph
+        graphs = []
+        for t in xrange(graph.nb_time_points+1):
+            pg = PropertyGraph()
+            vertex2label = {}
+            # - Add a vertex for each cluster `q` at time `t`:
+            for q in xrange(self._nb_clusters):
+                if tp_c.has_key((t,q)):
+                    vertex2label[pg.add_vertex(q)]=(t,q)
+            # - Save the couples (time,cluster) as 'label':
+            pg.add_vertex_property('label')
+            pg.vertex_property('label').update(vertex2label)
+            graphs.append(pg)
+
+        # -- Recover the lineage and the number of children between (temporally) successive clusters :
+        lineage = [{},{},{},{}]
+        quantif = [{},{},{},{}]
+        for t, q in tp_c.keys():
+            if t < graph.nb_time_points: # there will be no children from the last time point
+                vids_in_q_at_t = [k for k in self._ids_by_clusters[q] if k in graph.vertex_ids_at_time(t)]
+                lineage[t][q]=[]
+                quantif[t][q]={}
+                for vid in vids_in_q_at_t:
+                    children = list(graph.children(vid))
+                    if children!=[]:
+                        for child in children:
+                            child_cluster = self._clustering[self._vtx_list.index(child)]
+                            if child_cluster not in lineage[t][q]:
+                                lineage[t][q].append(child_cluster)
+                            if not quantif[t][q].has_key(child_cluster):
+                                quantif[t][q][child_cluster]=1
+                            else:
+                                quantif[t][q][child_cluster]+=1
+
+        # -- Create the `TemporalPropertyGraph`
+        from openalea.container.temporal_property_graph import TemporalPropertyGraph
+        tpg = TemporalPropertyGraph()
+        tpg.extend(graphs, lineage, graph.graph_property('time_steps'))
+
+        # -- Add 'cluster_size' and 'nb_children' properties:
+        from openalea.image.algo.graph_from_image import label2vertex_map
+        label2vertex = label2vertex_map(tpg)
+        # - Add 'cluster_size' property, i.e. the number of cell in each cluster at a give time:
+        tpg.add_vertex_property('cluster_size', dict( [(label2vertex[k],v[1]) for k,v in tp_c.iteritems()] ))
+        # - Add 'nb_children' property, i.e. the number of child ren between (temporally) successive clusters:
+        from openalea.image.algo.graph_from_image import vertexpair2edge_map, add_edge_property_from_dictionary
+        add_edge_property_from_dictionary(tpg, 'nb_children', dict( [((label2vertex[(t,q)],label2vertex[(t+1,child)]),value) for t in xrange(len(quantif)) for q in quantif[t] for child,value in quantif[t][q].iteritems()]), vertexpair2edge_map(tpg))
+
+        return tpg
+
+    def plot_clustered_temporal_property_graph(self, clustered_graph, no_spatiotemp_data_cluster = 'auto'):
+        """
+        """
+        # -- Translate the temporal_property_graph into a NetworkX graph:
+        G = clustered_graph.to_networkx()
+
+        # -- Define possition of each node:
+        pos={}
+        for node in G.node.keys():
+            x = G.node[node]['index']
+            y = G.node[node]['old_label']
+            pos[node] = (x,y)
+
+        # -- Retreive node informations:
+        node_cluster = np.array([G.node[k]['old_label'] for k in G.node.keys()])
+        node_size = np.array([G.node[k]['cluster_size'] for k in G.node.keys()])
+
+        # -- Filter for displaying the cluster made of cells without spatio-temporal properties:
+        if no_spatiotemp_data_cluster == None:
+            no_spatiotemp_data_cluster = []
+        if no_spatiotemp_data_cluster == 'auto':
+            xy = np.array(pos.values())
+            no_spatiotemp_data_cluster = list(xy[np.where(xy[:,0]==0),1])
+        if isinstance(no_spatiotemp_data_cluster,int):
+            no_spatiotemp_data_cluster = [no_spatiotemp_data_cluster]
+
+        import networkx as nx
+        # -- Draw the graphs:
+        fig = plt.figure(figsize=(15,6),dpi=100)
+        fig.subplots_adjust( wspace=0.1, left=0.04, right=0.96, top=0.9)
+        plt.suptitle('Clustered SpatioTemporal Graph')
+        fig.add_subplot(121)
+        # -- Nodes plotting:
+        nx.draw_networkx_nodes(G, pos, node_size=node_size*5, node_color=node_cluster, vmin=min(node_cluster), vmax=max(node_cluster),cmap='jet')
+        # -- Edges plotting:
+        # - Edge sizes depend on the number of children going to a cluster divided by the number of children from that cluster:
+        edge_size = np.array([G.edge[id1][id2]['nb_children']/float(sum([G.edge[id_1][id_2]['nb_children'] for id_1,id_2 in G.edges() if id1==id_1])) for id1,id2 in G.edges()])
+        edge_style = np.array(['solid' if G.node[id1]['old_label'] not in no_spatiotemp_data_cluster else 'dotted' for id1,id2 in G.edges()])
+        # - Draw edges:
+        nx.draw_networkx_edges(G, pos, width=5*edge_size, style=edge_style)
+        # - Axes labels and plot title:
+        plt.xlabel('Successive time points')
+        plt.ylabel('Cluster id')
+        plt.title('Edge sizes are related to were children go to.')
+
+        fig.add_subplot(122)
+        # -- Nodes plotting:
+        nx.draw_networkx_nodes(G, pos, node_size=node_size*5, node_color=node_cluster, vmin=min(node_cluster), vmax=max(node_cluster),cmap='jet')
+        # -- Edges plotting:
+        # - Edge sizes depend on the number of children going to a cluster divided by the number of children in that cluster:
+        edge_size = np.array([G.edge[id1][id2]['nb_children']/float(G.node[id2]['cluster_size']) for id1,id2 in G.edges()])
+        edge_style = np.array(['solid' if G.node[id1]['old_label'] not in no_spatiotemp_data_cluster else 'dotted' for id1,id2 in G.edges()])
+        # - Draw edges:
+        nx.draw_networkx_edges(G, pos, width=5*edge_size, style=edge_style)
+        # - Axes labels and plot title:
+        plt.xlabel('Successive time points')
+        plt.ylabel('Cluster id')
+        plt.title('Edge sizes are related to were children come from.')
 
