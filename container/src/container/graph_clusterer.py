@@ -74,11 +74,11 @@ def standardisation(data, norm, variable_types = None, verbose = False):
      - `mat` (np.array) - distance matrix
      - `norm` (str) - "L1" or "L2", select which standarisation metric to apply to the data;
      - `variable_types` (str) - "Numeric" or "Ordinal" or "Interval"
-    
+
     :Returns:
      - `standard_mat` (np.array) - standardized distance matrix
     """
-    
+
     if (norm.upper() != 'L1') and (norm.upper() != 'L2'):
         raise ValueError("Undefined standardisation metric")
 
@@ -127,7 +127,7 @@ def csr_matrix_from_graph(graph, vids2keep):
     :Parameters:
      - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from which to extract connectivity.
      - `vids2keep` (list) - list of vertex ids to build the sparse matrix from (columns and rows will be ordered according to this list).
-    """    
+    """
     N = len(vids2keep)
     data,row,col = [],[],[]
 
@@ -165,6 +165,12 @@ def renorm(line, column, mat_topo, var_mat, temp_mat, w_topo, w_var, w_temp):
         return w_topo/renorm, np.array(w_var)/renorm if w_var!=[] else [], np.array(w_temp)/renorm if w_temp!=[] else []
     else:
         return w_topo, w_var, w_temp
+
+def create_weight_matrix(N,weight,standard_distance_matrix)
+    tmp_w_mat = np.zeros( shape = [N,N], dtype=float )
+    tmp_w_mat.fill(weight)
+    tmp_w_mat[np.where(np.isnan(standard_distance_matrix)]==np.nan
+    return tmp_w_mat
 
 
 def _within_cluster_distances(distance_matrix, clustering):
@@ -320,7 +326,7 @@ class Clusterer:
             var_id = [var_id]
         assert len(var_name)==len(var_type)
         assert len(var_name)==len(var_id)
-        
+
         for n, var in enumerate(var_name):
             if (var_id[n] is None or var_id[n] == "") and isinstance(var_name[n],str):
                 var_id[n] = var_name[n]
@@ -447,6 +453,7 @@ class Clusterer:
             variable_weights = [float(variable_weights)]
         assert len(variable_names) == len(variable_weights)
         assert math.fsum(variable_weights)==1.
+        #assert math.fsum(variable_weights)==1. or math.fsum(variable_weights)-1.<1e-5
 
         # -- Checking all requested information (i.e. variables names) is present in the dictionary `self._distance_matrix_dict`:
         for k in variable_names:
@@ -516,14 +523,14 @@ class Clusterer:
                 nb_spa_var += 1
 
         # -- Checking for simple cases: no re-weighting to do !
-        # - Only 'topological' or 'euclidean' distance asked: 
+        # - Only 'topological' or 'euclidean' distance asked:
         if spatial_relation_data and (nb_spa_var+nb_temp_var)==0:
             print "No topological/euclidean distance between each time point !!"
             return vtx_list, mat_topo_dist_standard
-        # - Only ONE spatial pairwise distance asked: 
+        # - Only ONE spatial pairwise distance asked:
         if not spatial_relation_data and nb_temp_var == 0 and nb_spa_var == 1:
             return vtx_list, spatial_standard_distance_matrix[0]
-        # - Only ONE temporal pairwise distance asked: 
+        # - Only ONE temporal pairwise distance asked:
         if not spatial_relation_data and nb_spa_var == 0 and nb_temp_var == 1:
             print "Paiwise distance matrix based on temporally differentiated variables affected @t_n+1."
             print "There will be no distance for the ids of the first time-point!"
@@ -555,6 +562,142 @@ class Clusterer:
                     w_topo, w_var, w_temp = renorm(i,j,mat_topo_dist_standard, spatial_standard_distance_matrix, temporal_standard_distance_matrix, copy.copy(topo_weight), copy.copy(spatial_weights), copy.copy(temporal_weights))
                     # - Pairwise weighted standard distance matrix
                     global_matrix[i,j] = global_matrix[j,i] = w_topo * mat_topo[i,j] + sum([w_var[n]*var_mat[n][i,j] for n in xrange(nb_spa_var)]) + sum([w_temp[n]*temp_mat[n][i,j] for n in xrange(nb_temp_var)])
+
+        # -- We update caching variables only if there is more than ONE pairwise distance matrix :
+        self._global_distance_matrix = global_matrix
+        self._global_distance_ids = vtx_list
+        self._global_distance_weigths = variable_weights
+        self._global_distance_variables = variable_names
+
+        return vtx_list, global_matrix
+
+
+    def assemble_matrix_2(self, variable_names, variable_weights, vids = None):
+        """
+        Funtion creating the global weighted distance matrix.
+        Provided `variable_names` should exist in `self.vertex_matrix_dict`
+
+        :Parameters:
+         - `variable_names` (list) - list of variables names in `self.vertex_matrix_dict` to combine
+         - `variable_weights` (list) - list of variables used to create the global weighted distance matrix
+         - `vids` (list) - list of ids to have in the distance matrix
+        """
+        if isinstance(variable_names,str):
+            variable_names = [variable_names]
+        if isinstance(variable_weights,int) or isinstance(variable_weights,float):
+            variable_weights = [float(variable_weights)]
+        assert len(variable_names) == len(variable_weights)
+        assert math.fsum(variable_weights)==1.
+        #assert math.fsum(variable_weights)==1. or math.fsum(variable_weights)-1.<1e-5
+
+        # -- Checking all requested information (i.e. variables names) is present in the dictionary `self._distance_matrix_dict`:
+        for k in variable_names:
+            if not self._distance_matrix_dict.has_key(k):
+                if k.lower() == 'topological':
+                    self.add_topological_distance_matrix()
+                elif k.lower() == 'euclidean':
+                    self.add_euclidean_distance_matrix()
+                else:
+                    raise KeyError("'{}' is not in the dictionary `self._distance_matrix_dict`".format(k))
+
+        # -- Detecting the kind of data we are facing !
+        spatial_relation_data, temporal_data, spatial_data = False, False, False
+        for k,v in self._distance_matrix_info.iteritems():
+            if k == 'topological' or k == 'euclidean':
+                spatial_relation_data = True
+            if v[0] == 't':
+                temporal_data = True
+            if v[0] == 's' and k != 'topological' and k != 'euclidean':
+                spatial_data = True
+
+        # -- Creating the list of vertices:
+        # - Checking for unwanted ids:
+        if vids is not None:
+            id_not_in_labels = list(set(vids)-set(self.labels))
+            if len(id_not_in_labels) != 0:
+                warnings.warn("Some of the ids you provided has not been found in the graph : {}".format(id_not_in_labels))
+                print ("Removing them...")
+                vids = list(set(vids)-set(id_not_in_labels))
+        # - Filtering ids according to necessity:
+        if temporal_data:
+            # - We keep vertex ids only if they are temporally linked in the graph at `rank` or -`rank`
+            if vids is None:
+                vtx_list = [vid for vid in self.labels if exist_relative_at_rank(self.graph, vid, self.rank) or exist_relative_at_rank(self.graph, vid, -self.rank)]
+            else:
+                vtx_list = [vid for vid in vids if exist_relative_at_rank(self.graph, vid, self.rank) or exist_relative_at_rank(self.graph, vid, -self.rank)]
+        else:
+            # - No need to check for temporal link !
+            if vids is None:
+                vtx_list = self.labels
+            else:
+                vtx_list = vids
+
+        # -- Shortcut when asking for the same result:
+        if variable_weights == self._global_distance_weigths and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
+            return self._global_distance_ids, self._global_distance_matrix
+
+        # -- Standardization step:
+        # - Need to check if there is any changes (length or order) in the ids list compared to the initial list used to create the pairwise distance matrix:
+        ids_index = [self.labels.index(v) for v in vtx_list]
+
+        spatial_standard_distance_matrix, temporal_standard_distance_matrix = {}, {}
+        temporal_weights, spatial_weights = [], []
+        nb_temp_var, nb_spa_var = 0, 0
+        mat_topo_dist_standard = []
+        for n,var_name in enumerate(variable_names):
+            if var_name == 'topological' or var_name == 'euclidean':
+                mat_topo_dist_standard = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
+                topo_weight = variable_weights[n]
+            elif self._distance_matrix_info[var_name][0] == 't':
+                temporal_standard_distance_matrix[nb_temp_var] = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
+                temporal_weights.append(variable_weights[n])
+                nb_temp_var += 1
+            else:
+                spatial_standard_distance_matrix[nb_spa_var] = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
+                spatial_weights.append(variable_weights[n])
+                nb_spa_var += 1
+
+        # -- Checking for simple cases: no re-weighting to do !
+        # - Only 'topological' or 'euclidean' distance asked:
+        if spatial_relation_data and (nb_spa_var+nb_temp_var)==0:
+            print "No topological/euclidean distance between each time point !!"
+            return vtx_list, mat_topo_dist_standard
+        # - Only ONE spatial pairwise distance asked:
+        if not spatial_relation_data and nb_temp_var == 0 and nb_spa_var == 1:
+            return vtx_list, spatial_standard_distance_matrix[0]
+        # - Only ONE temporal pairwise distance asked:
+        if not spatial_relation_data and nb_spa_var == 0 and nb_temp_var == 1:
+            print "Paiwise distance matrix based on temporally differentiated variables affected @t_n+1."
+            print "There will be no distance for the ids of the first time-point!"
+            return vtx_list, temporal_standard_distance_matrix[0]
+
+        # - Creating weight matrix and replacing nan by zeros for computation in standardized matrix.
+        N = len(vtx_list)
+        weights, weight_matrix, standardized_matrix = [], [], []
+        if spatial_relation_data:
+            standardized_matrix.append( np.nan_to_num(mat_topo_dist_standard) )
+            weights.append(topo_weight)
+            weight_matrix.append(create_weight_matrix(N,topo_weight,mat_topo_dist_standard))
+        if spatial_data:
+            standardized_matrix.extend( [np.nan_to_num(spatial_standard_distance_matrix[n]) for n in xrange(nb_spa_var)] )
+            for n in xrange(nb_spa_var):
+                weights.append(spatial_weights[n])
+                weight_matrix.append(create_weight_matrix(N,spatial_weights[n],spatial_standard_distance_matrix[n]))
+        if temporal_data:
+            standardized_matrix.extend( [np.nan_to_num(temporal_standard_distance_matrix[n]) for n in xrange(nb_temp_var)] )
+            for n in xrange(nb_temp_var):
+                weights.append(temporal_weights[n])
+                weight_matrix.append(create_weight_matrix(N,temporal_weights[n],temporal_standard_distance_matrix[n]))
+
+        print("Creating the global pairwise weighted standard distance matrix...")
+        # Finally making the global weighted pairwise standard distance matrix:
+        for w, w_m in zip(weights,weight_matrix):
+            binary = ~np.isnan(w_m)
+            weight_matrix = [weight_matrix[r]*(binary+~binary*w) for r in xrange(len(weights))]
+
+        global_matrix = np.zeros( shape = [N,N], dtype=float )
+        for wei_mat, standard_mat in zip(weight_matrix,standardized_matrix):
+            global_matrix += np.nan_to_num(weight_matrix)*standardized_matrix
 
         # -- We update caching variables only if there is more than ONE pairwise distance matrix :
         self._global_distance_matrix = global_matrix
@@ -610,7 +753,7 @@ class Clusterer:
         """
         if self._global_distance_matrix is None:
             return warnings.warn('No clustering made yet !')
-        
+
         if name == "":
             name=self._method+"_"+str(self._nb_clusters)+"_"+str([str(self._global_distance_weigths[n])+"*"+str(self._global_distance_variables[n]) for n in xrange(len(self._global_distance_weigths))])
             print "The clustering '{}' will be added to the `graph` ...".format(name)
@@ -629,7 +772,7 @@ class Clusterer:
     def clustering_estimators(self, clustering_method, k_min=4, k_max=15, beta = 1, plot_estimator = True):
         """
         Compute various estimators based on clustering results.
-        
+
         :Parameters:
          - distance_matrix (np.array): distance matrix to be used for clustering;
          - clustering_method (str): clustering methods to be applyed, must be "Ward" or "Spectral"
@@ -757,7 +900,7 @@ class ClusteringChecker:
         Function computing within cluster diameter, i.e. the max distance between two vertex from the same cluster.
         $$ \max_{i,j \in q} D(j,i) ,$$
         where $D(i,j)$ is the distance matrix and $q$ a cluster, .
-        
+
         :Parameters:
          - `distance_matrix` (np.array) - distance matrix used to create the clustering.
          - `clustering` (list) - list giving the resulting clutering.
@@ -780,7 +923,7 @@ class ClusteringChecker:
         Function computing within cluster diameter, i.e. the min distance between two vertex from two diferent clusters.
         $$ \min_{i \in q, j \not\in q} D(j,i) ,$$
         where $D(i,j)$ is the distance matrix and $q$ a cluster.
-        
+
         :Parameters:
          - `distance_matrix` (np.array) - distance matrix used to create the clustering.
          - `clustering` (list) - list giving the resulting clutering.
@@ -1017,7 +1160,7 @@ class ClusteringChecker:
         Compute the mean distance between a vertex and those from each group.
         $$ D(i,q) = \dfrac{ \sum_{i \neq j} D(i,j) }{ N_q } \: , \quad \forall i \in [1,self._N] \:, \: q \in [1,Q],$$
         where $D(i,j)$ is the distance matrix and $q$ a cluster.
-        
+
         :Parameters:
          - `distance_matrix` (np.array) - distance matrix used to create the clustering.
          - `clustering` (list) - list giving the resulting clutering.
