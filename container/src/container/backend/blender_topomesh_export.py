@@ -29,7 +29,7 @@ This module export a mesh from Blender
 
 __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
-__revision__ = " $Id: blender_topomesh.py 7865 2010-02-08 18:04:39Z cokelaer $ "
+__revision__ = " $Id$ "
 
 from random import randint
 import Blender

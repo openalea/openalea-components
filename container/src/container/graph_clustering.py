@@ -23,7 +23,7 @@ import copy
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from mpl_toolkits.mplot3d.axes3d import Axes3D
-
+from scipy.sparse import csr_matrix
 from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 
 def distance_matrix_from_vector(data, variable_types, no_dist_index = []):
@@ -832,6 +832,7 @@ def MDS_graph(dataset, dimension=3, clustering=None):
         print "There will be no representation of the embedded coordinates."
 
     if clustering is None:
+        D = dataset # BE CAREFUL: D is not defined.
         clustering = xrange(len(D))
 
     from sklearn import manifold
@@ -864,6 +865,7 @@ def plot_cluster_distances(cluster_distances):
     plt.imshow(cluster_distances, cmap=cm.jet, interpolation='nearest')
 
     numrows, numcols = cluster_distances.shape
+    cd = cluster_distances
     def format_coord(x, y):
         col = int(x+0.5)
         row = int(y+0.5)

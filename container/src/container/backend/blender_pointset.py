@@ -29,7 +29,7 @@ This module import a point set in Blender
 
 __docformat__ = "restructuredtext"
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 from random import randint
 import Blender

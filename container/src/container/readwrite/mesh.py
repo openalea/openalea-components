@@ -21,7 +21,7 @@ for a rought description of this format.
 """
 
 __license__= "Cecill-C"
-__revision__=" $Id: topomesh.py 7865 2010-02-08 18:04:39Z cokelaer $ "
+__revision__=" $Id$ "
 
 from ..topomesh import Topomesh
 

@@ -47,7 +47,7 @@ def pre_order(tree, vtx_id, edge_type_property = None):
         successor = []
         yield vtx_id
         for vid in tree.children(vtx_id):
-            if edge_type.get(vid) == '<':
+            if edge_type_property.get(vid) == '<':
                 successor.append(vid)
                 continue
 

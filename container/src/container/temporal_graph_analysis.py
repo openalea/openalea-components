@@ -20,10 +20,10 @@ import warnings
 import types
 import numpy as np
 import copy
-from interface.property_graph import IPropertyGraph, PropertyError
+#from interface.property_graph import IPropertyGraph, PropertyError
 import matplotlib.pyplot as plt
 
-from scipy.sparse import csr_matrix
+#from scipy.sparse import csr_matrix
 from numpy.linalg import svd, lstsq
 
 
@@ -1011,8 +1011,8 @@ def triplot(graphs_list, values2plot, labels_list=None, values_name="",normed=Fa
     if type(values2plot)==type(str('str')):
         for g in graphs_list:
             if values2plot not in g.vertex_property_names():
-                import sys
-                sys.exit(1)
+                #sys.exit(1)
+                raise ValueError(values2plot)
             else:
                 if (values_name==""):
                     values_name=values2plot
