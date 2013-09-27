@@ -22,6 +22,7 @@ __revision__ = " $Id$ "
 from interface.property_graph import IPropertyGraph, PropertyError
 from graph import Graph, InvalidVertex, InvalidEdge
 import numpy as np
+from heapq import heappop, heappush
 import warnings
 
 VertexProperty, EdgeProperty, GraphProperty = range(3)
@@ -276,13 +277,13 @@ class PropertyGraph(IPropertyGraph, Graph):
         self.__relabel_and_add_vertex_edge_properties(graph, trans_vid, trans_eid)
         
         # update properties on graph
-        gproperties = self.graph_property()
+        #gproperties = self.graph_property()
         newgproperties = {}
         for pname, prop in graph.graph_property_names():
             newgproperty = graph.translate_graph_property(pname,trans_vid, trans_eid)
             newgproperties[pname] = newgproperty
 
-        prop.update(newgproperties)
+            prop.update(newgproperties)
 
         return trans_vid, trans_eid
         
@@ -564,8 +565,6 @@ class PropertyGraph(IPropertyGraph, Graph):
         :Returns:
         - `dist_dict` : a dictionary of the distances, key : vid, value : distance
         """
-        import numpy as np
-        from heapq import heappop, heappush
         dist={}
         reduced_dist={}
         reduced_dist[vid]=0
@@ -621,7 +620,6 @@ class PropertyGraph(IPropertyGraph, Graph):
         :Return:
         - `numpy.array` : a NxN matrix
         """
-        import numpy as np
         if not isinstance(edge_dist, type(lambda m: 1)):
             val_edge_dist = edge_dist
             edge_dist = lambda g, x, y : val_edge_dist

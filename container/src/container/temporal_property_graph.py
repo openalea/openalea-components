@@ -17,7 +17,7 @@
 """This module provide a class that extends the PropertyGraph with different types of edges"""
 
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 from property_graph import *
 import warnings
@@ -245,11 +245,11 @@ class TemporalPropertyGraph(PropertyGraph):
             return vids
         if n==1 :
             for vid in vids:
-                neighbs |= (self.out_neighbors(vid, 't') | set([vid]))
+                neighbs |= (self.out_neighbors(vid, edge_type) | set([vid]))
             return neighbs
         else :
             for vid in vids :
-                neighbs |= (self.descendants(self.out_neighbors(vid, 't'), n-1) | set([vid]))
+                neighbs |= (self.descendants(self.out_neighbors(vid, edge_type), n-1) | set([vid]))
                 if list(neighbs)==self._vertices.keys():
                     return neighbs
         return neighbs
@@ -281,11 +281,11 @@ class TemporalPropertyGraph(PropertyGraph):
             return vids
         if n==1 :
             for vid in vids:
-                neighbs |= (self.in_neighbors(vid, 't') | set([vid]))
+                neighbs |= (self.in_neighbors(vid, edge_type) | set([vid]))
             return neighbs
         else :
             for vid in vids :
-                neighbs |= (self.ancestors(self.in_neighbors(vid, 't'), n-1) | set([vid]))
+                neighbs |= (self.ancestors(self.in_neighbors(vid, edge_type), n-1) | set([vid]))
                 if list(neighbs)==self._vertices.keys():
                     return neighbs
         return neighbs

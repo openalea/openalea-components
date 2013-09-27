@@ -17,7 +17,7 @@
 """This module helps to use clustering and standardization methods on graphs."""
 
 __license__ = "Cecill-C"
-__revision__ = " $Id: $ "
+__revision__ = " $Id$ "
 
 import warnings
 import numpy as np

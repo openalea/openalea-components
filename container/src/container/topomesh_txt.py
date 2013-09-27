@@ -120,10 +120,10 @@ def txt_to_topomesh (f, method = "set") :
             mesh.add_wisp(deg,wid)
             #props
             for ind,val in enumerate(gr[2:]) :
-            	if props[deg][ind][1].type() == 'str' :
-            		props[deg][ind][1][wid] = val
-            	else :
-            		props[deg][ind][1][wid] = eval("%s(%s)" % (props[deg][ind][1].type(),val) )
+                if props[deg][ind][1].type() == 'str' :
+                    props[deg][ind][1][wid] = val
+                else :
+                    props[deg][ind][1][wid] = eval("%s(%s)" % (props[deg][ind][1].type(),val) )
             line = f.readline().rstrip()
 
     #links
@@ -155,3 +155,4 @@ def read_topomesh (filename, method = "set") :
     mesh,descr,props = txt_to_topomesh(f,method)
     f.close()
     return mesh,descr,props
+
