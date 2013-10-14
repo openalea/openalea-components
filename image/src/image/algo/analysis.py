@@ -1512,7 +1512,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             if verbose: print 'Computing curvature :'
             for n,vid in enumerate(vids):
                 if (recalculate_all) or (not self.principal_curvatures.has_key(vid)) :
-                    if verbose: print n,'/',len(vids)
+                    if verbose and n%20 == 0: print n,'/',len(vids)
                     func( self, vid, pts, adjacencies, fitting_degree, monge_degree )
 
         return wrapped_function

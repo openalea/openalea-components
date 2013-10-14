@@ -20,6 +20,7 @@ from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialIm
 from openalea.image.spatial_image import is2D
 from openalea.container import PropertyGraph
 import numpy as np
+import math
 
 #~ default_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis']
 default_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
@@ -58,10 +59,10 @@ def generate_graph_topology(labels, neighborhood):
     return graph, label2vertex, edges
 
 
-def _graph_from_image(image, labels, background, default_properties, 
-                     default_real_property, bbox_as_real, 
+def _graph_from_image(image, labels, background, default_properties,
+                     property_as_real, bbox_as_real,
                      ignore_cells_at_stack_margins, min_contact_surface):
-    """ 
+    """
     Construct a PropertyGraph from a SpatialImage (or equivalent) representing a segmented image.
 
     :Parameters:
@@ -70,7 +71,7 @@ def _graph_from_image(image, labels, background, default_properties,
         If labels is None, all labels are used.
      - `background` (int) - label representing background.
      - `default_properties` (list) - the list of name of properties to create. It should be in default_properties.
-     - `default_real_property` (bool) - If default_real_property = True, property is in real-world units else in voxels.
+     - `property_as_real` (bool) - If property_as_real = True, property is in real-world units else in voxels.
      - `bbox_as_real` (bool) - If bbox_as_real = True, bounding boxes are in real-world units else in voxels.
 
     :rtype: PropertyGraph
@@ -98,7 +99,7 @@ def _graph_from_image(image, labels, background, default_properties,
     if ignore_cells_at_stack_margins:
         analysis.add2ignoredlabels( analysis.cells_in_image_margins() )
 
-    if labels is None: 
+    if labels is None:
         filter_label = False
         labels = list(analysis.labels())
         if background in labels : del labels[labels.index(background)]
@@ -122,30 +123,30 @@ def _graph_from_image(image, labels, background, default_properties,
     if ("wall_orientation" in default_properties) and ('all_wall_orientation' in default_properties):
         default_properties.remove("wall_orientation")
 
-    if 'boundingbox' in default_properties : 
+    if 'boundingbox' in default_properties :
         print 'Extracting boundingbox...'
         add_vertex_property_from_dictionary(graph,'boundingbox',analysis.boundingbox(labels,real=bbox_as_real),mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"boundingbox":(u'\u3bcm'if bbox_as_real else 'voxels')} )
+        #~ graph._graph_property("units").update( {"boundingbox":(u'\xb5m'if bbox_as_real else 'voxels')} )
 
-    if 'volume' in default_properties and analysis.is3D(): 
+    if 'volume' in default_properties and analysis.is3D():
         print 'Computing volume property...'
-        add_vertex_property_from_dictionary(graph,'volume',analysis.volume(labels,real=default_real_property),mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"volume":('\u03bcm\u00B3'if default_real_property else 'voxels')} )
+        add_vertex_property_from_dictionary(graph,'volume',analysis.volume(labels,real=property_as_real),mlabel2vertex=label2vertex)
+        #~ graph._graph_property("units").update( {"volume":(u'\xb5m\xb3'if property_as_real else 'voxels')} )
 
     barycenters = None
     if 'barycenter' in default_properties :
         print 'Computing barycenter property...'
-        barycenters = analysis.center_of_mass(labels,real=default_real_property)
+        barycenters = analysis.center_of_mass(labels,real=property_as_real)
         add_vertex_property_from_dictionary(graph,'barycenter',barycenters,mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"barycenter":('\u03bcm'if default_real_property else 'voxels')} )
+        #~ graph._graph_property("units").update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
 
     background_neighbors = set(analysis.neighbors(background))
     background_neighbors.intersection_update(labelset)
-    if 'L1' in default_properties :         
+    if 'L1' in default_properties :
         print 'Generating the list of cells belonging to the first layer...'
         add_vertex_property_from_label_and_value(graph,'L1',labels,[(l in background_neighbors) for l in labels],mlabel2vertex=label2vertex)
 
-    if 'border' in default_properties : 
+    if 'border' in default_properties :
         print 'Generating the list of cells at the margins of the stack...'
         border_cells = analysis.cells_in_image_margins()
         try: border_cells.remove(background)
@@ -153,42 +154,43 @@ def _graph_from_image(image, labels, background, default_properties,
         border_cells = set(border_cells)
         add_vertex_property_from_label_and_value(graph,'border',labels,[(l in border_cells) for l in labels],mlabel2vertex=label2vertex)
 
-    if 'inertia_axis' in default_properties : 
+    if 'inertia_axis' in default_properties :
         print 'Computing inertia_axis property...'
         inertia_axis, inertia_values = analysis.inertia_axis(labels,barycenters)
         add_vertex_property_from_dictionary(graph,'inertia_axis',inertia_axis,mlabel2vertex=label2vertex)
         add_vertex_property_from_dictionary(graph,'inertia_values',inertia_values,mlabel2vertex=label2vertex)
 
-    if 'wall_surface' in default_properties : 
+    if 'wall_surface' in default_properties :
         print 'Computing wall_surface property...'
         filtered_edges, unlabelled_target, unlabelled_wall_surfaces = {}, {}, {}
         for source,targets in neighborhood.iteritems():
             if source in labelset :
                 filtered_edges[source] = [ target for target in targets if source < target and target in labelset ]
                 unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background]
-        wall_surfaces = analysis.wall_surfaces(filtered_edges,real=default_real_property)
+        wall_surfaces = analysis.wall_surfaces(filtered_edges,real=property_as_real)
         add_edge_property_from_label_property(graph,'wall_surface',wall_surfaces,mlabelpair2edge=edges)
 
         graph.add_vertex_property('unlabelled_wall_surface')
         for source in unlabelled_target:
-            unlabelled_wall_surface = analysis.wall_surfaces({source:unlabelled_target[source]},real=default_real_property)
+            unlabelled_wall_surface = analysis.wall_surfaces({source:unlabelled_target[source]},real=property_as_real)
             graph.vertex_property('unlabelled_wall_surface')[label2vertex[source]] = sum(unlabelled_wall_surface.values())
 
-        #~ graph._graph_property("units").update( {"wall_surface":('\u03bcm\u00B2'if default_real_property else 'voxels')} )
+        #~ graph._graph_property("units").update( {"wall_surface":('\xb5m\xb2'if property_as_real else 'voxels')} )
+        #~ graph._graph_property("units").update( {"unlabelled_wall_surface":('\xb5m\xb2'if property_as_real else 'voxels')} )
 
     if 'epidermis_surface' in default_properties :
         print 'Computing epidermis_surface property...'
         def not_background(indices):
             a,b = indices
-            if a == background: 
+            if a == background:
                 if b == background: raise ValueError(indices)
                 else : return b
             elif b == background: return a
             else: raise ValueError(indices)
-        epidermis_surfaces = analysis.cell_wall_surface(background,list(background_neighbors) ,real=default_real_property)
+        epidermis_surfaces = analysis.cell_wall_surface(background,list(background_neighbors) ,real=property_as_real)
         epidermis_surfaces = dict([(not_background(indices),value) for indices,value in epidermis_surfaces.iteritems()])
         add_vertex_property_from_label_property(graph,'epidermis_surface',epidermis_surfaces,mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"epidermis_surface":('um2'if default_real_property else 'voxels')} )
+        #~ graph._graph_property("units").update( {"epidermis_surface":('\xb5m\xb2'if property_as_real else 'voxels')} )
 
 
     if 'projected_anticlinal_wall_median' in default_properties:
@@ -315,7 +317,7 @@ def _graph_from_image(image, labels, background, default_properties,
         graph.add_graph_property('radius_local_principal_curvature_estimation',radius)
         for radius in graph.graph_property('radius_local_principal_curvature_estimation'):
             print 'Computing local_principal_curvature property with radius = {}voxels...'.format(radius)
-            print r"This represent a local curvature estimation area of {}$\mu.m^{2}$".format(math.pi*(radius*analysis.image.resolution[0])*(radius*analysis.image.resolution[1]))
+            print u"This represent a local curvature estimation area of {}\xb5m\xb2".format(round(math.pi*(radius*analysis.image.resolution[0])*(radius*analysis.image.resolution[1])))
             analysis.compute_principal_curvatures(radius=radius,verbose=True)
             add_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_values_r'+str(radius), analysis.principal_curvatures)
             add_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_normal_r'+str(radius), analysis.principal_curvatures_normal)
@@ -327,17 +329,17 @@ def _graph_from_image(image, labels, background, default_properties,
         #~ print 'Computing local_gaussian_curvature with radius = {}voxels...'.format(radius)
         #~ gaussian_curvature = analysis.gaussian_curvature_CGAL(radius=radius,verbose=True)
         #~ add_vertex_property_from_dictionary(graph, 'local_gaussian_curvature_r'+str(radius), gaussian_curvature)
-#~ 
+#~
     #~ if 'local_mean_curvature' in default_properties:
         #~ print 'Computing local_mean_curvature property with radius = {}voxels...'.format(radius)
         #~ mean_curvature = analysis.mean_curvature_CGAL(radius=radius,verbose=True)
         #~ add_vertex_property_from_dictionary(graph, 'local_mean_curvature_r'+str(radius), mean_curvature)
-#~ 
+#~
     #~ if 'local_curvature_ratio' in default_properties:
         #~ print 'Computing local_curvature_ratio property with radius = {}voxels...'.format(radius)
         #~ curvature_ratio = analysis.curvature_ratio_CGAL(radius=radius,verbose=True)
         #~ add_vertex_property_from_dictionary(graph, 'local_curvature_ratio_r'+str(radius), curvature_ratio)
-#~ 
+#~
     #~ if 'local_curvature_anisotropy' in default_properties:
         #~ print 'Computing local_curvature_anisotropy property with radius = {}voxels...'.format(radius)
         #~ curvature_anisotropy = analysis.curvature_anisotropy_CGAL(radius=radius,verbose=True)
@@ -346,23 +348,23 @@ def _graph_from_image(image, labels, background, default_properties,
     return graph
 
 
-def graph_from_image2D(image, labels, background, default_properties, 
-                     default_real_property, bbox_as_real, 
+def graph_from_image2D(image, labels, background, default_properties,
+                     property_as_real, bbox_as_real,
                      ignore_cells_at_stack_margins, min_contact_surface):
     return _graph_from_image(image, labels, background, default_properties,
-                            default_real_property, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
+                            property_as_real, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
 
-def graph_from_image3D(image, labels, background, default_properties, 
-                     default_real_property, bbox_as_real, 
+def graph_from_image3D(image, labels, background, default_properties,
+                     property_as_real, bbox_as_real,
                      ignore_cells_at_stack_margins, min_contact_surface):
     return _graph_from_image(image, labels, background, default_properties,
-                            default_real_property, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
+                            property_as_real, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
 
-def graph_from_image(image, 
-                     labels = None, 
-                     background = 1, 
+def graph_from_image(image,
+                     labels = None,
+                     background = 1,
                      default_properties = None,
-                     default_real_property = True,
+                     property_as_real = True,
                      bbox_as_real = False,
                      ignore_cells_at_stack_margins = True,
                      min_contact_surface = None):
@@ -378,18 +380,18 @@ def graph_from_image(image,
         if default_properties == None:
             default_properties = default_properties2D
         return graph_from_image2D(image, labels, background, default_properties,
-                            default_real_property, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
+                            property_as_real, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
     else:
         if default_properties == None:
             default_properties = default_properties3D
         return graph_from_image3D(image, labels, background, default_properties,
-                            default_real_property, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
+                            property_as_real, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
 
 def label2vertex_map(graph):
     """
         Compute a dictionary that map label to vertex id.
         It requires the existence of a 'label' vertex property
-        
+
         :rtype: dict
     """
     return dict([(j,i) for i,j in graph.vertex_property('label').iteritems()])
@@ -398,7 +400,7 @@ def label2vertex(graph,labels):
     """
         Translate label as vertex id.
         It requires the existence of a 'label' vertex property
-        
+
         :rtype: dict
     """
     label2vertexmap = label2vertex_map(graph)
@@ -410,7 +412,7 @@ def labelpair2edge_map(graph):
     """
         Compute a dictionary that map pair of labels to edge id.
         It requires the existence of a 'label' property
-        
+
         :rtype: dict
     """
     mlabel2vertex = label2vertex_map(graph)
@@ -420,19 +422,19 @@ def vertexpair2edge_map(graph):
     """
         Compute a dictionary that map pair of labels to edge id.
         It requires the existence of a 'label' property
-        
+
         :rtype: dict
     """
     return dict([((graph.source(eid),graph.target(eid)),eid) for eid in graph.edges()])
 
 
 def add_vertex_property_from_dictionary(graph, name, dictionary, mlabel2vertex = None):
-    """ 
-        Add a vertex property with name 'name' to the graph build from an image. 
-        The values of the property are given as by a dictionary where keys are vertex labels. 
     """
-        
-    if mlabel2vertex is None:    
+        Add a vertex property with name 'name' to the graph build from an image.
+        The values of the property are given as by a dictionary where keys are vertex labels.
+    """
+
+    if mlabel2vertex is None:
         mlabel2vertex = label2vertex_map(graph)
 
     if name in graph.vertex_properties():
@@ -442,14 +444,14 @@ def add_vertex_property_from_dictionary(graph, name, dictionary, mlabel2vertex =
     graph.vertex_property(name).update( dict([(mlabel2vertex[k], dictionary[k]) for k in dictionary]) )
 
 def add_vertex_property_from_label_and_value(graph, name, labels, property_values, mlabel2vertex = None):
-    """ 
-        Add a vertex property with name 'name' to the graph build from an image. 
-        The values of the property are given as two lists. 
+    """
+        Add a vertex property with name 'name' to the graph build from an image.
+        The values of the property are given as two lists.
         First one gives the label in the image and second gives the value of the property.
         Labels are first translated in id of the graph and values are assigned to these ids in the graph
     """
-        
-    if mlabel2vertex is None:    
+
+    if mlabel2vertex is None:
         mlabel2vertex = label2vertex_map(graph)
 
     if name in graph.vertex_properties():
@@ -459,12 +461,12 @@ def add_vertex_property_from_label_and_value(graph, name, labels, property_value
     graph.vertex_property(name).update(dict([(mlabel2vertex[i], v) for i,v in zip(labels,property_values)]))
 
 def add_vertex_property_from_label_property(graph, name, label_property, mlabel2vertex = None):
-    """ 
-        Add a vertex property with name 'name' to the graph build from an image. 
-        The values of the property are given as a dictionnary associating a label and a value. 
+    """
+        Add a vertex property with name 'name' to the graph build from an image.
+        The values of the property are given as a dictionnary associating a label and a value.
         Labels are first translated in id of the graph and values are assigned to these ids in the graph
     """
-    if mlabel2vertex is None:    
+    if mlabel2vertex is None:
         mlabel2vertex = label2vertex_map(graph)
 
     if name in graph.vertex_properties():
@@ -474,12 +476,12 @@ def add_vertex_property_from_label_property(graph, name, label_property, mlabel2
     graph.vertex_property(name).update(dict([(mlabel2vertex[i], v) for i,v in label_property.iteritems()]))
 
 def add_edge_property_from_dictionary(graph, name, dictionary, mlabelpair2edge = None):
-    """ 
-        Add an edge property with name 'name' to the graph build from an image. 
-        The values of the property are given as by a dictionary where keys are vertex labels. 
     """
-        
-    if mlabelpair2edge is None:    
+        Add an edge property with name 'name' to the graph build from an image.
+        The values of the property are given as by a dictionary where keys are vertex labels.
+    """
+
+    if mlabelpair2edge is None:
         mlabelpair2edge = labelpair2edge_map(graph)
 
     if name in graph.edge_properties():
@@ -489,13 +491,13 @@ def add_edge_property_from_dictionary(graph, name, dictionary, mlabelpair2edge =
     graph.edge_property(name).update( dict([(mlabelpair2edge[k], dictionary[k]) for k in dictionary]) )
 
 def add_edge_property_from_label_and_value(graph, name, label_pairs, property_values, mlabelpair2edge = None):
-    """ 
-        Add an edge property with name 'name' to the graph build from an image. 
-        The values of the property are given as two lists. 
+    """
+        Add an edge property with name 'name' to the graph build from an image.
+        The values of the property are given as two lists.
         First one gives the pair of labels in the image that are connected and the second list gives the value of the property.
         Pairs of labels are first translated in edge ids of the graph and values are assigned to these ids in the graph
     """
-        
+
     if mlabelpair2edge is None:
         mlabelpair2edge = labelpair2edge_map(graph)
 
@@ -506,9 +508,9 @@ def add_edge_property_from_label_and_value(graph, name, label_pairs, property_va
     graph.edge_property(name).update(dict([(mlabelpair2edge[labelpair], value) for labelpair,value in zip(label_pairs,property_values)]))
 
 def add_edge_property_from_label_property(graph, name, labelpair_property, mlabelpair2edge = None):
-    """ 
-        Add an edge property with name 'name' to the graph build from an image. 
-        The values of the property are given as a dictionnary associating a pair of label and a value. 
+    """
+        Add an edge property with name 'name' to the graph build from an image.
+        The values of the property are given as a dictionnary associating a pair of label and a value.
         Pairs of labels are first translated in edge ids of the graph and values are assigned to these ids in the graph
     """
     if mlabelpair2edge is None:
@@ -518,4 +520,4 @@ def add_edge_property_from_label_property(graph, name, labelpair_property, mlabe
         raise ValueError('Existing edge property %s' % name)
 
     graph.add_edge_property(name)
-    graph.edge_property(name).update(dict([(mlabelpair2edge[labelpair], value) for labelpair,value in labelpair_property.iteritems()]))    
+    graph.edge_property(name).update(dict([(mlabelpair2edge[labelpair], value) for labelpair,value in labelpair_property.iteritems()]))
