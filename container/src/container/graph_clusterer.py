@@ -26,7 +26,6 @@ import copy
 import math
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 from sklearn.cluster import SpectralClustering, Ward, DBSCAN
@@ -141,35 +140,10 @@ def csr_matrix_from_graph(graph, vids2keep):
     return csr_matrix((data,(row,col)), shape=(N,N))
 
 
-def renorm(line, column, mat_topo, var_mat, temp_mat, w_topo, w_var, w_temp):
-    w_renorm_topo = 0.
-    if w_topo != 0.:
-        if np.isnan(mat_topo[line,column]):
-            w_renorm_topo = w_topo
-            w_topo = 0.
-
-    w_renorm_var = 0.
-    for n in var_mat:
-        if np.isnan(var_mat[n][line,column]):
-            w_renorm_var += w_var[n]
-            w_var[n] = 0.
-
-    w_renorm_temp = 0.
-    for n in temp_mat:
-        if np.isnan(temp_mat[n][line,column]):
-            w_renorm_temp += w_temp[n]
-            w_temp[n] = 0.
-
-    renorm = (1.-(w_renorm_topo+w_renorm_var+w_renorm_temp))
-    if renorm != 0.:
-        return w_topo/renorm, np.array(w_var)/renorm if w_var!=[] else [], np.array(w_temp)/renorm if w_temp!=[] else []
-    else:
-        return w_topo, w_var, w_temp
-
-def create_weight_matrix(N,weight,standard_distance_matrix)
+def create_weight_matrix(N,weight,standard_distance_matrix):
     tmp_w_mat = np.zeros( shape = [N,N], dtype=float )
     tmp_w_mat.fill(weight)
-    tmp_w_mat[np.where(np.isnan(standard_distance_matrix)]==np.nan
+    tmp_w_mat[np.where(np.isnan(standard_distance_matrix))]==np.nan
     return tmp_w_mat
 
 
@@ -307,7 +281,7 @@ class Clusterer:
         self._global_distance_variables = None
         self._method = None
         self._nb_clusters = None
-
+        self._clustering = None
 
     def add_vertex_variable(self, var_name, var_type, var_id = None):
         """
@@ -432,147 +406,148 @@ class Clusterer:
 
     def remove_distance_matrix(self, var_id):
         """
+        :TODO:
         remove a distance matrix form the dictionary `self._distance_matrix_dict` and it's attached information in `self._distance_matrix_info`
         """
         pass
 
 
-    def assemble_matrix(self, variable_names, variable_weights, vids = None):
-        """
-        Funtion creating the global weighted distance matrix.
-        Provided `variable_names` should exist in `self.vertex_matrix_dict`
+    #~ def assemble_matrix_OLD(self, variable_names, variable_weights, vids = None):
+        #~ """
+        #~ Funtion creating the global weighted distance matrix.
+        #~ Provided `variable_names` should exist in `self.vertex_matrix_dict`
+#~ 
+        #~ :Parameters:
+         #~ - `variable_names` (list) - list of variables names in `self.vertex_matrix_dict` to combine
+         #~ - `variable_weights` (list) - list of variables used to create the global weighted distance matrix
+         #~ - `vids` (list) - list of ids to have in the distance matrix
+        #~ """
+        #~ if isinstance(variable_names,str):
+            #~ variable_names = [variable_names]
+        #~ if isinstance(variable_weights,int) or isinstance(variable_weights,float):
+            #~ variable_weights = [float(variable_weights)]
+        #~ assert len(variable_names) == len(variable_weights)
+        #~ assert math.fsum(variable_weights)==1.
+        #~ #assert math.fsum(variable_weights)==1. or math.fsum(variable_weights)-1.<1e-5
+#~ 
+        #~ # -- Checking all requested information (i.e. variables names) is present in the dictionary `self._distance_matrix_dict`:
+        #~ for k in variable_names:
+            #~ if not self._distance_matrix_dict.has_key(k):
+                #~ if k.lower() == 'topological':
+                    #~ self.add_topological_distance_matrix()
+                #~ elif k.lower() == 'euclidean':
+                    #~ self.add_euclidean_distance_matrix()
+                #~ else:
+                    #~ raise KeyError("'{}' is not in the dictionary `self._distance_matrix_dict`".format(k))
+#~ 
+        #~ # -- Detecting the kind of data we are facing !
+        #~ spatial_relation_data, temporal_data, spatial_data = False, False, False
+        #~ for k,v in self._distance_matrix_info.iteritems():
+            #~ if k == 'topological' or k == 'euclidean':
+                #~ spatial_relation_data = True
+            #~ if v[0] == 't':
+                #~ temporal_data = True
+            #~ if v[0] == 's' and k != 'topological' and k != 'euclidean':
+                #~ spatial_data = True
+#~ 
+        #~ # -- Creating the list of vertices:
+        #~ # - Checking for unwanted ids:
+        #~ if vids is not None:
+            #~ id_not_in_labels = list(set(vids)-set(self.labels))
+            #~ if len(id_not_in_labels) != 0:
+                #~ warnings.warn("Some of the ids you provided has not been found in the graph : {}".format(id_not_in_labels))
+                #~ print ("Removing them...")
+                #~ vids = list(set(vids)-set(id_not_in_labels))
+        #~ # - Filtering ids according to necessity:
+        #~ if temporal_data:
+            #~ # - We keep vertex ids only if they are temporally linked in the graph at `rank` or -`rank`
+            #~ if vids is None:
+                #~ vtx_list = [vid for vid in self.labels if exist_relative_at_rank(self.graph, vid, self.rank) or exist_relative_at_rank(self.graph, vid, -self.rank)]
+            #~ else:
+                #~ vtx_list = [vid for vid in vids if exist_relative_at_rank(self.graph, vid, self.rank) or exist_relative_at_rank(self.graph, vid, -self.rank)]
+        #~ else:
+            #~ # - No need to check for temporal link !
+            #~ if vids is None:
+                #~ vtx_list = self.labels
+            #~ else:
+                #~ vtx_list = vids
+#~ 
+        #~ # -- Shortcut when asking for the same result:
+        #~ if variable_weights == self._global_distance_weigths and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
+            #~ return self._global_distance_ids, self._global_distance_matrix
+#~ 
+        #~ # -- Standardization step:
+        #~ # - Need to check if there is any changes (length or order) in the ids list compared to the initial list used to create the pairwise distance matrix:
+        #~ ids_index = [self.labels.index(v) for v in vtx_list]
+#~ 
+        #~ spatial_standard_distance_matrix, temporal_standard_distance_matrix = {}, {}
+        #~ temporal_weights, spatial_weights = [], []
+        #~ nb_temp_var, nb_spa_var = 0, 0
+        #~ mat_topo_dist_standard = []
+        #~ for n,var_name in enumerate(variable_names):
+            #~ if var_name == 'topological' or var_name == 'euclidean':
+                #~ mat_topo_dist_standard = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
+                #~ topo_weight = variable_weights[n]
+            #~ elif self._distance_matrix_info[var_name][0] == 't':
+                #~ temporal_standard_distance_matrix[nb_temp_var] = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
+                #~ temporal_weights.append(variable_weights[n])
+                #~ nb_temp_var += 1
+            #~ else:
+                #~ spatial_standard_distance_matrix[nb_spa_var] = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
+                #~ spatial_weights.append(variable_weights[n])
+                #~ nb_spa_var += 1
+#~ 
+        #~ # -- Checking for simple cases: no re-weighting to do !
+        #~ # - Only 'topological' or 'euclidean' distance asked:
+        #~ if spatial_relation_data and (nb_spa_var+nb_temp_var)==0:
+            #~ print "No topological/euclidean distance between each time point !!"
+            #~ return vtx_list, mat_topo_dist_standard
+        #~ # - Only ONE spatial pairwise distance asked:
+        #~ if not spatial_relation_data and nb_temp_var == 0 and nb_spa_var == 1:
+            #~ return vtx_list, spatial_standard_distance_matrix[0]
+        #~ # - Only ONE temporal pairwise distance asked:
+        #~ if not spatial_relation_data and nb_spa_var == 0 and nb_temp_var == 1:
+            #~ print "Paiwise distance matrix based on temporally differentiated variables affected @t_n+1."
+            #~ print "There will be no distance for the ids of the first time-point!"
+            #~ return vtx_list, temporal_standard_distance_matrix[0]
+#~ 
+        #~ # - Replacing nan by zeros for computation.
+        #~ if spatial_relation_data:
+            #~ mat_topo = np.nan_to_num(mat_topo_dist_standard)
+        #~ else:
+            #~ mat_topo = []
+        #~ if spatial_data:
+            #~ var_mat = [np.nan_to_num(spatial_standard_distance_matrix[n]) for n in xrange(nb_spa_var)]
+        #~ else:
+            #~ var_mat, spatial_standard_distance_matrix = [], []
+        #~ if temporal_data:
+            #~ temp_mat = [np.nan_to_num(temporal_standard_distance_matrix[n]) for n in xrange(nb_temp_var)]
+        #~ else:
+            #~ temp_mat, temporal_standard_distance_matrix = [], []
+#~ 
+        #~ print("Creating the global pairwise weighted standard distance matrix...")
+        #~ # Finally making the global weighted pairwise standard distance matrix:
+        #~ N = len(vtx_list)
+        #~ global_matrix = np.zeros( shape = [N,N], dtype=float )
+        #~ w_mat = np.zeros( shape = [N,N], dtype=float )
+        #~ for i in xrange(global_matrix.shape[0]):
+            #~ for j in xrange(global_matrix.shape[1]):
+                #~ if i>j: #D[i,j]=D[j,i] and if i==j, D[i,j]=D[j,i]=0
+                    #~ # - Computing weights according to missing values.
+                    #~ w_topo, w_var, w_temp = renorm(i,j,mat_topo_dist_standard, spatial_standard_distance_matrix, temporal_standard_distance_matrix, copy.copy(topo_weight), copy.copy(spatial_weights), copy.copy(temporal_weights))
+                    #~ # - Pairwise weighted standard distance matrix
+                    #~ global_matrix[i,j] = global_matrix[j,i] = w_topo * mat_topo[i,j] + sum([w_var[n]*var_mat[n][i,j] for n in xrange(nb_spa_var)]) + sum([w_temp[n]*temp_mat[n][i,j] for n in xrange(nb_temp_var)])
+#~ 
+        #~ # -- We update caching variables only if there is more than ONE pairwise distance matrix :
+        #~ self._global_distance_matrix = global_matrix
+        #~ self._global_distance_ids = vtx_list
+        #~ self._global_distance_weigths = variable_weights
+        #~ self._global_distance_variables = variable_names
+#~ 
+        #~ return vtx_list, global_matrix
 
-        :Parameters:
-         - `variable_names` (list) - list of variables names in `self.vertex_matrix_dict` to combine
-         - `variable_weights` (list) - list of variables used to create the global weighted distance matrix
-         - `vids` (list) - list of ids to have in the distance matrix
-        """
-        if isinstance(variable_names,str):
-            variable_names = [variable_names]
-        if isinstance(variable_weights,int) or isinstance(variable_weights,float):
-            variable_weights = [float(variable_weights)]
-        assert len(variable_names) == len(variable_weights)
-        assert math.fsum(variable_weights)==1.
-        #assert math.fsum(variable_weights)==1. or math.fsum(variable_weights)-1.<1e-5
 
-        # -- Checking all requested information (i.e. variables names) is present in the dictionary `self._distance_matrix_dict`:
-        for k in variable_names:
-            if not self._distance_matrix_dict.has_key(k):
-                if k.lower() == 'topological':
-                    self.add_topological_distance_matrix()
-                elif k.lower() == 'euclidean':
-                    self.add_euclidean_distance_matrix()
-                else:
-                    raise KeyError("'{}' is not in the dictionary `self._distance_matrix_dict`".format(k))
-
-        # -- Detecting the kind of data we are facing !
-        spatial_relation_data, temporal_data, spatial_data = False, False, False
-        for k,v in self._distance_matrix_info.iteritems():
-            if k == 'topological' or k == 'euclidean':
-                spatial_relation_data = True
-            if v[0] == 't':
-                temporal_data = True
-            if v[0] == 's' and k != 'topological' and k != 'euclidean':
-                spatial_data = True
-
-        # -- Creating the list of vertices:
-        # - Checking for unwanted ids:
-        if vids is not None:
-            id_not_in_labels = list(set(vids)-set(self.labels))
-            if len(id_not_in_labels) != 0:
-                warnings.warn("Some of the ids you provided has not been found in the graph : {}".format(id_not_in_labels))
-                print ("Removing them...")
-                vids = list(set(vids)-set(id_not_in_labels))
-        # - Filtering ids according to necessity:
-        if temporal_data:
-            # - We keep vertex ids only if they are temporally linked in the graph at `rank` or -`rank`
-            if vids is None:
-                vtx_list = [vid for vid in self.labels if exist_relative_at_rank(self.graph, vid, self.rank) or exist_relative_at_rank(self.graph, vid, -self.rank)]
-            else:
-                vtx_list = [vid for vid in vids if exist_relative_at_rank(self.graph, vid, self.rank) or exist_relative_at_rank(self.graph, vid, -self.rank)]
-        else:
-            # - No need to check for temporal link !
-            if vids is None:
-                vtx_list = self.labels
-            else:
-                vtx_list = vids
-
-        # -- Shortcut when asking for the same result:
-        if variable_weights == self._global_distance_weigths and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
-            return self._global_distance_ids, self._global_distance_matrix
-
-        # -- Standardization step:
-        # - Need to check if there is any changes (length or order) in the ids list compared to the initial list used to create the pairwise distance matrix:
-        ids_index = [self.labels.index(v) for v in vtx_list]
-
-        spatial_standard_distance_matrix, temporal_standard_distance_matrix = {}, {}
-        temporal_weights, spatial_weights = [], []
-        nb_temp_var, nb_spa_var = 0, 0
-        mat_topo_dist_standard = []
-        for n,var_name in enumerate(variable_names):
-            if var_name == 'topological' or var_name == 'euclidean':
-                mat_topo_dist_standard = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
-                topo_weight = variable_weights[n]
-            elif self._distance_matrix_info[var_name][0] == 't':
-                temporal_standard_distance_matrix[nb_temp_var] = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
-                temporal_weights.append(variable_weights[n])
-                nb_temp_var += 1
-            else:
-                spatial_standard_distance_matrix[nb_spa_var] = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
-                spatial_weights.append(variable_weights[n])
-                nb_spa_var += 1
-
-        # -- Checking for simple cases: no re-weighting to do !
-        # - Only 'topological' or 'euclidean' distance asked:
-        if spatial_relation_data and (nb_spa_var+nb_temp_var)==0:
-            print "No topological/euclidean distance between each time point !!"
-            return vtx_list, mat_topo_dist_standard
-        # - Only ONE spatial pairwise distance asked:
-        if not spatial_relation_data and nb_temp_var == 0 and nb_spa_var == 1:
-            return vtx_list, spatial_standard_distance_matrix[0]
-        # - Only ONE temporal pairwise distance asked:
-        if not spatial_relation_data and nb_spa_var == 0 and nb_temp_var == 1:
-            print "Paiwise distance matrix based on temporally differentiated variables affected @t_n+1."
-            print "There will be no distance for the ids of the first time-point!"
-            return vtx_list, temporal_standard_distance_matrix[0]
-
-        # - Replacing nan by zeros for computation.
-        if spatial_relation_data:
-            mat_topo = np.nan_to_num(mat_topo_dist_standard)
-        else:
-            mat_topo = []
-        if spatial_data:
-            var_mat = [np.nan_to_num(spatial_standard_distance_matrix[n]) for n in xrange(nb_spa_var)]
-        else:
-            var_mat, spatial_standard_distance_matrix = [], []
-        if temporal_data:
-            temp_mat = [np.nan_to_num(temporal_standard_distance_matrix[n]) for n in xrange(nb_temp_var)]
-        else:
-            temp_mat, temporal_standard_distance_matrix = [], []
-
-        print("Creating the global pairwise weighted standard distance matrix...")
-        # Finally making the global weighted pairwise standard distance matrix:
-        N = len(vtx_list)
-        global_matrix = np.zeros( shape = [N,N], dtype=float )
-        w_mat = np.zeros( shape = [N,N], dtype=float )
-        for i in xrange(global_matrix.shape[0]):
-            for j in xrange(global_matrix.shape[1]):
-                if i>j: #D[i,j]=D[j,i] and if i==j, D[i,j]=D[j,i]=0
-                    # - Computing weights according to missing values.
-                    w_topo, w_var, w_temp = renorm(i,j,mat_topo_dist_standard, spatial_standard_distance_matrix, temporal_standard_distance_matrix, copy.copy(topo_weight), copy.copy(spatial_weights), copy.copy(temporal_weights))
-                    # - Pairwise weighted standard distance matrix
-                    global_matrix[i,j] = global_matrix[j,i] = w_topo * mat_topo[i,j] + sum([w_var[n]*var_mat[n][i,j] for n in xrange(nb_spa_var)]) + sum([w_temp[n]*temp_mat[n][i,j] for n in xrange(nb_temp_var)])
-
-        # -- We update caching variables only if there is more than ONE pairwise distance matrix :
-        self._global_distance_matrix = global_matrix
-        self._global_distance_ids = vtx_list
-        self._global_distance_weigths = variable_weights
-        self._global_distance_variables = variable_names
-
-        return vtx_list, global_matrix
-
-
-    def assemble_matrix_2(self, variable_names, variable_weights, vids = None):
+    def assemble_matrix(self, variable_names, variable_weights, vids = None, return_data = False):
         """
         Funtion creating the global weighted distance matrix.
         Provided `variable_names` should exist in `self.vertex_matrix_dict`
@@ -697,7 +672,7 @@ class Clusterer:
 
         global_matrix = np.zeros( shape = [N,N], dtype=float )
         for wei_mat, standard_mat in zip(weight_matrix,standardized_matrix):
-            global_matrix += np.nan_to_num(weight_matrix)*standardized_matrix
+            global_matrix += np.nan_to_num(wei_mat)*standard_mat
 
         # -- We update caching variables only if there is more than ONE pairwise distance matrix :
         self._global_distance_matrix = global_matrix
@@ -705,7 +680,10 @@ class Clusterer:
         self._global_distance_weigths = variable_weights
         self._global_distance_variables = variable_names
 
-        return vtx_list, global_matrix
+        if return_data:
+            return vtx_list, global_matrix
+        else:
+            print "Done."
 
 
     def cluster(self, n_clusters, method = "ward", ids = None, global_matrix = None):
@@ -738,7 +716,7 @@ class Clusterer:
             else:
                 raise ValueError("You have to provide the number of clusters you want for the spectral method.")
 
-        self._clustering = clustering_labels
+        self._clustering = list(clustering_labels)
         self._method = method.lower()
         self._nb_clusters = n_clusters
         if ids is not None:
@@ -747,7 +725,7 @@ class Clusterer:
             return clustering_labels
 
 
-    def save_clustering2graph(self, graph, save_all = False, name=""):
+    def export_clustering2graph(self, graph, save_all = False, name=""):
         """
         Function saving the current clustering on the graph structure.
         """
@@ -766,8 +744,41 @@ class Clusterer:
             graph.add_graph_property("ids_"+name, self._global_distance_ids)
             graph.add_graph_property("dist_matrix_"+name, self._global_distance_matrix)
 
-        return "This addded clustering informations to the provided `graph` but did not saved it on disk!"
+        warnings.warn("This addded clustering informations to the provided `graph` but did not saved it on disk!")
 
+
+    def silhouette_estimators(self, clustering_method, k_min=4, k_max=15, beta = 1, plot_estimator = True):
+        """
+        Compute various estimators based on clustering results.
+        
+        :Parameters:
+         - distance_matrix (np.array): distance matrix to be used for clustering;
+         - clustering_method (str): clustering methods to be applyed, must be "Ward" or "Spectral"
+         - clustering_range (list): range of clusters to consider.
+        """
+        from sklearn import metrics
+        from sklearn.cluster import spectral_clustering, Ward
+        clustering_labels={}
+        sil = {}
+        assert k_min>1
+
+        for k in xrange(k_min, k_max+1):
+            if clustering_method.lower() == "ward":
+                clustering = Ward(n_clusters=k).fit(self._global_distance_matrix)
+                clustering_labels[k] = clustering.labels_
+            if clustering_method.lower() == "spectral":
+                similarity = np.exp(-beta * self._global_distance_matrix / self._global_distance_matrix.std())
+                clustering = SpectralClustering(n_clusters = k, precomputed=True).fit(self._global_distance_matrix)
+                clustering_labels[k] = clustering.labels_
+
+            sil[k] = metrics.silhouette_score(self._global_distance_matrix, clustering_labels[k], metric='euclidean')
+
+        if plot_estimator:
+            fig = plt.figure(figsize=(4,4),dpi=100)
+            plt.plot(xrange(k_min, k_max+1), sil.values(), color='red')
+            plt.title("Silhouette estimator")
+
+        return sil
 
     def clustering_estimators(self, clustering_method, k_min=4, k_max=15, beta = 1, plot_estimator = True):
         """
@@ -818,29 +829,35 @@ class Clusterer:
         return CH, Hartigan, sil
 
 
-
-class ClusteringChecker:
+class ClustererChecker:
     """
-    Class to assess clustering output.
-    The object is created by using a list of the vertex names, an
-    associated distance matrix and the resulting clustering.
+    Class allowing to analyse a `Clusterer` object.
     """
-    def __init__(self, vtx_list, distance_matrix, clustering):
-        self._vtx_list = vtx_list
-        self._distance_matrix = distance_matrix
-        if isinstance(clustering, dict):
-            self._clustering = [clustering[k] for k in self._vtx_list]
-        elif isinstance(clustering, list):
-            self._clustering = clustering
-        else:
-            TypeError('`clustering` should be a list or a dict type.')
-
+    def __init__(self, clusterer, construct_clustered_graph = True):
+        # - Paranoia :
+        assert clusterer.__class__.__name__ == 'Clusterer'
+        # - Initialisation
+        self.clusterer = clusterer
+        self._vtx_list = clusterer._global_distance_ids
+        self._distance_matrix = clusterer._global_distance_matrix
+        self._clustering = clusterer._clustering
+        # - Precompute usefull values :
         self._N = len(self._clustering)
         self._clusters_ids = list(set(self._clustering))
         self._nb_clusters = len(self._clusters_ids)
-        self._nb_ids_by_clusters = [len(np.where(self._clustering == q)[0]) for q in self._clusters_ids]
+        self._nb_ids_by_clusters = dict( [ (q,len(np.where(self._clustering == q)[0])) for q in self._clusters_ids] )
         self._ids_by_clusters = dict( (q, [self._vtx_list[k] for k in np.where(self._clustering == q)[0]]) for q in self._clusters_ids )
-
+        # - Reformat inherited (usefull) info :
+        self.info_clustering = {'method': clusterer._method,
+                                'variables': clusterer._global_distance_variables,
+                                'weigths': clusterer._global_distance_weigths}
+        self.clustering_name = self.info_clustering['method']+"_"+str(self._nb_clusters)+"_"+str([str(self.info_clustering['weigths'][n])+"*"+str(self.info_clustering['variables'][n]) for n in xrange(len(self.info_clustering['weigths']))])
+        # - Construct the clustered graph :
+        if construct_clustered_graph:
+            print 'Creating the clustered version of the inherited graph...'
+            self.clustered_graph = self.clustered_temporal_property_graph()
+        else:
+            self.clustered_graph = None
 
     def cluster_distance_matrix(self):
         """
@@ -855,7 +872,7 @@ class ClusteringChecker:
          - `distance_matrix` (np.array) - distance matrix used to create the clustering.
          - `clustering` (list) - list giving the resulting clutering.
 
-        :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
+        :WARNING: `distance_matrix` and `clustering` should obviously be ordered the same way!
         """
         D = np.zeros( shape = [self._nb_clusters,self._nb_clusters], dtype = float )
         for n,q in enumerate(self._clusters_ids):
@@ -977,13 +994,14 @@ class ClusteringChecker:
             else:
                 compare_groups = False
 
+            clustering_dict = dict(zip(self._vtx_list, self._clustering))
             not_found = []
             labels_true, labels_pred = [], []
             max1 = max(dict_labels_expert.values())+1
-            max2 = max(self._clustering.values())+1
+            max2 = max(clustering_dict.values())+1
             for k,v in dict_labels_expert.iteritems():
-                if self._clustering.has_key(k):
-                    v2 = self._clustering[k]
+                if clustering_dict.has_key(k):
+                    v2 = clustering_dict[k]
                     if compare_groups:
                         labels_true.append(v if (v in groups2compare[:,0]) else max1)
                         labels_pred.append(v2 if (v2 in groups2compare[:,1]) else max2)
@@ -1111,7 +1129,7 @@ class ClusteringChecker:
         percent = {}
         for q in self._clusters_ids:
             for t in index_time_points:
-                nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_ids_at_time(t)])
+                nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_at_time(t)])
                 percent[(q,t)] = [nb/float(self._nb_ids_by_clusters[q]), nb]
 
         return dict( ((q,t), percent[(q,t)]) for q in self._clusters_ids for t in index_time_points if percent[(q,t)][0] != 0)
@@ -1132,7 +1150,7 @@ class ClusteringChecker:
         percent = {}
         for t in index_time_points:
             for q in self._clusters_ids:
-                nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_ids_at_time(t)])
+                nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_at_time(t)])
                 percent[(t,q)] = [nb/float(self._nb_ids_by_clusters[q]), nb]
 
         return dict( ((t,q), percent[(t,q)]) for q in self._clusters_ids for t in index_time_points if percent[(t,q)][0] != 0)
@@ -1146,7 +1164,7 @@ class ClusteringChecker:
 
         forward_projection_cluster = {}
         for t in index_time_points[:-1]:
-            for vid in graph.vertex_ids_at_time(t):
+            for vid in graph.vertex_at_time(t):
                 if graph.has_children(vid):
                     children = graph.children(vid)
                     for vid_children in children:
@@ -1222,11 +1240,16 @@ class ClusteringChecker:
 
         plt.legend(ncol=3)
 
-    def clustered_temporal_property_graph(self, graph):
+
+    def clustered_temporal_property_graph(self):
         """
-        Clustered version of the temporal_property_graph `graph`
+        Create a clustered version of the temporal_property_graph `graph`, representing the spatio-temporal relations between clusters.
+
+        :Returns:
+         - `tpg` (temporal_property_graph) - represent the spatio-temporal relations between clusters.
         """
         # - Start by retreiving the representativity of each time points (index) and clusters
+        graph = self.clusterer.graph
         tp_c = self.time_point_by_clusters(graph)
 
         # -- Create a list of spatial `graphs` at each time point (no spatial relation taken into account!)
@@ -1236,7 +1259,7 @@ class ClusteringChecker:
             pg = PropertyGraph()
             vertex2label = {}
             # - Add a vertex for each cluster `q` at time `t`:
-            for q in xrange(self._nb_clusters):
+            for q in self._clusters_ids:
                 if tp_c.has_key((t,q)):
                     vertex2label[pg.add_vertex(q)]=(t,q)
             # - Save the couples (time,cluster) as 'label':
@@ -1249,7 +1272,7 @@ class ClusteringChecker:
         quantif = [{},{},{},{}]
         for t, q in tp_c.keys():
             if t < graph.nb_time_points: # there will be no children from the last time point
-                vids_in_q_at_t = [k for k in self._ids_by_clusters[q] if k in graph.vertex_ids_at_time(t)]
+                vids_in_q_at_t = [k for k in self._ids_by_clusters[q] if k in graph.vertex_at_time(t)]
                 lineage[t][q]=[]
                 quantif[t][q]={}
                 for vid in vids_in_q_at_t:
@@ -1278,11 +1301,25 @@ class ClusteringChecker:
         from openalea.image.algo.graph_from_image import vertexpair2edge_map, add_edge_property_from_dictionary
         add_edge_property_from_dictionary(tpg, 'nb_children', dict( [((label2vertex[(t,q)],label2vertex[(t+1,child)]),value) for t in xrange(len(quantif)) for q in quantif[t] for child,value in quantif[t][q].iteritems()]), vertexpair2edge_map(tpg))
 
+        self.clustered_graph = tpg
+
         return tpg
 
-    def plot_clustered_temporal_property_graph(self, clustered_graph, no_spatiotemp_data_cluster = 'auto'):
+
+    def plot_clustered_temporal_property_graph(self, no_spatiotemp_data_cluster = 'auto'):
         """
+        Graphical representations of the clustered spatio-temporal graph.
+        
+        :Parameters:
+         - `clustered_graph` (temporal_property_graph) - a clustered spatio-temporal graph
+         - `no_spatiotemp_data_cluster` (str|int|list) - filter for displaying the cluster made of cells without spatio-temporal properties. If 'auto' the cluster is obtained automatically by using the cluster defined at the first time point. A integer or a list of cluster can be provided too.
         """
+        # -- Use or create the clustered version of the `TemporalPropertyGraph`:
+        if self.clustered_graph is None:
+            clustered_graph = self.clustered_temporal_property_graph()
+        else:
+            clustered_graph = self.clustered_graph
+
         # -- Translate the temporal_property_graph into a NetworkX graph:
         G = clustered_graph.to_networkx()
 
@@ -1310,7 +1347,7 @@ class ClusteringChecker:
         # -- Draw the graphs:
         fig = plt.figure(figsize=(15,6),dpi=100)
         fig.subplots_adjust( wspace=0.1, left=0.04, right=0.96, top=0.9)
-        plt.suptitle('Clustered SpatioTemporal Graph')
+        plt.suptitle('Clustered SpatioTemporal Graph of {}'.format(self.clustering_name))
         fig.add_subplot(121)
         # -- Nodes plotting:
         nx.draw_networkx_nodes(G, pos, node_size=node_size*5, node_color=node_cluster, vmin=min(node_cluster), vmax=max(node_cluster),cmap='jet')
@@ -1339,3 +1376,235 @@ class ClusteringChecker:
         plt.ylabel('Cluster id')
         plt.title('Edge sizes are related to were children come from.')
 
+
+    def nonHomogen_Markov_Chain(self):
+        """ Function doc """
+        # -- Use or create the clustered version of the `TemporalPropertyGraph`:
+        if self.clustered_graph is None:
+            clustered_graph = self.clustered_temporal_property_graph()
+        else:
+            clustered_graph = self.clustered_graph
+
+        # -- We create usefull variables and dictionary:
+        nb_clusters = self._nb_clusters
+        from openalea.image.algo.graph_from_image import label2vertex_map
+        index_cluster_id2vtx = label2vertex_map(clustered_graph)
+        vtx2index_cluster_id = dict( (v,k) for k,v in index_cluster_id2vtx.iteritems())
+
+        # -- Initialisation of transition and initial probability matrix:
+        p_init = []
+        for t in xrange(clustered_graph.nb_time_points+1):
+            # - For each time point we have an initial proba matrix
+            p_init.append(np.zeros((nb_clusters,)))
+
+        p_trans = []
+        for t in xrange(clustered_graph.nb_time_points):
+            # - For each time interval we have an homogen transition proba matrix
+            p_trans.append(np.zeros((nb_clusters, nb_clusters)))
+
+        # -- Filling up initial probability matrix:
+        for vid in clustered_graph.vertices():
+            # - For each state without parent we save its size (number of individual)
+            if clustered_graph.parent(vid) == set([]):
+                index, label = vtx2index_cluster_id[vid]
+                p_init[index][label] = clustered_graph.vertex_property('cluster_size')[vid]
+
+        # - We now normalise by the number of new individual at each time point:
+        for t in xrange(clustered_graph.nb_time_points+1):
+            if float(sum(p_init[t])) != 0.:
+                p_init[t] = p_init[t]/float(sum(p_init[t]))
+
+        # -- Filling up transition probability matrix:
+        for eid in clustered_graph.edges():
+            # - For each edges between two states we save the number of children going from one to another
+            vid1, vid2 = clustered_graph.edge_vertices(eid)
+            index1, label1 = vtx2index_cluster_id[vid1]
+            index2, label2 = vtx2index_cluster_id[vid2]
+            p_trans[index2-1][label1,label2] = clustered_graph.edge_property('nb_children')[eid]
+
+        # - We now normalise by the total number of children from each state (per lines in the matrix)
+        for t in xrange(clustered_graph.nb_time_points):
+            for i in xrange(nb_clusters):
+                if float(sum(p_trans[t][i,])) != 0.:
+                    p_trans[t][i,] = p_trans[t][i,]/float(sum(p_trans[t][i,]))
+
+        return p_init, p_trans
+
+
+    def update_cluster_labels(self, old2new_labels, contruct_clustered_graph = True):
+        """
+        Change the cluster labels according to given info in `old2new_labels`.
+
+        :Parameter:
+         - `old2new_labels` (dict) - translation dictionary
+        """
+        assert isinstance(old2new_labels, dict)
+        self.clusterer._clustering = [old2new_labels[k] for k in self._clustering]
+
+        self.__init__( self.clusterer, contruct_clustered_graph )
+        print "Clustering labels have been udpated !"
+
+
+
+def cluster2labels(clusters_dict):
+    """
+    Create a dict *key=clusters; *labels=ids from a dict *key=ids; *labels=clusters.
+    """
+    cluster2labels = {}
+    for k,v in clusters_dict.iteritems():
+        try:
+            cluster2labels[v].append(k)
+        except:
+            cluster2labels[v] = []
+
+    return cluster2labels
+
+
+def cost_function(ids_1, ids_2, similarity = False):
+    """
+    The matching elements cost function (dissimilarity):
+    $$ D(a,b) = 1 - (2* intersect(a,b)) / (N_a + N_b), $$
+     where N_a and N_b are the number of elements in ensemble a and b.
+
+    :Parameters:
+     - `ids_1` (list|set) - list or set of id-like elements belonging to a cluster
+     - `ids_2` (list|set) - list or set of id-like elements belonging to another cluster (from another clustering!)
+     - `similarity` (bool) - if True, return similarity function instead of dissimilarity
+    """
+    if isinstance(ids_1, list):
+        ids_1 = set(ids_1)
+    if isinstance(ids_2, list):
+        ids_2 = set(ids_2)
+    if similarity:
+        return float(2*len(ids_1 & ids_2))/(len(ids_1)+len(ids_2))
+    else:
+        return 1-float(2*len(ids_1 & ids_2))/(len(ids_1)+len(ids_2))
+
+
+def ensemble_cost_function( cluster2labels_1, cluster2labels_2, similarity = False ):
+    """
+    Cost function between two clusters relating to the number of common ids in them.
+
+    :Parameters:
+     - `cluster2labels_1` (dict) - 
+     - `cluster2labels_2` (dict) - 
+     - `similarity` (bool) - if True, return similarity function instead of dissimilarity
+    """
+    cost_triplets = []
+    for clusters_1, ids_1 in cluster2labels_1.iteritems():
+        for clusters_2, ids_2 in cluster2labels_2.iteritems():
+            if set(ids_1) & set(ids_2) != set([]):
+                cost_triplets.append([clusters_1, clusters_2, cost_function(ids_1, ids_2)])
+
+    return cost_triplets
+
+
+def cluster_matching(clusters_dict_1, clusters_dict_2, return_all = False):
+    """
+    Function calling the BipartiteMatching C++ code to match clusters based on a Minimum cost flow algorithm over their ids composition.
+    :Parameters:
+    
+    """
+    from openalea.tree_matching.bipartitematching import BipartiteMatching
+    c2l1 = cluster2labels(clusters_dict_1)
+    c2l2 = cluster2labels(clusters_dict_2)
+    res = BipartiteMatching(c2l1.keys(), c2l2.keys(), ensemble_cost_function(c2l1,c2l2), [1.0 for i in xrange(len(c2l1))], [1.0 for i in xrange(len(c2l2))])
+    match = res.match()
+
+    if return_all:
+        return match
+    else:
+        return match[1]
+
+
+class ClustererComparison:
+    """
+    """
+    def __init__(self, clustering_1, clustering_2):
+        # -- Initialisation:
+        if clustering_1.__class__.__name__ == 'ClustererChecker':
+            self.clustering_1 = dict(zip(clustering_1._vtx_list, clustering_1._clustering))
+        else:
+            assert isinstance(clustering_1, dict)
+            self.clustering_1 = clustering_1
+        if clustering_2.__class__.__name__ == 'ClustererChecker':
+            self.clustering_2 = dict(zip(clustering_2._vtx_list, clustering_2._clustering))
+        else:
+            assert isinstance(clustering_2, dict)
+            self.clustering_2 = clustering_2
+
+        # -- Matching clusters:
+        print "Matching clusters by a Minimum cost flow algorithm base on their ids composition."
+        matching = cluster_matching(self.clustering_1, self.clustering_2, True)
+        self.matching_score = matching[0]
+        print "Total cost of the flow: {}".format(self.matching_score)
+        self.matched_clusters = matching[1]
+        print "Matched clusters : {}".format(self.matched_clusters)
+        self.unmatched_clusters_1 = matching[2]
+        self.unmatched_clusters_2 = matching[3]
+        if self.unmatched_clusters_1 != []:
+            self.all_matched_1=False
+            print "Unmatched clusters from `clustering_1`: {}".format(self.unmatched_clusters_1)
+        else:
+            self.all_matched_1=True
+            print "All clusters from `clustering_1` have been matched !"
+        if self.unmatched_clusters_2 != []:
+            self.all_matched_2=False
+            print "Unmatched clusters from `clustering_2`: {}".format(self.unmatched_clusters_2)
+        else:
+            self.all_matched_2=True
+            print "All clusters from `clustering_2` have been matched !"
+
+
+    def relabelling_dictionary_1(self):
+        """
+        """
+        relabelling_dict = dict( (id1,id2) for id1,id2 in self.matched_clusters )
+        if not self.all_matched_1:
+            max_1 = max(self.clustering_1.values())
+            for n,k in enumerate(self.unmatched_clusters_1):
+                relabelling_dict.update({k:max_1+n+1})
+
+        return relabelling_dict
+
+    def relabelling_dictionary_2(self):
+        """
+        """
+        relabelling_dict = dict( (id2,id1) for id1,id2 in self.matched_clusters )
+        if not self.all_matched_2:
+            max_1 = max(self.clustering_2.values())
+            for n,k in enumerate(self.unmatched_clusters_2):
+                relabelling_dict.update({k:max_1+n+1})
+
+        return relabelling_dict
+
+
+
+
+#~ def renorm(line, column, mat_topo, var_mat, temp_mat, w_topo, w_var, w_temp):
+    """
+    !!! WORKS WITH assemble_matrix_OLD !!!
+    """
+    #~ w_renorm_topo = 0.
+    #~ if w_topo != 0.:
+        #~ if np.isnan(mat_topo[line,column]):
+            #~ w_renorm_topo = w_topo
+            #~ w_topo = 0.
+#~ 
+    #~ w_renorm_var = 0.
+    #~ for n in var_mat:
+        #~ if np.isnan(var_mat[n][line,column]):
+            #~ w_renorm_var += w_var[n]
+            #~ w_var[n] = 0.
+#~ 
+    #~ w_renorm_temp = 0.
+    #~ for n in temp_mat:
+        #~ if np.isnan(temp_mat[n][line,column]):
+            #~ w_renorm_temp += w_temp[n]
+            #~ w_temp[n] = 0.
+#~ 
+    #~ renorm = (1.-(w_renorm_topo+w_renorm_var+w_renorm_temp))
+    #~ if renorm != 0.:
+        #~ return w_topo/renorm, np.array(w_var)/renorm if w_var!=[] else [], np.array(w_temp)/renorm if w_temp!=[] else []
+    #~ else:
+        #~ return w_topo, w_var, w_temp

@@ -21,7 +21,9 @@ __revision__ = " $Id$ "
 
 from property_graph import *
 import warnings
-from openalea.container.temporal_graph_analysis import translate_ids_Image2Graph, translate_keys_Graph2Image
+import numpy as np
+
+from openalea.container.temporal_graph_analysis import translate_ids_Image2Graph, translate_keys_Graph2Image, exist_all_relative_at_rank
 
 class TemporalPropertyGraph(PropertyGraph):
     """
@@ -301,54 +303,85 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         return iter(self.ancestors(vids, n))
 
-    def vertex_ids_at_time(self, time_point, only_lineaged = False, as_mother = False, as_daughter = False):
+    def lineaged_vertex(self, fully_lineaged=True):
+        """
+        Return ids of lineaged vertices.
+        One can ask for strict lineage, i.e. only vertices temporally linked from the beginning (`self.vertex_property('index')`==`0`) to the end (`self.nb_time_points`).
+        
+        :Parameter:
+         - `fully_lineaged` (bool) : if True, return vertices temporally linked from the beginning to the end, otherwise return vertices having at least a parent or a child(ren).
+        """
+        if fully_lineaged:
+            last_tp_ids_lineaged_from_0 = [k for k in self.vertices() if exist_all_relative_at_rank(self, k, -self.nb_time_points)]
+            first_tp_ids_lineaged_from_0 = [k for k in self.ancestors(last_tp_ids_lineaged_from_0, self.nb_time_points) if self.vertex_property('index')[k]==0]
+            first_tp_ids_fully_lineaged = [k for k in first_tp_ids_lineaged_from_0 if exist_all_relative_at_rank(self, k, self.nb_time_points)]
+            return list(np.sort(list(self.descendants(first_tp_ids_fully_lineaged, self.nb_time_points))))
+        else:
+            return [k for k in self.vertices() if (self.has_children(k) or self.has_parent(k))]
+
+    def vertex_at_time(self, time_point, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
         """
         Return vertices ids corresponding to a given time point in the TPG.
-        """
-        if only_lineaged and (not as_mother and not as_daughter):
-            as_mother = as_daughter = True
-        if as_mother or as_daughter:
-            only_lineaged = True
+        Optional parameters can be used to filter the list of vertices ids returned.
         
-        if only_lineaged:
+        :Parameters:
+         - `time_point` (int) : integer giving which time point should be considered
+         - `lineaged` (bool) : if True, return vertices having at least a parent or a child(ren)
+         - `fully_lineaged` (bool) : if True, return vertices linked from the beginning to the end of the graph
+         - `as_parent` (bool) : if True, return vertices lineaged as parents
+         - `as_children` (bool) : if True, return vertices lineaged as children
+        """
+        if lineaged and (not as_parent and not as_children):
+            as_parent = as_children = True
+        if as_parent or as_children:
+            lineaged = True
+
+        if fully_lineaged:
+            return [k for k in self.lineaged_vertex(fully_lineaged=True) if self.vertex_property('index')[k]==time_point]
+        if lineaged:
             return [ k for k in self.vertices() if (self.vertex_property('index')[k]==time_point) and
-             ( ((self.out_edges(k, 't') != set()) if as_mother else False ) or ( (self.in_edges(k, 't') != set()) if as_daughter else False ) ) ]
+             ( (self.has_children(k) if as_parent else False ) or ( self.has_parent(k) if as_children else False ) ) ]
         else:
             return [k for k in self.vertices() if self.vertex_property('index')[k]==time_point]
 
-
-    def vertex_property_with_image_labels(self, vertex_property, image_labels2keep = None, graph_labels2keep = None):
+    def vertex_property_with_image_labels(self, vertex_property, graph_labels2keep = None, image_labels2keep = None, time_point = None):
         """
-        Return a dictionary extracted from the graph.vertex_property(`vertex_property`) with relabelled keys thanks to the dictionary graph.vertex_property('old_labels').
+        Return a dictionary extracted from the graph.vertex_property(`vertex_property`) with relabelled keys into "images labels" thanks to the dictionary graph.vertex_property('old_labels').
         
         :Parameters:
-        - `vertex_property` : can be an existing 'graph.vertex_property' or a string refering to an existing graph.vertex_property to extract.
-        - `image_labels2keep` (int|list) : a list of "image type" labels (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
-        - `graph_labels2keep` (int|list) : a list of "graph type" labels (i.e. from SpatialImages/PropertyGraphs) to return in the `relabelled_dictionnary`
+         - `vertex_property` : can be an existing 'graph.vertex_property' or a string refering to an existing graph.vertex_property to extract.
+         - `image_labels2keep` (int|list) : a list of "image type" labels (i.e. from SpatialImages) to return in the `relabelled_dictionnary`
+         - `graph_labels2keep` (int|list) : a list of "graph type" ids (i.e. from PropertyGraphs) to return in the `relabelled_dictionnary`
 
         :Returns:
-        - a dictionary with relabelled keys to "images labels" (i.e. from SpatialImages/PropertyGraphs), key : vertex/cell label, value : `vertex_property`
+         - *key_ vertex/cell label, *values_ `vertex_property`
         
         :Examples:
-        graph.vertex_property_with_image_labels( graph.vertex_property('volume') )
-        graph.vertex_property_with_image_labels( 'volume' )
-        graph.vertex_property_with_image_labels( 'volume' , SpatialImageAnalysis.L1() )
+         graph.vertex_property_with_image_labels( graph.vertex_property('volume') )
+         graph.vertex_property_with_image_labels( 'volume' )
+         graph.vertex_property_with_image_labels( 'volume' , SpatialImageAnalysis.L1() )
         
         """
         if isinstance(vertex_property,str):
             vertex_property = self.vertex_property(vertex_property)
-        
+
         if (graph_labels2keep is not None) and (image_labels2keep is not None):
             warnings.warn("You can't specify both image_labels2keep AND graph_labels2keep!")
-        
+            return None
+
         if (graph_labels2keep is None) and (image_labels2keep is None):
             warnings.warn('You have asked for all labels from the TemporalPropertyGraph to be returned!')
-            warnings.warn('Mistakes will be presents in the returned dictionary.')
-        
+            warnings.warn('That is not possible due to apotential misslabelling of the returned dictionary.')
+            return None
+
+        if (image_labels2keep is None) and (time_point is None):
+            warnings.warn('You have to provide a `time_point` parameter when using `image_labels2keep`!')
+            return None
+
         if (graph_labels2keep is not None):
             return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in graph_labels2keep)) 
-        
+
         if (image_labels2keep is not None):
-            return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in translate_ids_Image2Graph(image_labels2keep))) 
+            return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in translate_ids_Image2Graph(self,image_labels2keep,time_point))) 
 
 
