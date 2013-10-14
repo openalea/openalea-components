@@ -161,3 +161,5 @@ def test_regionalisation():
     g.remove_region("dist4")
     assert g._graph_property.get("dist4") == None
     assert g._vertex_property["regions"] == {}
+
+

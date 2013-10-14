@@ -84,6 +84,8 @@ def translate_ids_Graph2Image(graph, id_list):
     if isinstance(id_list,int):
         return graph.vertex_property('old_label')[id_list]
     
+    if isinstance(id_list,set):
+        id_list = list(id_list)
     if not isinstance(id_list,list):
         raise ValueError('This is not an "int" or a "list" type variable.')
 
@@ -101,10 +103,12 @@ def translate_ids_Image2Graph(graph, id_list, time_point):
     :WARNING:
         `time_point` numbers starts at '0'
     """
+    if isinstance(id_list,set):
+        id_list = list(id_list)
     if (not isinstance(id_list,list)) and (not isinstance(id_list,int)):
         raise ValueError('This is not an "int" or a "list" type variable.')
 
-    graph_labels_at_time_point = graph.vertex_ids_at_time(time_point)
+    graph_labels_at_time_point = graph.vertex_at_time(time_point)
     Image2Graph_labels_at_time_point = dict( (v,k) for k,v in graph.vertex_property('old_label').iteritems() if k in graph_labels_at_time_point )
 
     if isinstance(id_list,int):
@@ -453,14 +457,28 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
 
 
-def vertex_gaussian_curvature( graph ):
+def epidermis_wall_gaussian_curvature( graph ):
     """
+    Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
+    The principal curvature values saved there are based only on wall voxels
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
     """    
-    return dict([ (vid, curv_values[0] * curv_values[0]) for vid, curv_values in graph.vertex_property('epidermis_wall_principal_curvature_values').iteritems()])
+    return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_wall_principal_curvature_values').iteritems()])
+
+
+def epidermis_local_gaussian_curvature( graph ):
+    """
+    Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
+    The principal curvature values saved there are based on voxels present in a within a certain radius around the wall median.
+    Gaussian curvature is the product of principal curvatures 'k1*k2'.
+    """
+    radius = graph.graph_property('radius_local_curvature_estimation')
+    return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
+
 
 def division_rate(graph, rank=1, parent_ids = False):
     """
+    Division rate
     :Parameters:
      - 'graph' (TGP) - a TPG.
      - 'rank' (int) - children at distance 'rank' will be used.
@@ -495,6 +513,7 @@ def division_rate(graph, rank=1, parent_ids = False):
 def exist_relative_at_rank(graph, vid, rank):
     """
     Check if there is a relative (descendant or ancestor) of the 'vid' at 'rank'.
+
     :Parameters:
      - 'graph' (TPG): the TPG to be used for translation
      - 'vid' (int): the initial point to look-out for rank existence.
@@ -518,12 +537,11 @@ def exist_all_relative_at_rank(graph, vid, rank):
     """
     Check if lineage is complete over several ranks. 
     i.e. every decendants cells from `vid` have a lineage up to rank `rank`.
-    Suppose that the lineage has been correctly done: a lineage is given to the graph only if we are sure to have all the daugthers from a mother.
     
     :Parameters:
-    - `graph` TPG to browse;
-    - 'vid' : a vertex id.
-    - 'rank' : neighborhood at distance 'rank' will be used.
+     - `graph` TPG to browse;
+     - 'vid' : a vertex id.
+     - 'rank' : neighborhood at distance 'rank' will be used.
     """
     if rank == 0 or not exist_relative_at_rank(graph, vid, rank):
         return False
@@ -559,7 +577,7 @@ def exist_all_relative_at_rank(graph, vid, rank):
         return True
 
 
-def time_point_property(graph, time_point, vertex_property, only_lineaged = False, as_mother = False, as_daughter = False):
+def time_point_property(graph, time_point, vertex_property, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
     """
     Allow to extract a property 'vertex_property' from the temporal graph for one time-point.
     
@@ -577,12 +595,12 @@ def time_point_property(graph, time_point, vertex_property, only_lineaged = Fals
     if time_point not in graph.vertex_property('index').values():
         raise ValueError(str(time_point)+"not in"+str(graph))
 
-    vids_at_time = graph.vertex_ids_at_time(time_point, only_lineaged, as_mother, as_daughter)
+    vids_at_time = graph.vertex_at_time(time_point, lineaged, fully_lineaged, as_parent, as_children)
     
     return dict([(i,vertex_property[i]) for i in vids_at_time if vertex_property.has_key(i)])
     
 
-def time_point_property_by_regions(graph, time_point, vertex_property, only_lineaged = False, as_mother = False, as_daughter = False):
+def time_point_property_by_regions(graph, time_point, vertex_property, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
     """
     Allow to extract a property 'vertex_property' from the temporal graph for one time-point, sorted by regions.
     Return a dict of dict, first level of keys are region(s) name(s) and second layer are vertex ids and the values of their associated property.
@@ -594,7 +612,7 @@ def time_point_property_by_regions(graph, time_point, vertex_property, only_line
     :Return:
     - dictionary of regions which values are a dictionnary of vertex property extracted from the time-point;
     """
-    extracted_property = time_point_property(graph, time_point, vertex_property, only_lineaged, as_mother, as_daughter)
+    extracted_property = time_point_property(graph, time_point, vertex_property, lineaged, fully_lineaged, as_parent, as_children)
     
     regions_names = list(np.unique([v[0] for k,v in graph.vertex_property('regions').iteritems() if graph.vertex_property('index')[k]==time_point]))
     
@@ -621,9 +639,9 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
         vids = [vid for vid in graph.vertices() if vid in vertex_property]
 
     ppt_kwargs = {}
-    if 'only_lineaged' in kwargs: ppt_kwargs.update({'only_lineaged':kwargs['only_lineaged']})
-    if 'as_mother' in kwargs: ppt_kwargs.update({'as_mother':kwargs['as_mother']})
-    if 'as_daughter' in kwargs: ppt_kwargs.update({'as_daughter':kwargs['as_daughter']})
+    if 'lineaged' in kwargs: ppt_kwargs.update({'lineaged':kwargs['lineaged']})
+    if 'as_parent' in kwargs: ppt_kwargs.update({'as_parent':kwargs['as_parent']})
+    if 'as_children' in kwargs: ppt_kwargs.update({'as_children':kwargs['as_children']})
     data = []
     for tp in time_points:
         data.append(time_point_property(graph, tp, vertex_property,**ppt_kwargs).values())
@@ -994,7 +1012,7 @@ def sibling_volume_ratio(graph):
                 svr[vtx,sibling]=ratio
     return svr
 
-def triplot(graphs_list, values2plot, labels_list=None, values_name="",normed=False):
+def triplot(graphs_list, values2plot, labels_list=None, values_name="", normed=False):
     """
     TO DO
     """
