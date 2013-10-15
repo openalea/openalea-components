@@ -30,9 +30,6 @@ from openalea.container.temporal_graph_analysis import translate_ids_Graph2Image
 from openalea.image.registration.registration import pts2transfo
 from vplants.asclepios.vt_exec import reech3d
 
-#~ spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis']
-spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
-spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis', 'projected_anticlinal_wall_median', 'wall_median', 'wall_orientation']
 
 def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2register, vids, real_world_units=True, **kwargs):
     """
@@ -46,7 +43,7 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
      - `real_world_units` (bool) -
 
     :Returns:
-     - a dictionary where *keys=vids and *values= 3x1 vectors of coordinates
+     - a dictionary where *keys= vids and *values= 3x1 vectors of coordinates
     """
     t_start = time.time()
     SpI_ids = translate_ids_Graph2Image(graph, vids)
@@ -57,7 +54,7 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
         background = 1
 
     if isinstance(reference_image, AbstractSpatialImageAnalysis):
-        analysis = image_2register
+        analysis = reference_image
     if isinstance(reference_image, str):
         reference_image = imread(reference_image)
     if isinstance(reference_image, SpatialImage):
@@ -94,11 +91,6 @@ def image_registration(image_2register, ref_points, reg_points, output_shape, **
     Register an image according to `ref_points` & `reg_points`.
     Interpolation methods is set to 'nearest' by default, but this can be changed by adding an 'interpolation_method' as kwargs.
     """
-    ref_points, reg_points = [], []
-    for vid in vids:
-        reg_points.append(graph.vertex_property('barycenter')[vid])
-        ref_points.append(new_barycenters[vid])
-
     ref_points, reg_points = np.asarray(ref_points), np.asarray(reg_points)
     registration = pts2transfo(ref_points, reg_points)
     if ('interpolation_method' in kwargs) and isinstance(kwargs['interpolation_method'],str):
@@ -183,7 +175,13 @@ def generate_graph_topology(labels, neighborhood):
     graph.vertex_property('label').update(vertex2label)
 
     return graph, label2vertex, edges
-    
+
+
+#~ spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis']
+spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
+spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis', 'projected_anticlinal_wall_median', 'wall_median', 'wall_orientation', 'all_wall_orientation', 'division_wall_orientation', 'strain_landmarks']
+
+
 def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
          background, spatio_temporal_properties, property_as_real, bbox_as_real):
     """ 
@@ -401,9 +399,8 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
             add_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_origin', SpI_Analysis.principal_curvatures_origin)
 
 
-def _temporal_properties_from_image(tp_graph, SpI_Analysis, index, labels, background, spatio_temporal_properties, 
-                     property_as_real, bbox_as_real, 
-                     ignore_cells_at_stack_margins, min_contact_surface):
+def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
+         background, spatio_temporal_properties, property_as_real, bbox_as_real):
     """ 
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
 
@@ -417,41 +414,8 @@ def _temporal_properties_from_image(tp_graph, SpI_Analysis, index, labels, backg
      - `bbox_as_real` (bool) - If bbox_as_real = True, bounding boxes are in real-world units else in voxels.
 
     """
-    for n,i in enumerate(xrange(1,tp_graph.nb_time_points)):
-        n+=1
-        
-        if 'temporal_inertia_axis' in spatio_temporal_properties:
-            pass
-
-        if 'temporal_epidermis_inertia_axis' in spatio_temporal_properties:
-            voxel_layer = copy.copy(SpI_Analysis.first_voxel_layer(1))
-            for label in SpI_Analysis.layer1():
-                xyz = np.where(voxel_layer==label)
-                center = np.mean(xyz,axis=1)
-                x,y,z = xyz[0]-center[0], xyz[1]-center[1], xyz[2]-center[2]
-                coord = np.array([x,y,z])
-
-        if 'temporal_projected_anticlinal_wall_median' in spatio_temporal_properties:
-            print 'Computing temporal_projected_anticlinal_wall_median property...'
-            wall_median = {}
-            dict_anticlinal_wall_voxels = SpI_Analysis.wall_voxels_per_cells_pairs( SpI_Analysis.layer1(), neighborhood, only_epidermis = True, ignore_background = True )
-            for label_1, label_2 in dict_anticlinal_wall_voxels:
-                if label_1 == 0: continue # if 0 means that it wasn't in the labels list provided, so we skip it.
-                x,y,z = dict_anticlinal_wall_voxels[(label_1, label_2)]
-                # compute geometric median:
-                from openalea.image.algo.analysis import geometric_median, closest_from_A
-                neighborhood_origin = geometric_median( np.array([list(x),list(y),list(z)]) )
-                integers = np.vectorize(lambda x : int(x))
-                neighborhood_origin = integers(neighborhood_origin)
-                # closest points:
-                pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
-                min_dist = closest_from_A(neighborhood_origin, pts)
-                wall_median[(label_1, label_2)] = min_dist
-
-            add_edge_property_from_dictionary(graph, 'projected_anticlinal_wall_median', wall_median)
-
-
-    return graph
+    if 'strain_landmarks' in spatio_temporal_properties:
+        pass
 
 
 def graph_from_image2D(image, labels, background, spatio_temporal_properties, 
@@ -508,7 +472,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     else:
         min_contact_surface = None
 
-    print "Creating Spatial Graphs..."
+    print "# -- Creating Spatial Graphs..."
     analysis, graphs, label2vertex, edges = {}, {}, {}, {}
     for n,image in enumerate(images):
         print "Analysing image #{}".format(n)
@@ -529,12 +493,13 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         # -- Now we construct the Spatial Graph (topology):
         neighborhood = analysis[n].neighbors(labels, min_contact_surface = min_contact_surface)
         graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels, neighborhood)
+    print "Done\n"
 
-
-    print "Creating Spatio-Temporal Graph..."
+    print "# -- Creating Spatio-Temporal Graph..."
     # -- Now we construct the Temporal Property Graph (with no properties attached to vertex):
     tpg = TemporalPropertyGraph()
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
+    print "Done\n"
 
     # If we already removed cells at the margins of the stack, no need to look for them after:
     if ignore_cells_at_stack_margins:
@@ -543,49 +508,61 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
 
     # Registration step:
     if 'register_images' in kwargs and kwargs['register_images']:
-        if 'reference_image' in kwargs and isinstance(kwarg['reference_image'],int):
-            ref_img =  kwarg['reference_image']
-        elif'reference_image' in kwargs and isinstance(kwarg['reference_image'],list):
-            ref_img =  kwarg['reference_image']
-            assert len(ref_img)==tpg.nb_time_points
+        print "# -- Image registration..."
+        if 'reference_image' in kwargs:
+            if isinstance(kwarg['reference_image'],int):
+                ref_images =  kwarg['reference_image']
+                unreg_images = list( set(np.arange(tpg.nb_time_points+1)) - set([ref_images]) )
+                ref_images = np.repeat(ref_images, tpg.nb_time_points)
+            if isinstance(kwarg['reference_image'],list):
+                ref_images =  kwarg['reference_image']
+                assert len(ref_images) == tpg.nb_time_points
+                if 'unregistered_images' in kwargs and isinstance(kwarg['unregistered_images'],list):
+                    unreg_images = kwarg['unregistered_images']
+                    assert len(unreg_images)==tpg.nb_time_points
+                else:
+                    warnings.warn("You gave a 'reference_image' list but no 'unregistered_images' list as 'kwargs'.")
+                    return None
         else:
-            ref_img = list(np.arange(tpg.nb_time_points)+1) # by default we register every images onto the next one.
+            # -- By default we register every images onto the next one, starting with the last one.
+            ref_images = list(np.arange(tpg.nb_time_points,0,-1))
+            unreg_images = list(np.array(ref_images)-1)
 
-        if isinstance(ref_img, int):
-            img_list = list( set(np.arange(tpg.nb_time_points+1)) - set([ref_img]) )
-            ref_img = np.repeat(ref_img, tpg.nb_time_points)
-        else:
-            img_list = list( np.arange(tpg.nb_time_points) )
-
-        for n, tp_img in enumerate(img_list):
+        for n, unreg_img in enumerate(unreg_images):
+            print "Registering image #{} over image #{} with 'fused' daughters".format(unreg_img, ref_images[n])
             # we use only cells that are fully lineaged for stability reasons!
-            vids = tpg.vertex_at_time(tp_img, fully_lineaged = True)
+            vids = tpg.vertex_at_time(unreg_img, fully_lineaged = True)
             # translation into SpatialImage ids:
             SpI_ids = translate_ids_Graph2Image(tpg, vids)
             # we now need the barycenters of the 'fused' daughters:
-            fused_daughters_bary = find_daugthers_barycenters(tpg, analysis[ref_img[n]], ref_img[n], tp_img, vids)
+            fused_daughters_bary = find_daugthers_barycenters(tpg, analysis[ref_images[n]], ref_images[n], unreg_img, vids)
             # registration and resampling step:
-            reg_img = image_registration(analysis[tp_img], analysis[ref_img[n]].center_of_mass(SpI_ids),
-                fused_daughters_bary, output_shape=analysis[ref_img[n]].image.shape, t_2def= tp_img, t_ref=ref_img[n])
+            reg_img = image_registration(analysis[unreg_img].image, fused_daughters_bary, analysis[unreg_img].center_of_mass(SpI_ids),
+                 output_shape=analysis[ref_images[n]].image.shape, t_2def=unreg_img, t_ref=ref_images[n])
             # cropping resampled image by a bounding box:
-            reg_img = find_object_boundingbox(reg_img[tp_img], t_2def= tp_img, t_ref=ref_img[n])
+            #reg_img = find_object_boundingbox(reg_img, background[n], t_2def= unreg_img, t_ref=ref_images[n])
             # redoing the `SpatialImageAnalysis`
-            analysis[n] = SpatialImageAnalysis(reg_img, ignoredlabels = 0, return_type = DICT, background = background[n])
-    
+            analysis[unreg_img] = SpatialImageAnalysis(reg_img, ignoredlabels = 0, return_type = DICT, background = background[n])
+        print "Done\n"
+
+    print "# -- Extracting cell features..."
     for n in xrange(tpg.nb_time_points+1):
-        print "Extracting cell features from image #{}".format(n)
+        print "from image #{}".format(n)
         if isinstance(properties4lineaged_vertex,str) and properties4lineaged_vertex == 'strict':
             labels = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, fully_lineaged=True))
         elif properties4lineaged_vertex:
             labels = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=True, fully_lineaged=False))
         else:
             labels = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=False, fully_lineaged=False))
-        
-        _spatial_properties_from_image(graphs[n], analysis[n], labels, label2vertex[n],
-                 background[n], spatio_temporal_properties,property_as_real, bbox_as_real)
 
+        _spatial_properties_from_image(graphs[n], analysis[n], labels, label2vertex[n],
+             background[n], spatio_temporal_properties, property_as_real, bbox_as_real)
+    print "Done\n"
+
+    print "Creating Spatio-Temporal Graph with spatio-temporal features..."
     tpg = TemporalPropertyGraph()
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
+    print "Done"
 
     return tpg
 
