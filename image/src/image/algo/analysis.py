@@ -374,6 +374,8 @@ class AbstractSpatialImageAnalysis(object):
         self._kernels = None
         self._neighbors = None
         self._layer1 = None
+        self._center_of_mass = None
+        self._real_center_of_mass = False
 
         # -- Variables for meta-informations:
         try:
@@ -553,11 +555,16 @@ class AbstractSpatialImageAnalysis(object):
 
         # img_as_float = self.image.astype(np.float)
         # center = nd.center_of_mass(img_as_float, img_as_float, index=labels)
+        if self._center_of_mass is not None:
+            center = self._center_of_mass
+        else:
+            center = np.array(nd.center_of_mass(self.image, self.image, index=labels))
 
-        center = np.array(nd.center_of_mass(self.image, self.image, index=labels))
-
-        if real is True:
+        if real or (self._center_of_mass is not None and not self._real_center_of_mass):
             center = np.multiply(center,self.image.resolution)
+            self._real_center_of_mass = True
+
+        self._center_of_mass = center
         return self.convert_return(center, labels)
 
 

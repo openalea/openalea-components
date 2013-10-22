@@ -53,6 +53,11 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
     else:
         background = 1
 
+    if 'verbose' in kwargs and kwargs['verbose']:
+        verbose = True
+    else:
+        verbose = False
+
     if isinstance(reference_image, AbstractSpatialImageAnalysis):
         analysis = reference_image
     elif isinstance(reference_image, str):
