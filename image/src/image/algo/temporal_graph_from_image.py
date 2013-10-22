@@ -71,7 +71,7 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
     new_barycenters = {}
     print "Computing daugthers barycenters:"
     for n, vid in enumerate(vids):
-        if n%5 == 0: print n,'/',len(vids)
+        if n%50 == 0: print n,'/',len(vids)
         graph_children = graph.descendants(vid, reference_tp-tp_2register) - graph.descendants(vid, reference_tp-tp_2register-1)
         SpI_children = translate_ids_Graph2Image(graph, graph_children)
         x,y,z = [],[],[]
@@ -571,44 +571,44 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         print "# -- Image registration..."
         if 'reference_image' in kwargs:
             if isinstance(kwarg['reference_image'],int):
-                ref_images =  kwarg['reference_image']
-                unreg_images = list( set(np.arange(tpg.nb_time_points+1)) - set([ref_images]) )
-                ref_images = np.repeat(ref_images, tpg.nb_time_points)
+                ref_image =  kwarg['reference_image']
+                unreg_images_ids_list = list( set(np.arange(tpg.nb_time_points+1)) - set([ref_image]) )
+                ref_images_ids_list = np.repeat(ref_images, tpg.nb_time_points)
             if isinstance(kwarg['reference_image'],list):
-                ref_images =  kwarg['reference_image']
-                assert len(ref_images) == tpg.nb_time_points
+                ref_images_ids_list =  kwarg['reference_image']
+                assert len(ref_images_ids_list) == tpg.nb_time_points
                 if 'unregistered_images' in kwargs and isinstance(kwarg['unregistered_images'],list):
-                    unreg_images = kwarg['unregistered_images']
-                    assert len(unreg_images)==tpg.nb_time_points
+                    unreg_images_ids_list = kwarg['unregistered_images']
+                    assert len(unreg_images_ids_list)==tpg.nb_time_points
                 else:
                     warnings.warn("You gave a 'reference_image' list but no 'unregistered_images' list as 'kwargs'.")
                     return None
         else:
             # -- By default we register every images onto the next one, starting with the last one.
-            ref_images = list(np.arange(tpg.nb_time_points,0,-1))
-            unreg_images = list(np.array(ref_images)-1)
+            ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
+            unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
 
-        for n, unreg_img in enumerate(unreg_images):
-            print "Registering image #{} over image #{} with 'fused' daughters".format(unreg_img, ref_images[n])
+        for unreg_img_id, ref_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
+            print "Registering image #{} over image #{} with 'fused' daughters".format(unreg_img_id, ref_img_id)
             # we use only cells that are fully lineaged for stability reasons!
-            vids = tpg.vertex_at_time(unreg_img, fully_lineaged = True)
+            unreg_img_vids = tpg.vertex_at_time(unreg_img_id, fully_lineaged = True)
             # translation into SpatialImage ids:
-            SpI_ids = translate_ids_Graph2Image(tpg, vids)
+            unreg_SpI_ids = translate_ids_Graph2Image(tpg, unreg_img_vids)
             # we now need the barycenters of the 'fused' daughters:
-            fused_daughters_bary = find_daugthers_barycenters(tpg, analysis[ref_images[n]], ref_images[n], unreg_img, vids)
+            fused_daughters_bary = find_daugthers_barycenters(tpg, analysis[ref_img_id], ref_img_id, unreg_img_id, unreg_img_vids)
             # registration and resampling step:
             ref_points = [fused_daughters_bary[k] for k in fused_daughters_bary]
-            reg_points = [analysis[unreg_img].center_of_mass(k) for k in fused_daughters_bary]
-            reg_img = image_registration(analysis[unreg_img].image, ref_points, reg_points, output_shape=analysis[ref_images[n]].image.shape)
+            reg_points = [analysis[unreg_img_id].center_of_mass(unreg_SpI_ids)[k] for k in fused_daughters_bary]
+            registered_img = image_registration(analysis[unreg_img_id].image, ref_points, reg_points, output_shape=analysis[ref_img_id].image.shape)
             # cropping resampled image by a bounding box:
             #~ global_box = find_object_boundingbox(reg_img, background[n])
             #~ img_cropped = copy.copy(reg_img[global_box[0]:global_box[1],global_box[2]:global_box[3],global_box[4]:global_box[5]])
             #~ if save_cropped_image:
                 #~ img_cropped.info.update({'xyz_crop_start':[int(global_box[0]),int(global_box[2]),int(global_box[4])]})
-                #~ imsave('t{}_on_t{}.inr.gz'.format(unreg_img+1,ref_images[n]+1),img_cropped)
+                #~ imsave('t{}_on_t{}.inr.gz'.format(unreg_img_id+1,ref_img_id+1),img_cropped)
 
             # redoing the `SpatialImageAnalysis`
-            analysis[unreg_img] = SpatialImageAnalysis(reg_img, ignoredlabels = 0, return_type = DICT, background = background[n])
+            analysis[unreg_img_id] = SpatialImageAnalysis(registered_img, ignoredlabels = 0, return_type = DICT, background = background[n])
 
         print "Done\n"
 
