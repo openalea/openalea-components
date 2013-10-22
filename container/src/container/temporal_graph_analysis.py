@@ -149,7 +149,7 @@ def translate_keys_Graph2Image(graph, dictionary, time_point=None):
     translated_dict = {}
     if time_point is None:
         for k in dictionary:
-            if not dictionary.has_key(k):
+            if graph.vertex_property('old_label').has_key(k):
                 translated_dict[graph.vertex_property('old_label')[k]] = dictionary[k]
             else:
                 raise KeyError("The dictionary you want to translate contain label from more than one time point, found redundant keys!")
