@@ -102,7 +102,7 @@ def image_registration(image_2register, ref_points, reg_points, output_shape, **
         interpolation_method = kwargs['interpolation_method']
     else:
         interpolation_method = "nearest"
-    im_reech = reech3d.reech3d(image_2register, mat=registration, interpolation=interpolation_method, vin=im2reech.resolution, vout=analysis.image.resolution, output_shape=output_shape)
+    im_reech = reech3d.reech3d(image_2register, mat=registration, interpolation=interpolation_method, vin=image_2register.resolution, vout=image_2register.resolution, output_shape=output_shape)
 
     if ('t_2def' in kwargs) and ('t_ref' in kwargs):
         t_2def = kwargs['t_2def']
