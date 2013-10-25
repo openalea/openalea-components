@@ -189,7 +189,7 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
         SpI_children = translate_ids_Graph2Image(graph, graph_children)
         for id_child in SpI_children:
             mask = analysis.image[analysis.boundingbox(id_child)] == id_child
-            tmp_img[analysis.boundingbox(id_child)] += mask * SpI_ids[n]
+            tmp_img[analysis.boundingbox(id_child)] += np.multiply(mask, SpI_ids[n])
 
     t_stop = time.time()
     if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(t_stop-t_start)
@@ -234,6 +234,7 @@ def find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = []):
     if isinstance(labels2exclude,int):
         labels2exclude = [labels2exclude]
 
+    wall_median = {}
     for label_1, label_2 in dict_anticlinal_wall_voxels:
         if label_1 in labels2exclude or label_2 in labels2exclude: continue # if 0 means that it wasn't in the labels list provided, so we skip it.
         x,y,z = dict_anticlinal_wall_voxels[(label_1, label_2)]
@@ -255,7 +256,7 @@ spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1
 
 
 def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
-         background, spatio_temporal_properties, property_as_real, bbox_as_real):
+         background, neighborhood, spatio_temporal_properties, property_as_real, bbox_as_real):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a PropertyGraph.
     """
@@ -443,7 +444,7 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
 
 
 def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
-         background, spatio_temporal_properties, property_as_real, bbox_as_real):
+         background, spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
 
@@ -457,7 +458,7 @@ def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
      - `bbox_as_real` (bool) - If bbox_as_real = True, bounding boxes are in real-world units else in voxels.
 
     """
-    fused_image_analysis={}
+    fused_image_analysis, neighborhood = {}, {}
     if 'epidermis_2D_landmarks' in spatio_temporal_properties:
         assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
         assert 'epidermis_wall_median' in graph.vertex_property_names()
@@ -465,15 +466,16 @@ def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
 
         wall_median = {}
         for tp_2fuse in xrange(graph.nb_time_points)+1:
-            p
             ref_tp = tp_2fuse-1
-            fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph,
-             [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in labels], ref_tp, tp_2fuse, background=background[tp_2fuse])
-            fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
-            dict_anticlinal_wall_voxels = SpI_Analysis.wall_voxels_per_cells_pairs( SpI_Analysis.layer1(), neighborhood, only_epidermis = True, ignore_background = True )
+            ids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in labels]
+            fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ids, ref_tp, tp_2fuse, background=background[tp_2fuse])
+            analysis = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+            fused_image_analysis[tp_2fuse] = analysis
+            neighborhood[tp_2fuse] = analysis.neighbors(analysis.labels(), min_contact_surface = min_contact_surface)
+            dict_anticlinal_wall_voxels = analysis.wall_voxels_per_cells_pairs( analysis.layer1(), neighborhood[tp_2fuse], only_epidermis = True, ignore_background = True )
             wall_median.update(find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = [0]))
 
-            add_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', wall_median)
+        add_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', wall_median)
 
     if '3D_landmarks' in spatio_temporal_properties:
         assert 'wall_median' in graph.edge_property_names()
@@ -644,7 +646,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         labels = translate_ids_Graph2Image(tpg, tpg.lineaged_vertex(fully_lineaged=False))
 
     _temporal_properties_from_image(tpg, analysis, labels, label2vertex,
-             background, spatio_temporal_properties, property_as_real, bbox_as_real)
+             background, spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface)
 
 
     return tpg
