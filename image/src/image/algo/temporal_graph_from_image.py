@@ -173,11 +173,10 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
         image = imread(image)
     if isinstance(image, SpatialImage):
         analysis = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background)
-    if isinstance(image, AbstractSpatialImageAnalysis):
+    elif isinstance(image, AbstractSpatialImageAnalysis):
         analysis = image
     else:
-        warnings.warn("Could not determine the type of the `reference_image`...")
-        return None
+        raise TypeError("Could not determine the type of the `image`...")
     # -- 'fused' image creation:
     tmp_img = np.asarray(cp.copy(analysis.image))
     tmp_img.fill(0)
@@ -798,3 +797,18 @@ def add_edge_property_from_label_property(graph, name, labelpair_property, mlabe
 
     graph.add_edge_property(name)
     graph.edge_property(name).update(dict([(mlabelpair2edge[labelpair], value) for labelpair,value in labelpair_property.iteritems()]))
+
+def extend_edge_property_from_dictionary(graph, name, dictionary, mlabelpair2edge = None):
+    """
+        Add an edge property with name 'name' to the graph build from an image.
+        The values of the property are given as by a dictionary where keys are vertex labels.
+    """
+
+    if mlabelpair2edge is None:
+        mlabelpair2edge = labelpair2edge_map(graph)
+
+    if name not in graph.edge_properties():
+        warnings.warn('Edge property %s does not exist' % name)
+        graph.add_edge_property(name)
+
+    graph.edge_property(name).update( dict([(mlabelpair2edge[k], dictionary[k]) for k in dictionary]) )
