@@ -19,6 +19,7 @@
 import numpy as np
 import time
 import warnings
+import copy as cp
 
 from openalea.image.serial.basics import SpatialImage, imread
 from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT
@@ -47,23 +48,19 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
     """
     t_start = time.time()
     SpI_ids = translate_ids_Graph2Image(graph, vids)
-    if 'background' in kwargs:
-        assert isinstance(kwargs['background'], int)
-        background = kwargs['background']
-    else:
-        background = 1
+    # -- **kwargs options:
+    try: background = kwargs['background']
+    except: background = 1
+    assert isinstance(background, int)
+    try: verbose = kwargs['verbose']
+    except: verbose = False
 
-    if 'verbose' in kwargs and kwargs['verbose']:
-        verbose = True
-    else:
-        verbose = False
-
-    if isinstance(reference_image, AbstractSpatialImageAnalysis):
-        analysis = reference_image
-    elif isinstance(reference_image, str):
-        reference_image = imread(reference_image)
-    elif isinstance(reference_image, SpatialImage):
-        analysis = SpatialImageAnalysis(reference_image, ignoredlabels = 0, return_type = DICT, background = background)
+    if isinstance(image, str):
+        image = imread(image)
+    if isinstance(image, SpatialImage):
+        analysis = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background)
+    if isinstance(image, AbstractSpatialImageAnalysis):
+        analysis = image
     else:
         warnings.warn("Could not determine the type of the `reference_image`...")
         return None
@@ -120,16 +117,17 @@ def find_object_boundingbox(image2crop, ignore_cells_in_image_margins=True, **kw
     """
     Find the smallest box surrounding the labelled object in the image `image2crop`.
     """
-    if 'background' in kwargs:
-        assert isinstance(kwargs['background'], int)
-        background = kwargs['background']
-    else:
-        background = 1
+    # -- **kwargs options:
+    try: background = kwargs['background']
+    except: background = 1
+    assert isinstance(background, int)
 
     ### Reshaping with a boundingbox (around non-margin cells):
     def_analysis = SpatialImageAnalysis(image2crop, ignoredlabels = 0, return_type = DICT, background = background)
     if ignore_cells_in_image_margins:
         def_analysis.add2ignoredlabels( def_analysis.cells_in_image_margins() )
+    if 'label2keep' in kwargs:
+        def_analysis.add2ignoredlabels( list(set(def_analysis.labels())-set(kwargs['label2keep'])) )
     # labels to make a boundingbox around:
     labels2keep = def_analysis.labels()
     # Find the surrounding bbox of the object (without `self.cells_in_image_margins()`):
@@ -148,60 +146,54 @@ def find_object_boundingbox(image2crop, ignore_cells_in_image_margins=True, **kw
     return global_box
 
 
-#~ def fuse_daughters_in_image(image, graph, vids, t_ref, t_2fuse):
-    #~ """
-    #~ Based on a TemporalPropertyGraph (lineage info), this script fuse daughters cells between `t_ref` & `t_2fuse`.
-#~ 
-    #~ :Parameters:
-     #~ - `image` (AbstractSpatialImageAnalysis|SpatialImage|str) - segmented image of the reference time point used to compute barycenters
-     #~ - `graph` (TemporalPropertyGraph) - a TemporalPropertyGraph used for the lineage information
-     #~ - `vids` (list) - the
-     #~ - `t_ref` (int) - time point (in the graph) of the 'reference image' i.e. from wher compute descendants
-     #~ - `t_2fuse` (int) - time point (in the graph) to fuse descendants
-#~ 
-    #~ :Returns:
-     #~ - a dictionary where *keys= vids and *values= 3x1 vectors of coordinates
-    #~ """
-    #~ t_start = time.time()
-    #~ SpI_ids = translate_ids_Graph2Image(graph, vids)
-    #~ if 'background' in kwargs:
-        #~ assert isinstance(background, int)
-        #~ background = kwargs['background']
-    #~ else:
-        #~ background = 1
-#~ 
-    #~ if isinstance(reference_image, AbstractSpatialImageAnalysis):
-        #~ analysis = reference_image
-    #~ if isinstance(reference_image, str):
-        #~ reference_image = imread(reference_image)
-    #~ if isinstance(reference_image, SpatialImage):
-        #~ analysis = SpatialImageAnalysis(reference_image, ignoredlabels = 0, return_type = DICT, background = background)
-    #~ else:
-        #~ warnings.warn("Could not determine the type of the `reference_image`...")
-        #~ return None
-#~ 
-    #~ new_barycenters = {}
-    #~ print "Computing daugthers barycenters:"
-    #~ for n, vid in enumerate(vids):
-        #~ if n%5 == 0: print n,'/',len(vids)
-        #~ graph_children = graph.descendants(vid, reference_tp-tp_2register) - graph.descendants(vid, reference_tp-tp_2register-1)
-        #~ SpI_children = translate_ids_Graph2Image(graph, graph_children)
-        #~ x,y,z = [],[],[]
-        #~ for id_child in SpI_children:
-            #~ xyz = np.where( (analysis.image[analysis.boundingbox(id_child)]) == id_child )
-            #~ x.extend(xyz[0]+analysis.boundingbox(id_child)[0].start)
-            #~ y.extend(xyz[1]+analysis.boundingbox(id_child)[1].start)
-            #~ z.extend(xyz[2]+analysis.boundingbox(id_child)[2].start)
-#~ 
-        #~ if real_world_units:
-            #~ new_barycenters[vid] = np.mean(np.asarray([analysis.image.resolution]).T*np.asarray([x,y,z]),1)
-        #~ else:
-            #~ new_barycenters[vid] = np.mean(np.asarray([x,y,z]),1)
-#~ 
-    #~ t_stop = time.time()
-    #~ print "Time to find 'fused' daughters barycenter: {}s".format(t_stop-t_start)
-    #~ return new_barycenters
+def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kwargs):
+    """
+    Based on a TemporalPropertyGraph (lineage info), this script fuse daughters cells between `reference_tp` & `tp_2fuse`.
 
+    :Parameters:
+     - `image` (AbstractSpatialImageAnalysis|SpatialImage|str) - segmented image of the reference time point used to compute barycenters
+     - `graph` (TemporalPropertyGraph) - a TemporalPropertyGraph used for the lineage information
+     - `ref_vids` (list) - the
+     - `reference_tp` (int) - time point (in the graph) of the 'reference image' i.e. from wher compute descendants
+     - `tp_2fuse` (int) - time point (in the graph) to fuse descendants
+
+    :Returns:
+     - a dictionary where *keys= ref_vids and *values= 3x1 vectors of coordinates
+    """
+    t_start = time.time()
+    SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+    # -- **kwargs options:
+    try: background = kwargs['background']
+    except: background = 1
+    assert isinstance(background, int)
+    try: verbose = kwargs['verbose']
+    except: verbose = False
+    # -- Check the type the `image` object
+    if isinstance(image, str):
+        image = imread(image)
+    if isinstance(image, SpatialImage):
+        analysis = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background)
+    if isinstance(image, AbstractSpatialImageAnalysis):
+        analysis = image
+    else:
+        warnings.warn("Could not determine the type of the `reference_image`...")
+        return None
+    # -- 'fused' image creation:
+    tmp_img = cp.copy(analysis.image)
+    tmp_img.fill(0)
+    tmp_img += analysis.image == background # retreive the background
+    if verbose: print "Fusing daugthers of t{} at t{}:".format(reference_tp, tp_2fuse)
+    for n, vid in enumerate(ref_vids):
+        if verbose and n%50 == 0: print n,'/',len(ref_vids)
+        graph_children = graph.descendants(vid, tp_2fuse-reference_tp) - graph.descendants(vid, tp_2fuse-reference_tp-1)
+        SpI_children = translate_ids_Graph2Image(graph, graph_children)
+        for id_child in SpI_children:
+            mask = analysis.image[analysis.boundingbox(id_child)] == id_child
+            tmp_img[analysis.boundingbox(id_child)] += mask * SpI_ids[n]
+
+    t_stop = time.time()
+    if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(t_stop-t_start)
+    return tmp_img
 
 
 def generate_graph_topology(labels, neighborhood):
@@ -236,6 +228,26 @@ def generate_graph_topology(labels, neighborhood):
 
     return graph, label2vertex, edges
 
+def find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = []):
+    """
+    """
+    if isinstance(labels2exclude,int):
+        labels2exclude = [labels2exclude]
+
+    for label_1, label_2 in dict_anticlinal_wall_voxels:
+        if label_1 in labels2exclude or label_2 in labels2exclude: continue # if 0 means that it wasn't in the labels list provided, so we skip it.
+        x,y,z = dict_anticlinal_wall_voxels[(label_1, label_2)]
+        # compute geometric median:
+        from openalea.image.algo.analysis import geometric_median, closest_from_A
+        neighborhood_origin = geometric_median( np.array([list(x),list(y),list(z)]) )
+        integers = np.vectorize(lambda x : int(x))
+        neighborhood_origin = integers(neighborhood_origin)
+        # closest points:
+        pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
+        min_dist = closest_from_A(neighborhood_origin, pts)
+        wall_median[(label_1, label_2)] = min_dist
+
+    return wall_median
 
 #~ spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis']
 spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
@@ -326,23 +338,10 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
 
     if 'projected_anticlinal_wall_median' in spatio_temporal_properties:
         print 'Computing projected_anticlinal_wall_median property...'
-        wall_median = {}
         dict_anticlinal_wall_voxels = SpI_Analysis.wall_voxels_per_cells_pairs( SpI_Analysis.layer1(), neighborhood, only_epidermis = True, ignore_background = True )
-        for label_1, label_2 in dict_anticlinal_wall_voxels:
-            if label_1 == 0: continue # if 0 means that it wasn't in the labels list provided, so we skip it.
-            x,y,z = dict_anticlinal_wall_voxels[(label_1, label_2)]
-            # compute geometric median:
-            from openalea.image.algo.analysis import geometric_median, closest_from_A
-            neighborhood_origin = geometric_median( np.array([list(x),list(y),list(z)]) )
-            integers = np.vectorize(lambda x : int(x))
-            neighborhood_origin = integers(neighborhood_origin)
-            # closest points:
-            pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
-            min_dist = closest_from_A(neighborhood_origin, pts)
-            wall_median[(label_1, label_2)] = min_dist
+        wall_median = find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = [0])
 
         add_edge_property_from_dictionary(graph, 'projected_anticlinal_wall_median', wall_median)
-
 
     if 'wall_median' in spatio_temporal_properties:
         print 'Computing wall_median property...'
@@ -351,23 +350,7 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
         except:
             dict_wall_voxels = SpI_Analysis.wall_voxels_per_cells_pairs(labels, neighborhood, ignore_background=False )
 
-        wall_median = {}
-        for label_1, label_2 in dict_wall_voxels:
-            #~ if dict_wall_voxels[(label_1, label_2)] == None:
-                #~ if label_1 != 0:
-                    #~ print "There might be something wrong between cells %d and %d" %label_1  %label_2
-                #~ continue # if None we can use it.
-            x,y,z = dict_wall_voxels[(label_1, label_2)]
-            # compute geometric median:
-            from openalea.image.algo.analysis import geometric_median, closest_from_A
-            neighborhood_origin = geometric_median( np.array([list(x),list(y),list(z)]) )
-            integers = np.vectorize(lambda x : int(x))
-            neighborhood_origin = integers(neighborhood_origin)
-            # closest points:
-            pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
-            min_dist = closest_from_A(neighborhood_origin, pts)
-            wall_median[(label_1, label_2)] = min_dist
-
+        wall_median = find_wall_median_voxel(dict_wall_voxels, labels2exclude = [])
         edge_wall_median, unlabelled_wall_median, vertex_wall_median = {},{},{}
         for label_1, label_2 in dict_wall_voxels.keys():
             if (label_1 in graph.vertices()) and (label_2 in graph.vertices()):
@@ -474,7 +457,30 @@ def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
      - `bbox_as_real` (bool) - If bbox_as_real = True, bounding boxes are in real-world units else in voxels.
 
     """
-    if 'landmarks' in spatio_temporal_properties:
+    fused_image_analysis={}
+    if 'epidermis_2D_landmarks' in spatio_temporal_properties:
+        assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
+        assert 'epidermis_wall_median' in graph.vertex_property_names()
+        assert 'epidermis_surface' in graph.vertex_property_names()
+
+        wall_median = {}
+        for tp_2fuse in xrange(graph.nb_time_points)+1:
+            p
+            ref_tp = tp_2fuse-1
+            fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph,
+             [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in labels], ref_tp, tp_2fuse, background=background[tp_2fuse])
+            fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+            dict_anticlinal_wall_voxels = SpI_Analysis.wall_voxels_per_cells_pairs( SpI_Analysis.layer1(), neighborhood, only_epidermis = True, ignore_background = True )
+            wall_median.update(find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = [0]))
+
+            add_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', wall_median)
+
+    if '3D_landmarks' in spatio_temporal_properties:
+        assert 'wall_median' in graph.edge_property_names()
+        assert 'unlabelled_wall_median' in graph.vertex_property_names()
+        assert 'epidermis_wall_median' in graph.vertex_property_names()
+
+    if 'division_wall_orientation' in spatio_temporal_properties:
         pass
 
 
@@ -630,6 +636,16 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     tpg = TemporalPropertyGraph()
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
     print "Done"
+
+
+    if isinstance(properties4lineaged_vertex,str) and properties4lineaged_vertex == 'strict':
+        labels = translate_ids_Graph2Image(tpg, tpg.lineaged_vertex(fully_lineaged=True))
+    else:
+        labels = translate_ids_Graph2Image(tpg, tpg.lineaged_vertex(fully_lineaged=False))
+
+    _temporal_properties_from_image(tpg, analysis, labels, label2vertex,
+             background, spatio_temporal_properties, property_as_real, bbox_as_real)
+
 
     return tpg
 
