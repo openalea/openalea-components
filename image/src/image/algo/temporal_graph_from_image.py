@@ -693,7 +693,7 @@ def labelpair2edge_map(graph):
     """
     mlabel2vertex = label2vertex_map(graph)
     return dict([((mlabel2vertex[graph.source(eid)],mlabel2vertex[graph.target(eid)]),eid) for eid in graph.edges()
-     if (mlabel2vertex.has_key(graph.source(eid)) and mlabel2vertex.has_key(graph.target(eid))) )
+     if (mlabel2vertex.has_key(graph.source(eid)) and mlabel2vertex.has_key(graph.target(eid)))] )
 
 def vertexpair2edge_map(graph):
     """
