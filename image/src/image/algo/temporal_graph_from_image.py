@@ -179,7 +179,7 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
         warnings.warn("Could not determine the type of the `reference_image`...")
         return None
     # -- 'fused' image creation:
-    tmp_img = cp.copy(analysis.image)
+    tmp_img = np.asarray(cp.copy(analysis.image))
     tmp_img.fill(0)
     tmp_img += analysis.image == background # retreive the background
     if verbose: print "Fusing daugthers of t{} at t{}:".format(reference_tp, tp_2fuse)
@@ -189,11 +189,11 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
         SpI_children = translate_ids_Graph2Image(graph, graph_children)
         for id_child in SpI_children:
             mask = analysis.image[analysis.boundingbox(id_child)] == id_child
-            tmp_img[analysis.boundingbox(id_child)] += np.multiply(mask, SpI_ids[n])
+            tmp_img[analysis.boundingbox(id_child)] = tmp_img[analysis.boundingbox(id_child)] + np.multiply(mask, SpI_ids[n])
 
     t_stop = time.time()
     if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(t_stop-t_start)
-    return tmp_img
+    return SpatialImage(tmp_img)
 
 
 def generate_graph_topology(labels, neighborhood):
