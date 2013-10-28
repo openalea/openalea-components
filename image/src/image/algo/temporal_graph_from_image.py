@@ -32,13 +32,13 @@ from openalea.image.registration.registration import pts2transfo
 from vplants.asclepios.vt_exec import reech3d
 
 
-def find_daugthers_barycenters(graph, image, reference_tp, tp_2register, vids, real_world_units=True, **kwargs):
+def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2register, vids, real_world_units=True, **kwargs):
     """
     Based on a TemporalPropertyGraph (lineage info), this script find the barycenter of 'fused' daughters cells between `reference_tp` & `tp_2register`.
 
     :Parameters:
      - `graph` (TemporalPropertyGraph) - a TemporalPropertyGraph used for the lineage information
-     - `image` (AbstractSpatialImageAnalysis|SpatialImage|str) - segmented image of the reference time point used to compute barycenters
+     - `reference_image` (AbstractSpatialImageAnalysis|SpatialImage|str) - segmented image of the reference time point used to compute barycenters
      - `reference_tp` (int) - the
      - `tp_2register` (int) -
      - `real_world_units` (bool) -
@@ -55,12 +55,12 @@ def find_daugthers_barycenters(graph, image, reference_tp, tp_2register, vids, r
     try: verbose = kwargs['verbose']
     except: verbose = False
 
-    if isinstance(image, str):
-        image = imread(image)
-    if isinstance(image, SpatialImage):
-        analysis = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background)
-    if isinstance(image, AbstractSpatialImageAnalysis):
-        analysis = image
+    if isinstance(reference_image, str):
+        reference_image = imread(reference_image)
+    if isinstance(reference_image, SpatialImage):
+        analysis = SpatialImageAnalysis(reference_image, ignoredlabels = 0, return_type = DICT, background = background)
+    if isinstance(reference_image, AbstractSpatialImageAnalysis):
+        analysis = reference_image
     else:
         warnings.warn("Could not determine the type of the `image`...")
         return None
@@ -544,12 +544,12 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     for n,image in enumerate(images):
         print "Analysing image #{}".format(n)
         # - First we contruct an object `analysis` from class `AbstractSpatialImageAnalysis`
+        if isinstance(image, str):
+            analysis[n] = SpatialImageAnalysis(imread(image), ignoredlabels = 0, return_type = DICT, background = background[n])
+        if isinstance(image, SpatialImage):
+            analysis[n] = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background[n])
         if isinstance(image, AbstractSpatialImageAnalysis):
             analysis[n] = image
-        elif isinstance(image, str):
-            analysis[n] = SpatialImageAnalysis(imread(image), ignoredlabels = 0, return_type = DICT, background = background[n])
-        elif isinstance(image, SpatialImage):
-            analysis[n] = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background[n])
         # - We modify it according to input parameters:
         if ignore_cells_at_stack_margins:
             analysis[n].add2ignoredlabels( analysis[n].cells_in_image_margins() )
@@ -595,8 +595,8 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
             unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
 
-        for unreg_img_id, ref_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
-            print "Registering image #{} over image #{} with 'fused' daughters".format(unreg_img_id, ref_img_id)
+        for ref_img_id, unreg_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
+            print "Registering image #{} over {}image #{} ...".format(unreg_img_id, "" if ref_img_id==tpg.nb_time_points else "registered ", ref_img_id)
             # we use only cells that are fully lineaged for stability reasons!
             unreg_img_vids = tpg.vertex_at_time(unreg_img_id, fully_lineaged = True)
             # translation into SpatialImage ids:
