@@ -32,13 +32,13 @@ from openalea.image.registration.registration import pts2transfo
 from vplants.asclepios.vt_exec import reech3d
 
 
-def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2register, vids, real_world_units=True, **kwargs):
+def find_daugthers_barycenters(graph, image, reference_tp, tp_2register, vids, real_world_units=True, **kwargs):
     """
     Based on a TemporalPropertyGraph (lineage info), this script find the barycenter of 'fused' daughters cells between `reference_tp` & `tp_2register`.
 
     :Parameters:
      - `graph` (TemporalPropertyGraph) - a TemporalPropertyGraph used for the lineage information
-     - `reference_image` (AbstractSpatialImageAnalysis|SpatialImage|str) - segmented image of the reference time point used to compute barycenters
+     - `image` (AbstractSpatialImageAnalysis|SpatialImage|str) - segmented image of the reference time point used to compute barycenters
      - `reference_tp` (int) - the
      - `tp_2register` (int) -
      - `real_world_units` (bool) -
@@ -62,7 +62,7 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
     if isinstance(image, AbstractSpatialImageAnalysis):
         analysis = image
     else:
-        warnings.warn("Could not determine the type of the `reference_image`...")
+        warnings.warn("Could not determine the type of the `image`...")
         return None
 
     new_barycenters = {}
@@ -663,35 +663,39 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             #~ return graph_from_image3D(image, labels, background, spatio_temporal_properties,
                                 #~ property_as_real, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
 
-def label2vertex_map(graph):
+def label2vertex_map(graph, time_point = None):
     """
         Compute a dictionary that map label to vertex id.
         It requires the existence of a 'label' vertex property
 
         :rtype: dict
     """
-    return dict([(j,i) for i,j in graph.vertex_property('label').iteritems()])
+    if isinstance(graph, TemporalPropertyGraph):
+        assert time_point is not None
+        return dict([(j,i) for i,j in graph.vertex_property('label').iteritems() if i in graph.vertex_property('index')==time_point])
+    else:
+        return dict([(j,i) for i,j in graph.vertex_property('label').iteritems()])
 
-def label2vertex(graph,labels):
+def label2vertex(graph,labels, time_point = None):
     """
         Translate label as vertex id.
         It requires the existence of a 'label' vertex property
 
         :rtype: dict
     """
-    label2vertexmap = label2vertex_map(graph)
+    label2vertexmap = label2vertex_map(graph, time_point)
     if isinstance(labels,list):
         return [label2vertexmap[label] for label in labels]
     else : return label2vertexmap[labels]
 
-def labelpair2edge_map(graph):
+def labelpair2edge_map(graph, time_point = None):
     """
         Compute a dictionary that map pair of labels to edge id.
         It requires the existence of a 'label' property
 
         :rtype: dict
     """
-    mlabel2vertex = label2vertex_map(graph)
+    mlabel2vertex = label2vertex_map(graph, time_point)
     return dict([((mlabel2vertex[graph.source(eid)],mlabel2vertex[graph.target(eid)]),eid) for eid in graph.edges()
      if (mlabel2vertex.has_key(graph.source(eid)) and mlabel2vertex.has_key(graph.target(eid)))] )
 
@@ -799,14 +803,15 @@ def add_edge_property_from_label_property(graph, name, labelpair_property, mlabe
     graph.add_edge_property(name)
     graph.edge_property(name).update(dict([(mlabelpair2edge[labelpair], value) for labelpair,value in labelpair_property.iteritems()]))
 
-def extend_edge_property_from_dictionary(graph, name, dictionary, mlabelpair2edge = None):
+def extend_edge_property_from_dictionary(graph, name, dictionary, mlabelpair2edge = None, time_point = None):
     """
         Add an edge property with name 'name' to the graph build from an image.
         The values of the property are given as by a dictionary where keys are vertex labels.
     """
-
+    if isinstance(graph, TemporalPropertyGraph):
+        assert time_point is not None
     if mlabelpair2edge is None:
-        mlabelpair2edge = labelpair2edge_map(graph)
+        mlabelpair2edge = labelpair2edge_map(graph, time_point)
 
     if name not in graph.edge_properties():
         warnings.warn('Edge property %s does not exist' % name)
