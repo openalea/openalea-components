@@ -674,7 +674,7 @@ def label2vertex_map(graph, time_point = None):
     """
     if isinstance(graph, TemporalPropertyGraph):
         assert time_point is not None
-        return dict([(j,i) for i,j in graph.vertex_property('label').iteritems() if i in graph.vertex_property('index')==time_point])
+        return dict([(j,i) for i,j in graph.vertex_property('label').iteritems() if graph.vertex_property('index')[i]==time_point])
     else:
         return dict([(j,i) for i,j in graph.vertex_property('label').iteritems()])
 
@@ -688,7 +688,8 @@ def label2vertex(graph,labels, time_point = None):
     label2vertexmap = label2vertex_map(graph, time_point)
     if isinstance(labels,list):
         return [label2vertexmap[label] for label in labels]
-    else : return label2vertexmap[labels]
+    else:
+        return label2vertexmap[labels]
 
 def labelpair2edge_map(graph, time_point = None):
     """
