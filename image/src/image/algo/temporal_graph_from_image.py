@@ -540,7 +540,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         min_contact_surface = None
 
     print "# -- Creating Spatial Graphs..."
-    analysis, graphs, label2vertex, edges = {}, {}, {}, {}
+    analysis, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}
     for n,image in enumerate(images):
         print "Analysing image #{}".format(n)
         # - First we contruct an object `analysis` from class `AbstractSpatialImageAnalysis`
@@ -558,8 +558,8 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         if background[n] in labels: labels.remove(background[n])
 
         # -- Now we construct the Spatial Graph (topology):
-        neighborhood = analysis[n].neighbors(labels, min_contact_surface = min_contact_surface)
-        graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels, neighborhood)
+        neighborhood[n] = analysis[n].neighbors(labels, min_contact_surface = min_contact_surface)
+        graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels, neighborhood[n])
     print "Done\n"
 
     print "# -- Creating Spatio-Temporal Graph..."
@@ -568,12 +568,12 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
     print "Done\n"
 
-    # If we already removed cells at the margins of the stack, no need to look for them after:
+    # -- If we already removed cells at the margins of the stack, no need to look for them after:
     if ignore_cells_at_stack_margins:
         try: spatio_temporal_properties.remove('border')
         except: pass
 
-    # Registration step:
+    # -- Registration step:
     if 'register_images' in kwargs and kwargs['register_images']:
         print "# -- Image registration..."
         if 'reference_image' in kwargs:
@@ -595,7 +595,10 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
             unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
 
+        reg_neighborhood, excluded_labels = {}, {}
         for ref_img_id, unreg_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
+            # - we save previously 'ignored_labels':
+            excluded_labels[unreg_img_id] = analysis[unreg_img_id].ignoredlabels()
             print "Registering image #{} over {}image #{} ...".format(unreg_img_id, "" if ref_img_id==tpg.nb_time_points else "registered ", ref_img_id)
             # we use only cells that are fully lineaged for stability reasons!
             unreg_img_vids = tpg.vertex_at_time(unreg_img_id, fully_lineaged = True)
@@ -607,17 +610,16 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             ref_points = [fused_daughters_bary[k] for k in fused_daughters_bary]
             reg_points = [analysis[unreg_img_id].center_of_mass(unreg_SpI_ids)[k] for k in fused_daughters_bary]
             registered_img = image_registration(analysis[unreg_img_id].image, ref_points, reg_points, output_shape=analysis[ref_img_id].image.shape)
-            # cropping resampled image by a bounding box:
-            #~ global_box = find_object_boundingbox(reg_img, background[n])
-            #~ img_cropped = copy.copy(reg_img[global_box[0]:global_box[1],global_box[2]:global_box[3],global_box[4]:global_box[5]])
-            #~ if save_cropped_image:
-                #~ img_cropped.info.update({'xyz_crop_start':[int(global_box[0]),int(global_box[2]),int(global_box[4])]})
-                #~ imsave('t{}_on_t{}.inr.gz'.format(unreg_img_id+1,ref_img_id+1),img_cropped)
-
             # redoing the `SpatialImageAnalysis`
             analysis[unreg_img_id] = SpatialImageAnalysis(registered_img, ignoredlabels = 0, return_type = DICT, background = background[n])
+            analysis[unreg_img_id].add2ignoredlabels(excluded_labels[unreg_img_id])
+            reg_neighborhood[unreg_img_id] = analysis[n].neighbors(analysis[n].labels(), min_contact_surface = min_contact_surface)
 
+        reg_neighborhood[ref_images_ids_list[0]] = neighborhood[ref_images_ids_list[0]]
         print "Done\n"
+        for k in reg_neighborhood:
+            if reg_neighborhood[k] != neighborhood[k]:
+                print "Changes found in topology (neighborhood)"
 
     print "# -- Extracting cell features..."
     for n in xrange(tpg.nb_time_points+1):
@@ -630,7 +632,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             labels = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=False, fully_lineaged=False))
 
         _spatial_properties_from_image(graphs[n], analysis[n], labels, label2vertex[n],
-             background[n], spatio_temporal_properties, property_as_real, bbox_as_real)
+             background[n], reg_neighborhood[n], spatio_temporal_properties, property_as_real, bbox_as_real)
     print "Done\n"
 
     print "Creating Spatio-Temporal Graph with spatio-temporal features..."

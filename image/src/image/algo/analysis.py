@@ -597,18 +597,12 @@ class AbstractSpatialImageAnalysis(object):
         (slice(0, 3), slice(2, 4), slice(0, 1))]
         """        
         if self._bbox is None:
-            #~ if 0 in self.image:
-                #~ self._bbox = nd.find_objects(self.image)[1:]
-            #~ else:
-                #~ self._bbox = nd.find_objects(self.image)
             self._bbox = nd.find_objects(self.image)
         
         if labels is None:
             labels = copy.copy(self.labels())
             if self.background() is not None:
                 labels.append(self.background())
-            #~ if real: return [real_indices(bbox,self.image.resolution) for bbox in self._bbox]
-            #~ else :   return self._bbox
         
         # bbox of object labelled 1 to n are stored into self._bbox. To access i-th element, we have to use i-1 index
         if isinstance (labels, list):
@@ -618,7 +612,7 @@ class AbstractSpatialImageAnalysis(object):
 
         else :
             try:
-                if real:  return real_indices(self._bbox[labels-1],self.image.resolution)
+                if real:  return real_indices(self._bbox[labels-1], self.image.resolution)
                 else : return self._bbox[labels-1]
             except:
                 return None
@@ -897,7 +891,7 @@ class AbstractSpatialImageAnalysis(object):
         if neighbors is None : neighbors = self.neighbors()
         surfaces = {}
         for label_id, lneighbors in neighbors.iteritems():
-            # To avoid computing 2 times the same wall surface, we select wall between i and j with j > i.
+            # To avoid computing twice the same wall surface, we select walls between i and j with j > i.
             neigh = [n for n in lneighbors if n > label_id]
             if len(neigh) > 0:
                 lsurfaces = self.cell_wall_surface(label_id, neigh, real = real)
