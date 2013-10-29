@@ -254,8 +254,8 @@ spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epider
 spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis', 'projected_anticlinal_wall_median', 'wall_median', 'wall_orientation', 'all_wall_orientation', 'division_wall_orientation', 'strain_landmarks']
 
 
-def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
-         background, neighborhood, spatio_temporal_properties, property_as_real, bbox_as_real):
+def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, label2vertex,
+         mlabelpair2edge, background, spatio_temporal_properties, property_as_real, bbox_as_real):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a PropertyGraph.
     """
@@ -442,15 +442,15 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
             add_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_origin', SpI_Analysis.principal_curvatures_origin)
 
 
-def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex,
+def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex, mlabelpair2edge, 
          background, spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
 
     :Parameters:
-     - `SpatialImageAnalysis` (AbstractSpatialImageAnalysis) - Spatial analysis of an image.
+     - `SpI_Analysis` (AbstractSpatialImageAnalysis) - Spatial analysis of an image.
      - `labels` (list) - list of labels to be found in the image.
-        If labels is None, all labels are used.
+     - `label2vertex`
      - `background` (int) - label representing background.
      - `spatio_temporal_properties` (list) - the list of name of properties to create. It should be in spatio_temporal_properties.
      - `property_as_real` (bool) - If property_as_real = True, property is in real-world units else in voxels.
@@ -530,17 +530,13 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     if isinstance(images[0], str):
         assert [isinstance(image, str) for image in images]
 
-    if 'min_contact_surface' in kwargs:
-        min_contact_surface = kwargs['min_contact_surface']
-        if 'real_surface' in kwargs:
-            real_surface = kwargs['real_surface']
-        else:
-            real_surface = property_as_real
-    else:
-        min_contact_surface = None
+    try: min_contact_surface = kwargs['min_contact_surface']
+        try: real_surface = kwargs['real_surface']
+        except: real_surface = property_as_real
+    except: min_contact_surface = None
 
     print "# -- Creating Spatial Graphs..."
-    analysis, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}
+    analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
     for n,image in enumerate(images):
         print "Analysing image #{}".format(n)
         # - First we contruct an object `analysis` from class `AbstractSpatialImageAnalysis`
@@ -552,14 +548,12 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             analysis[n] = image
         # - We modify it according to input parameters:
         if ignore_cells_at_stack_margins:
-            analysis[n].add2ignoredlabels( analysis[n].cells_in_image_margins() )
-
-        labels = analysis[n].labels()
-        if background[n] in labels: labels.remove(background[n])
-
+            analysis[n].add2ignoredlabels(analysis[n].cells_in_image_margins())
+        labels[n] = analysis[n].labels()
+        if background[n] in labels[n]: labels[n].remove(background[n])
         # -- Now we construct the Spatial Graph (topology):
-        neighborhood[n] = analysis[n].neighbors(labels, min_contact_surface = min_contact_surface)
-        graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels, neighborhood[n])
+        neighborhood[n] = analysis[n].neighbors(labels[n], min_contact_surface = min_contact_surface)
+        graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
     print "Done\n"
 
     print "# -- Creating Spatio-Temporal Graph..."
@@ -575,7 +569,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
 
     # -- Registration step:
     if 'register_images' in kwargs and kwargs['register_images']:
-        print "# -- Image registration..."
+        print "# -- Images registration..."
         if 'reference_image' in kwargs:
             if isinstance(kwarg['reference_image'],int):
                 ref_image =  kwarg['reference_image']
@@ -595,7 +589,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
             unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
 
-        reg_neighborhood, excluded_labels = {}, {}
+        reg_neighborhood, excluded_labels, wall_surfaces = {}, {}, {}
         for ref_img_id, unreg_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
             # - we save previously 'ignored_labels':
             excluded_labels[unreg_img_id] = analysis[unreg_img_id].ignoredlabels()
@@ -613,42 +607,56 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             # redoing the `SpatialImageAnalysis`
             analysis[unreg_img_id] = SpatialImageAnalysis(registered_img, ignoredlabels = 0, return_type = DICT, background = background[n])
             analysis[unreg_img_id].add2ignoredlabels(excluded_labels[unreg_img_id])
-            reg_neighborhood[unreg_img_id] = analysis[n].neighbors(analysis[n].labels(), min_contact_surface = min_contact_surface)
-
-        reg_neighborhood[ref_images_ids_list[0]] = neighborhood[ref_images_ids_list[0]]
+            # -- Now we RE-construct the Spatial Graph (topology):
+            labels[n] = analysis[n].labels()
+            reg_neighborhood[unreg_img_id] = analysis[n].neighbors(labels[n], min_contact_surface = min_contact_surface)
+            graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
         print "Done\n"
-        for k in reg_neighborhood:
-            if reg_neighborhood[k] != neighborhood[k]:
-                print "Changes found in topology (neighborhood)"
 
+        # -- Check for changes in topology due to registration and interpolation.
+        for k in reg_neighborhood:
+            change = False, nb_changes=0
+            for i in reg_neighborhood[k]:
+                diff = set(reg_neighborhood[k][i])-set(neighborhood[k][i])
+                if diff != set([]):
+                    nb_changes+=1
+                    change = True
+            if change:
+                print "Found {} change{} in topology at t{} due to registration and interpolation.".format(nb_changes,"s" if n>1, else "",k)
+        neighborhood = reg_neighborhood
+        del reg_neighborhood
+
+    # -- Extracting cell features...
     print "# -- Extracting cell features..."
     for n in xrange(tpg.nb_time_points+1):
         print "from image #{}".format(n)
         if isinstance(properties4lineaged_vertex,str) and properties4lineaged_vertex == 'strict':
-            labels = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, fully_lineaged=True))
+            labels[n] = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, fully_lineaged=True))
         elif properties4lineaged_vertex:
-            labels = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=True, fully_lineaged=False))
+            labels[n] = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=True, fully_lineaged=False))
         else:
-            labels = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=False, fully_lineaged=False))
+            labels[n] = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=False, fully_lineaged=False))
 
-        _spatial_properties_from_image(graphs[n], analysis[n], labels, label2vertex[n],
-             background[n], reg_neighborhood[n], spatio_temporal_properties, property_as_real, bbox_as_real)
+        _spatial_properties_from_image(graphs[n], analysis[n], labels[n], neighborhood[n], label2vertex[n],
+             edges[n], background[n], spatio_temporal_properties, property_as_real, bbox_as_real)
     print "Done\n"
 
-    print "Creating Spatio-Temporal Graph with spatio-temporal features..."
+    # -- Creating Spatio-Temporal Graph with spatial features...
+    print "# -- Creating Spatio-Temporal Graph with spatial features..."
     tpg = TemporalPropertyGraph()
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
-    print "Done"
+    print "Done\n"
 
-
+    # -- Adding spatio-temporal features to the Spatio-Temporal Graph...
+    print "# -- Adding spatio-temporal features to the Spatio-Temporal Graph..."
     if isinstance(properties4lineaged_vertex,str) and properties4lineaged_vertex == 'strict':
-        labels = translate_ids_Graph2Image(tpg, tpg.lineaged_vertex(fully_lineaged=True))
+        labels[n] = translate_ids_Graph2Image(tpg, tpg.lineaged_vertex(fully_lineaged=True))
     else:
-        labels = translate_ids_Graph2Image(tpg, tpg.lineaged_vertex(fully_lineaged=False))
+        labels[n] = translate_ids_Graph2Image(tpg, tpg.lineaged_vertex(fully_lineaged=False))
 
-    _temporal_properties_from_image(tpg, analysis, labels, label2vertex,
-             background, spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface)
-
+    _temporal_properties_from_image(tpg, analysis, labels, neighborhood, label2vertex, edges,
+         background, spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface)
+    print "Done\n"
 
     return tpg
 
