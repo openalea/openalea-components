@@ -617,16 +617,17 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         print "Done\n"
 
         # -- Check for changes in topology due to registration and interpolation.
-        for k in reg_neighborhood:
-            change = False
-            nb_changes=0
-            for i in reg_neighborhood[k]:
-                diff = set(reg_neighborhood[k][i])-set(neighborhood[k][i])
-                if diff != set([]):
-                    nb_changes+=1
-                    change = True
-            if change:
-                print "Found {} change{} in topology at t{} due to registration and interpolation.".format(nb_changes,"s" if nb_changes>1 else "",k)
+        #~ for k in reg_neighborhood:
+            #~ change = False
+            #~ nb_changes=0
+            #~ for i in reg_neighborhood[k]:
+                #~ if neighborhood[k].has_key(i):
+                    #~ diff = set(reg_neighborhood[k][i])-set(neighborhood[k][i])
+                #~ if diff != set([]):
+                    #~ nb_changes+=1
+                    #~ change = True
+            #~ if change:
+                #~ print "Found {} change{} in topology at t{} due to registration and interpolation.".format(nb_changes,"s" if nb_changes>1 else "",k)
         neighborhood = reg_neighborhood
         del reg_neighborhood
 
