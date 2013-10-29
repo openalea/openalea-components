@@ -531,9 +531,9 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         assert [isinstance(image, str) for image in images]
 
     try: min_contact_surface = kwargs['min_contact_surface']
-        try: real_surface = kwargs['real_surface']
-        except: real_surface = property_as_real
     except: min_contact_surface = None
+    try: real_surface = kwargs['real_surface']
+    except: real_surface = property_as_real
 
     print "# -- Creating Spatial Graphs..."
     analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
