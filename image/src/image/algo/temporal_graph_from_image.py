@@ -622,7 +622,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
                     nb_changes+=1
                     change = True
             if change:
-                print "Found {} change{} in topology at t{} due to registration and interpolation.".format(nb_changes,"s" if n>1, else "",k)
+                print "Found {} change{} in topology at t{} due to registration and interpolation.".format(nb_changes,"s" if n>1 else "",k)
         neighborhood = reg_neighborhood
         del reg_neighborhood
 
