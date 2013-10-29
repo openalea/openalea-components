@@ -816,7 +816,7 @@ class AbstractSpatialImageAnalysis(object):
             return np.array([a[0],a[1]])
 
 
-    def cell_wall_surface( self, label_id, neighbors, real = True):
+    def cell_wall_surface(self, label_id, neighbors, real = True):
         """
         Return the surface of contact between a label and its neighbors.
         A list or a unique id can be given as neighbors.

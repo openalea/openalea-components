@@ -181,7 +181,7 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     tmp_img = np.asarray(cp.copy(analysis.image))
     tmp_img.fill(0)
     tmp_img += analysis.image == background # retreive the background
-    if verbose: print "Fusing daugthers of t{} at t{}:".format(reference_tp, tp_2fuse)
+    if verbose: print "Fusing daugthers from t{} at t{}:".format(reference_tp, tp_2fuse)
     for n, vid in enumerate(ref_vids):
         if verbose and n%50 == 0: print n,'/',len(ref_vids)
         graph_children = graph.descendants(vid, tp_2fuse-reference_tp) - graph.descendants(vid, tp_2fuse-reference_tp-1)
@@ -192,7 +192,10 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
 
     t_stop = time.time()
     if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(t_stop-t_start)
-    return SpatialImage(tmp_img)
+    tmp_img = SpatialImage(tmp_img)
+    tmp_img.resolution = analysis.image.resolution
+    tmp_img.info = analysis.image.info
+    return tmp_img
 
 
 def generate_graph_topology(labels, neighborhood):
@@ -623,7 +626,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
                     nb_changes+=1
                     change = True
             if change:
-                print "Found {} change{} in topology at t{} due to registration and interpolation.".format(nb_changes,"s" if n>1 else "",k)
+                print "Found {} change{} in topology at t{} due to registration and interpolation.".format(nb_changes,"s" if nb_changes>1 else "",k)
         neighborhood = reg_neighborhood
         del reg_neighborhood
 
