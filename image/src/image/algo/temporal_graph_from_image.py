@@ -314,7 +314,7 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, la
                 filtered_edges[source] = [ target for target in targets if source < target and target in labelset ]
                 unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background]
         wall_surfaces = SpI_Analysis.wall_surfaces(filtered_edges,real=property_as_real)
-        add_edge_property_from_label_property(graph,'wall_surface',wall_surfaces,mlabelpair2edge=edges)
+        add_edge_property_from_label_property(graph,'wall_surface',wall_surfaces,mlabelpair2edge=mlabelpair2edge)
 
         graph.add_vertex_property('unlabelled_wall_surface')
         for source in unlabelled_target:
@@ -464,20 +464,19 @@ def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex, m
     if 'epidermis_2D_landmarks' in spatio_temporal_properties:
         assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
         assert 'epidermis_wall_median' in graph.vertex_property_names()
-        assert 'epidermis_surface' in graph.vertex_property_names()
 
         wall_median = {}
         for tp_2fuse in xrange(graph.nb_time_points)+1:
             ref_tp = tp_2fuse-1
             ids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in labels]
             fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ids, ref_tp, tp_2fuse, background=background[tp_2fuse])
-            analysis = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+            analysis = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background=background[tp_2fuse])
             fused_image_analysis[tp_2fuse] = analysis
             neighborhood[tp_2fuse] = analysis.neighbors(analysis.labels(), min_contact_surface = min_contact_surface)
             dict_anticlinal_wall_voxels = analysis.wall_voxels_per_cells_pairs( analysis.layer1(), neighborhood[tp_2fuse], only_epidermis = True, ignore_background = True )
-            wall_median.update(find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = [0]))
-
-        add_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', wall_median)
+            wall_median = find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = [0])
+            wall_median = dict( [(translate_ids_Image2Graph(graph, k, ref_tp),v) for k,v in wall_median.iterimtems()])
+            extend_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', wall_median, mlabelpair2edge=mlabelpair2edge[ref_tp])
 
     if '3D_landmarks' in spatio_temporal_properties:
         assert 'wall_median' in graph.edge_property_names()
