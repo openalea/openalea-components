@@ -969,7 +969,7 @@ class AbstractSpatialImageAnalysis(object):
         if labels is None and neighborhood is None:
             compute_neighborhood=True
         if isinstance(labels,list) and isinstance(neighborhood,dict):
-            labels = [l for l in labels if l in neighborhood.has_key(l)]
+            labels = [l for l in labels if neighborhood.has_key(l)]
 
         if labels is None and not only_epidermis:
             labels=self.labels()
