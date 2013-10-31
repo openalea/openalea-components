@@ -230,16 +230,17 @@ def generate_graph_topology(labels, neighborhood):
 
     return graph, label2vertex, edges
 
-def find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = []):
+def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
     """
     """
     if isinstance(labels2exclude,int):
         labels2exclude = [labels2exclude]
 
     wall_median = {}
-    for label_1, label_2 in dict_anticlinal_wall_voxels:
-        if label_1 in labels2exclude or label_2 in labels2exclude: continue # if 0 means that it wasn't in the labels list provided, so we skip it.
-        x,y,z = dict_anticlinal_wall_voxels[(label_1, label_2)]
+    for label_1, label_2 in dict_wall_voxels:
+        if label_1 in labels2exclude or label_2 in labels2exclude:
+            continue # if 0 means that it wasn't in the labels list provided, so we skip it.
+        x,y,z = dict_wall_voxels[(label_1, label_2)]
         # compute geometric median:
         from openalea.image.algo.analysis import geometric_median, closest_from_A
         neighborhood_origin = geometric_median( np.array([list(x),list(y),list(z)]) )
@@ -445,8 +446,8 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, la
             add_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_origin', SpI_Analysis.principal_curvatures_origin)
 
 
-def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex, mlabelpair2edge, 
-         background, spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface):
+def _temporal_properties_from_image(graph, SpI_Analysis, labels, background,
+         spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
 
@@ -463,20 +464,58 @@ def _temporal_properties_from_image(graph, SpI_Analysis, labels, label2vertex, m
     fused_image_analysis, neighborhood = {}, {}
     if 'epidermis_2D_landmarks' in spatio_temporal_properties:
         assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
-        assert 'epidermis_wall_median' in graph.vertex_property_names()
 
-        wall_median = {}
+        print "Computing epidermis_2D_landmarks..."
+        # -- First we need to extract the medians of 'anticlinal walls' at the surface for the daughters fused images:
+        fused_anticlinal_wall_median, fused_vertex_wall_median = {}, {}
         for tp_2fuse in xrange(graph.nb_time_points)+1:
             ref_tp = tp_2fuse-1
-            ids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in labels]
-            fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ids, ref_tp, tp_2fuse, background=background[tp_2fuse])
-            analysis = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background=background[tp_2fuse])
-            fused_image_analysis[tp_2fuse] = analysis
-            neighborhood[tp_2fuse] = analysis.neighbors(analysis.labels(), min_contact_surface = min_contact_surface)
-            dict_anticlinal_wall_voxels = analysis.wall_voxels_per_cells_pairs( analysis.layer1(), neighborhood[tp_2fuse], only_epidermis = True, ignore_background = True )
-            wall_median = find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = [0])
-            wall_median = dict( [(translate_ids_Image2Graph(graph, k, ref_tp),v) for k,v in wall_median.iterimtems()])
-            extend_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', wall_median, mlabelpair2edge=mlabelpair2edge[ref_tp])
+            print "Extract the surfacic wall medians of daughters fused images between t{} and t{}".format(ref_tp, tp_2fuse)
+            ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in labels]
+            ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+            # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
+            fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
+            # - Creating a `SpatialImageAnalysis`:
+            fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+            # - Extracting neighborhood info:
+            fused_neighborhood = fused_image_analysis[tp_2fuse].neighbors(ref_SpI_ids, min_contact_surface = min_contact_surface)
+            # - Computing voxels position of 'anticlinal walls' at the surface:
+            fused_dict_anticlinal_wall_voxels = fused_image_analysis[tp_2fuse].wall_voxels_per_cells_pairs(ref_SpI_ids, fused_neighborhood, only_epidermis = True, ignore_background = False)
+            # - Finally compute the position of the median for each groups of voxels:
+            fused_anticlinal_wall_median[tp_2fuse] = find_wall_median_voxel(fused_dict_anticlinal_wall_voxels, labels2exclude = [])
+            for label_1, label_2 in fused_anticlinal_wall_median[tp_2fuse].keys():
+                if (label_1 == 1): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
+                    fused_vertex_wall_median[label_2] = fused_anticlinal_wall_median[tp_2fuse][(label_1, label_2)]
+                    fused_anticlinal_wall_median[tp_2fuse].pop((label_1, label_2))
+
+            add_vertex_property_from_dictionary(graph, 'daughters_fused_epidermis_wall_median', fused_vertex_wall_median, ref_tp)
+
+        # -- Now we can proceed to the landmarks association:
+        for tp_2fuse in xrange(graph.nb_time_points)+1:
+            ref_tp = tp_2fuse-1
+            print "Surfacic 3D landmarks association between t{} and t{}".format(ref_tp, tp_2fuse)
+            # - Translating 'projected_anticlinal_wall_median' in `graph.edge_property()` back with pair of labels as keys:
+            edge2labelpair_m = edge2labelpair_map(graph, ref_tp)
+            wall_median = dict([(edge2labelpair_m[eid],m) for eid,m in graph.edge_property('projected_anticlinal_wall_median').iteritems()])
+            # - Starting the landmarks association:
+            asso, no_asso_found = {}, []
+            for k in wall_median:
+                if fused_anticlinal_wall_median[tp_2fuse].has_key(k):
+                    asso[k] = [wall_median[k], fused_anticlinal_wall_median[tp_2fuse][k]]
+                else:
+                    no_asso_found.append(k)
+            # - Saving detected landmarks association:
+            extend_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', asso, time_point=ref_tp)
+            # - Displaying informations about how good this landmarks association step went :
+            print "Found {} associations over {} ({}%)".format(len(asso),len(wall_median),round(float(len(asso))/len(wall_median)*100,1))
+            new_contact_from_fusing = set(fused_wall_median.keys())-set(asso.keys())
+            if not new_contact_from_fusing == set([]):
+                print "New contact found after daughters fusion :"
+                for label_1, label_2 in new_contact_from_fusing:
+                    print u"Contact between {} and {}, surface: {}\xb5m\xb2".format(label_1, label_2, round(fused_image_analysis[tp_2fuse].cell_wall_surface(label_1, label_2),1))
+                    print u"Contact surface between {} and {} at t_n-1: {}\xb5m\xb2".format(label_1, label_2, round(analysis[ref_tp].cell_wall_surface(label_1, label_2),1))
+
+        print "Done\n"
 
     if '3D_landmarks' in spatio_temporal_properties:
         assert 'wall_median' in graph.edge_property_names()
@@ -690,7 +729,20 @@ def label2vertex_map(graph, time_point = None):
     else:
         return dict([(j,i) for i,j in graph.vertex_property('label').iteritems()])
 
-def label2vertex(graph,labels, time_point = None):
+def vertex2label_map(graph, time_point = None):
+    """
+        Compute a dictionary that map label to vertex id.
+        It requires the existence of a 'label' vertex property
+
+        :rtype: dict
+    """
+    if isinstance(graph, TemporalPropertyGraph):
+        assert time_point is not None
+        return dict([(i,j) for i,j in graph.vertex_property('label').iteritems() if graph.vertex_property('index')[i]==time_point])
+    else:
+        return dict([(i,j) for i,j in graph.vertex_property('label').iteritems()])
+
+def label2vertex(graph, labels, time_point = None):
     """
         Translate label as vertex id.
         It requires the existence of a 'label' vertex property
@@ -710,9 +762,22 @@ def labelpair2edge_map(graph, time_point = None):
 
         :rtype: dict
     """
-    mlabel2vertex = label2vertex_map(graph, time_point)
-    return dict([((mlabel2vertex[graph.source(eid)],mlabel2vertex[graph.target(eid)]),eid) for eid in graph.edges()
-     if (mlabel2vertex.has_key(graph.source(eid)) and mlabel2vertex.has_key(graph.target(eid)))] )
+    mvertex2label = vertex2label_map(graph, time_point)
+    
+    return dict([((mvertex2label[graph.source(eid)],mvertex2label[graph.target(eid)]),eid) for eid in graph.edges()
+     if (mvertex2label.has_key(graph.source(eid)) and mvertex2label.has_key(graph.target(eid)))] )
+
+def edge2labelpair_map(graph, time_point = None):
+    """
+        Compute a dictionary that map pair of labels to edge id.
+        It requires the existence of a 'label' property
+
+        :rtype: dict
+    """
+    mvertex2label = vertex2label_map(graph, time_point)
+    
+    return dict([(eid, (mvertex2label[graph.source(eid)],mvertex2label[graph.target(eid)])) for eid in graph.edges()
+     if (mvertex2label.has_key(graph.source(eid)) and mvertex2label.has_key(graph.target(eid)))] )
 
 def vertexpair2edge_map(graph):
     """
