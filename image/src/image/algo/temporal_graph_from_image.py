@@ -19,6 +19,7 @@
 import numpy as np
 import time, warnings, math
 import copy as cp
+from IPython import embed
 
 from openalea.image.serial.basics import SpatialImage, imread
 from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT
@@ -487,7 +488,6 @@ def _temporal_properties_from_image(graph, SpI_Analysis, vids, background,
                     if (label_1 == 1): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
                         fused_vertex_wall_median[label_2] = fused_anticlinal_wall_median[tp_2fuse][(label_1, label_2)]
                         fused_anticlinal_wall_median[tp_2fuse].pop((label_1, label_2))
-
                 extend_vertex_property_from_dictionary(graph, 'daughters_fused_epidermis_wall_median', fused_vertex_wall_median, time_point = ref_tp)
 
             # -- Now we can proceed to the landmarks association:
@@ -1082,7 +1082,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 extend_edge_property_from_dictionary(graph, 'wall_median', edge_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'epidermis_wall_median', vertex_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_median', unlabelled_wall_median, time_point=tp)
-
+                embed()
 
             if 'all_walls_orientation' in spatio_temporal_properties:
                 print 'Computing wall_orientation property...'
