@@ -128,7 +128,6 @@ def translate_ids_Image2Graph(graph, id_list, time_point):
     if Image_labels_not_found != []:
         warnings.warn("The cell ids"+str(Image_labels_not_found)+"were not in the graph!")
 
-
     return Image2Graph_labels
 
 def translate_keys_Graph2Image(graph, dictionary, time_point=None):
@@ -872,7 +871,91 @@ def __strain_parameters(func):
 
     return  wrapped_function
 
-@__strain_parameters
+def __strain_parameters2(func):
+    def wrapped_function(graph, vids = None, labels_at_t_n = True, use_projected_anticlinal_wall = False, verbose = False):
+        """
+        :Parameters:
+         - `graph` (TPG)
+         - `vids` (int|list) - list of (graph) vertex ids @ t_n. If :None: it will be computed for all possible vertex
+         - `use_projected_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('projected_anticlinal_wall_median') to compute a strain in 2D.
+        """
+        # Check if cells landmarks have been recovered ans stored in the graph structure:
+        if use_projected_anticlinal_wall:
+            assert 'epidermis_2D_landmarks' in graph.edge_property_names()
+            assert 'epidermis_wall_median' in graph.vertex_property_names()
+            assert 'daughters_fused_epidermis_wall_median' in graph.vertex_property_names()
+        else:
+            assert '3D_landwarks' in graph.edge_property_names()
+            assert 'epidermis_wall_median' in graph.vertex_property_names()
+            assert 'daughters_fused_wall_median' in graph.vertex_property_names()
+
+        # -- If the vid is not associated through time it's not possible to compute the strain.
+        if vids is None:
+            vids = list(graph.vertices())
+        if isinstance(vids,int):
+            vids=[vids]
+
+        # -- If the vid is not associated through time it's not possible to compute the strain.
+        tmp = copy.copy(vids)
+        for vid in vids:
+            if graph.descendants(vid, 1) == set([vid]):
+                tmp.remove(vid)
+
+        vids = tmp
+        stretch_mat = {}
+        missing_epidermis_wall_median = []
+        for n,vid in enumerate(vids):
+            if verbose and n%10==0: print n, " / ", len(vids)
+            spatial_edges = list(graph.edges( vid, 's' ))
+            # -- We recover the landmarks associated to each cell:
+            landmarks_t1, landmarks_t2 = [], []
+            if use_projected_anticlinal_wall:
+                ppt = 'epidermis_2D_landmarks'
+                # - We use the epidermis wall median as an extra landmark:
+                try:
+                    landmarks_t1.append(graph.vertex_property('epidermis_wall_median')[vid])
+                    landmarks_t2.append(graph.vertex_property('daughters_fused_epidermis_wall_median')[vid])
+                except:
+                    missing_epidermis_wall_median.append(vid)
+                    pass
+            else:
+                ppt = '3D_landmarks'
+
+            # - We create two matrix of landmarks positions before(t1) and after(t2) to compute the strain:
+            nb_missing_data = 0
+            for eid in spatial_edges:
+                if graph.edge_property(ppt).has_key(eid):
+                    landmarks_t1.append(graph.edge_property(ppt)[eid][0])
+                    landmarks_t2.append(graph.edge_property(ppt)[eid][1])
+                else:
+                    nb_missing_data+=1
+
+            if nb_missing_data != 0:
+                warnings.warn("Missing {} landmark{} for the vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
+            if nb_missing_data == 0:
+                assert len(landmarks_t1) == len(landmarks_t2)
+                N = len(landmarks_t1)
+                stretch_mat[vid] = func(graph, landmarks_t1, landmarks_t2)
+
+        if missing_epidermis_wall_median != []:
+            print 'Could not use the epidermis wall median as an extra landmark for vids: {}'.format(missing_epidermis_wall_median)
+
+        # -- Now we return the results of temporal differentiation function:
+        if labels_at_t_n: 
+            return stretch_mat
+        else:
+            stretch_mat_daughters={}
+            print "You have asked for labels @ t_n+1"
+            for vid in stretch_mat:
+                vid_descendants = graph.descendants(vid ,1)-graph.descendants(vid,0)
+                for id_descendant in vid_descendants:
+                    stretch_mat_daughters[id_descendant]=stretch_mat[vid]
+            return stretch_mat_daughters
+
+    return  wrapped_function
+
+#~ @__strain_parameters
+@__strain_parameters2
 def stretch_matrix(graph, xyz_t1, xyz_t2):
     """
     Compute the stretch / deformation matrix.
