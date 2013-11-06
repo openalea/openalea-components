@@ -1295,6 +1295,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         self.principal_curvatures_origin = {}
         self.curvatures_tensor = {}
         self.external_wall_geometric_median = {}
+        self.external_wall_geometric_median_voxel = {}
 
     def is3D(self): return True
     
@@ -1522,34 +1523,28 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
 
     @__principal_curvature_parameters_CGAL
-    def compute_principal_curvatures( self, vid, pts, adjacencies, fitting_degree, monge_degree ):
+    def compute_principal_curvatures(self, vid, pts, adjacencies, fitting_degree, monge_degree):
         """
         Function computing principal curvature using a CGAL c++ wrapped function: 'principal_curvatures'.
         It's only doable for cells of the first layer.
         """
-
+        # - Recover `vid` position in the image:
         x_vid, y_vid, z_vid = np.where(self.first_voxel_layer() == vid)
-        
-        if self.external_wall_geometric_median.has_key(vid):
-            neighborhood_origin = self.external_wall_geometric_median[vid]
+        # - Try to use the position of the closest voxel to the wall geometric median
+        if self.external_wall_geometric_median_voxel.has_key(vid):
+            min_dist = self.external_wall_geometric_median_voxel[vid]
         else:
             neighborhood_origin = geometric_median( np.array([list(x_vid),list(y_vid),list(z_vid)]) )
             self.external_wall_geometric_median[vid] = neighborhood_origin
+            integers = np.vectorize(lambda x : int(x))
+            neighborhood_origin = integers(neighborhood_origin)
+            pts_vid = [tuple([int(x_vid[i]),int(y_vid[i]),int(z_vid[i])]) for i in xrange(len(x_vid))]
+            min_dist = closest_from_A(neighborhood_origin, pts_vid)
+            self.external_wall_geometric_median_voxel[vid] = min_dist
 
-        integers = np.vectorize(lambda x : int(x))
-        neighborhood_origin = integers(neighborhood_origin)
-        pts_vid = [tuple([int(x_vid[i]),int(y_vid[i]),int(z_vid[i])]) for i in xrange(len(x_vid))]
-
-        min_dist = closest_from_A(neighborhood_origin, pts_vid)
         id_min_dist = pts.index(min_dist)
-
         neigborids = r_neighborhood(id_min_dist, pts, adjacencies, self.used_radius_for_curvature)
-
-        #~ neigbor_pts=[]
-        #~ for i in neigborids:
-            #~ neigbor_pts.append(pts[i])
-
-        #~ pc = principal_curvatures(pts,id_min_dist,neigborids)
+        # - Principal curvature computation:
         pc = principal_curvatures(pts, id_min_dist, neigborids, fitting_degree, monge_degree)
         k1 = pc[1][1]
         k2 = pc[2][1]

@@ -444,8 +444,8 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, la
     return graph
 
 
-def _temporal_properties_from_image(graph, SpI_Analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface):
+def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
+         spatio_temporal_properties, property_as_real, bbox_as_real):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
 
@@ -460,8 +460,11 @@ def _temporal_properties_from_image(graph, SpI_Analysis, vids, background,
      - `bbox_as_real` (bool) - If bbox_as_real = True, bounding boxes are in real-world units else in voxels.
 
     """
+    try: min_contact_surface = graph.graph_property('min_contact_surface')
+    except: min_contact_surface = None
     available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall_orientation']
-    if set(spatio_temporal_properties) & set(available_properties) != set([]):
+    properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
+    if set(properties) & set(available_properties) != set([]):
         fused_image_analysis, neighborhood = {}, {}
         if 'epidermis_2D_landmarks' in spatio_temporal_properties:
             assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
@@ -603,6 +606,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     # -- Now we construct the Temporal Property Graph (with no properties attached to vertex):
     tpg = TemporalPropertyGraph()
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
+    tpg.add_graph_property('min_contact_surface', min_contact_surface)
     print "Done\n"
 
     # -- If we already removed cells at the margins of the stack, no need to look for them after:
@@ -656,39 +660,28 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
         print "Done\n"
 
-    spatio_temporal_properties = check_properties(tpg, spatio_temporal_properties)
+        # -- Re-creating Spatio-Temporal Graph after registration...
+        print "# -- Re-creating the Spatio-Temporal Graph after registration..."
+        tpg = TemporalPropertyGraph()
+        tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
+        tpg.add_graph_property('min_contact_surface', min_contact_surface)
+        print "Done\n"
 
-    # -- Extracting cell features...
-    print "# -- Extracting cell features..."
-    for n in xrange(tpg.nb_time_points+1):
-        print "from image #{}".format(n)
-        if isinstance(properties4lineaged_vertex,str) and properties4lineaged_vertex == 'strict':
-            labels[n] = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, fully_lineaged=True))
-        elif properties4lineaged_vertex:
-            labels[n] = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=True, fully_lineaged=False))
-        else:
-            labels[n] = translate_ids_Graph2Image(tpg, tpg.vertex_at_time(n, lineaged=False, fully_lineaged=False))
-
-        graphs[n] = _spatial_properties_from_image(graphs[n], analysis[n], labels[n], neighborhood[n], label2vertex[n],
-             edges[n], background[n], spatio_temporal_properties, property_as_real, bbox_as_real)
-    print "Done\n"
-
-    # -- Creating Spatio-Temporal Graph with spatial features...
-    print "# -- Creating Spatio-Temporal Graph with spatial features..."
-    tpg = TemporalPropertyGraph()
-    tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
-    print "Done\n"
-    tpg.add_graph_property('min_contact_surface', min_contact_surface)
 
     # -- Adding spatio-temporal features to the Spatio-Temporal Graph...
     print "# -- Adding spatio-temporal features to the Spatio-Temporal Graph..."
+    spatio_temporal_properties = check_properties(tpg, spatio_temporal_properties)
+
     if isinstance(properties4lineaged_vertex,str) and properties4lineaged_vertex == 'strict':
         vids = tpg.lineaged_vertex(fully_lineaged=True)
     else:
         vids = tpg.lineaged_vertex(fully_lineaged=False)
 
-    tpg = _temporal_properties_from_image(tpg, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface)
+    tpg = _spatial_properties_from_images(tpg, analysis, vids, background,
+         spatio_temporal_properties, property_as_real, bbox_as_real)
+
+    tpg = _temporal_properties_from_images(tpg, analysis, vids, background,
+         spatio_temporal_properties, property_as_real, bbox_as_real)
     print "Done\n"
 
     return tpg
@@ -705,6 +698,26 @@ def check_properties(graph, spatio_temporal_properties):
             spatio_temporal_properties.append('projected_anticlinal_wall_median')
         if 'wall_median' not in graph.edge_properties() and 'wall_median' not in spatio_temporal_properties:
             spatio_temporal_properties.append('wall_median')
+
+    if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
+        index_radius = spatio_temporal_properties.index('epidermis_local_principal_curvature')+1
+        if isinstance(spatio_temporal_properties[index_radius],int):
+            radius = [spatio_temporal_properties[index_radius]]
+        elif isinstance(spatio_temporal_properties[index_radius],list):
+            radius = spatio_temporal_properties[index_radius]
+        else:
+            radius = [60]
+
+        try:
+            graph.add_graph_property('radius_local_principal_curvature_estimation',radius)
+            radius_2_compute = radius
+            graph.add_graph_property('radius_2_compute',radius_2_compute)
+        except:
+            existing_radius = set(graph.graph_property('radius_local_principal_curvature_estimation')) & set(radius)
+            if existing_radius != set([]):
+                radius_2_compute = list(set(radius) - existing_radius)
+            graph.graph_property('radius_local_principal_curvature_estimation').extend(radius_2_compute)
+            graph.add_graph_property('radius_2_compute',radius_2_compute)
 
     return spatio_temporal_properties
 
@@ -896,7 +909,7 @@ def extend_vertex_property_from_dictionary(graph, name, dictionary, mlabel2verte
     if mlabel2vertex is None:
         mlabel2vertex = label2vertex_map(graph, time_point)
     if name not in graph.vertex_properties():
-        warnings.warn("Existing vertex property '{}'".format(name))
+        warnings.warn("Vertex property '{}' does not exist".format(name))
         graph.add_vertex_property(name)
 
     missing_vertex = list(set(dictionary.keys())-set(mlabel2vertex.keys()))
@@ -951,8 +964,7 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids, backgrou
     # -- Adding spatio-temporal features to the Spatio-Temporal Graph...
     print "# -- Adding spatio-temporal features to the Spatio-Temporal Graph..."
     spatio_temporal_properties = check_properties(graph, spatio_temporal_properties)
-    try: min_contact_surface = graph.graph_property('min_contact_surface')
-    except: min_contact_surface = None
+
     if isinstance(vids,str) and vids == 'strict':
         vids = graph.lineaged_vertex(fully_lineaged=True)
     elif vids is None:
@@ -962,8 +974,8 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids, backgrou
 
     graph = _spatial_properties_from_images(graph, analysis, vids, background,
          spatio_temporal_properties, property_as_real, bbox_as_real)
-    graph = _temporal_properties_from_image(graph, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real, min_contact_surface)
+    graph = _temporal_properties_from_images(graph, analysis, vids, background,
+         spatio_temporal_properties, property_as_real, bbox_as_real)
     print "Done\n"
 
     return graph
@@ -976,7 +988,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
     """
     assert isinstance(graph, TemporalPropertyGraph)
     available_properties = ['boundingbox', 'volume', 'barycenter', 'L1', 'border', 'inertia_axis', 'wall_surface', 'epidermis_surface', 'projected_anticlinal_wall_median', 'wall_median', 'all_walls_orientation', 'epidermis_local_principal_curvature']
-    properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)]
+    properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
         for tp in xrange(graph.nb_time_points+1):
             print "# - Analysing image #{}".format(tp)
@@ -1004,7 +1016,11 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 extend_vertex_property_from_dictionary(graph, 'barycenter', barycenters, time_point=tp)
                 #~ graph._graph_property("units").update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
 
-            background_neighbors = set(SpI_Analysis[tp].neighbors(background))
+            background_neighbors = SpI_Analysis[tp].neighbors(background[tp])
+            if isinstance(background_neighbors, dict):
+                background_neighbors = set(background_neighbors[background[tp]])
+            else:
+                background_neighbors = set(background_neighbors)
             background_neighbors.intersection_update(labelset)
             if 'L1' in spatio_temporal_properties :
                 print 'Generating the list of cells belonging to the first layer...'
@@ -1067,29 +1083,30 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             if 'wall_median' in spatio_temporal_properties:
                 print 'Computing wall_median property...'
                 try: dict_wall_voxels
-                except: dict_wall_voxels = SpI_Analysis[tp].wall_voxels_per_cells_pairs(labels, neighborhood, ignore_background=False )
+                except: dict_wall_voxels = SpI_Analysis[tp].wall_voxels_per_cells_pairs(labels+[background[tp]], neighborhood.update({background[tp]:list(background_neighbors)}), ignore_background=False )
 
                 wall_median = find_wall_median_voxel(dict_wall_voxels, labels2exclude = [])
                 edge_wall_median, unlabelled_wall_median, vertex_wall_median = {},{},{}
                 for label_1, label_2 in dict_wall_voxels.keys():
-                    if (label_1 in graph.vertices()) and (label_2 in graph.vertices()):
-                        edge_wall_median[(label_1, label_2)] = wall_median[(label_1, label_2)]
                     if (label_1 == 0): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
                         unlabelled_wall_median[label_2] = wall_median[(label_1, label_2)]
-                    if (label_1 == 1): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
+                    elif (label_1 == 1): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
                         vertex_wall_median[label_2] = wall_median[(label_1, label_2)]
+                    else:
+                        edge_wall_median[(label_1, label_2)] = wall_median[(label_1, label_2)]
 
                 extend_edge_property_from_dictionary(graph, 'wall_median', edge_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'epidermis_wall_median', vertex_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_median', unlabelled_wall_median, time_point=tp)
-                embed()
+                #embed()
+
 
             if 'all_walls_orientation' in spatio_temporal_properties:
                 print 'Computing wall_orientation property...'
                 # -- First we have to extract the voxels defining the frontier between two objects:
                 # - Extract wall_orientation property for 'unlabelled' and 'epidermis' walls as well:
                 try: dict_wall_voxels
-                except: dict_wall_voxels = SpI_Analysis[tp].wall_voxels_per_cells_pairs(labels, neighborhood, ignore_background=False )
+                except: dict_wall_voxels = SpI_Analysis[tp].wall_voxels_per_cells_pairs(labels+[background[tp]], neighborhood.update({background[tp]:list(background_neighbors)}), ignore_background=False )
 
                 if 'wall_median' in graph.edge_properties():
                     medians_coords = dict( (graph.edge_vertices(eid), coord) for eid,coord in graph.edge_property('wall_median').iteritems() )
@@ -1139,24 +1156,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                         extend_vertex_property_from_dictionary(graph, 'epidermis_wall_principal_curvature_origin', epidermis_pc_origin, time_point=tp)
 
             if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
-                index_radius = spatio_temporal_properties.index('epidermis_local_principal_curvature')+1
-                if isinstance(spatio_temporal_properties[index_radius],int):
-                    radius = [spatio_temporal_properties[index_radius]]
-                elif isinstance(spatio_temporal_properties[index_radius],list):
-                    radius = spatio_temporal_properties[index_radius]
-                else:
-                    radius = [60]
-
-                try:
-                    graph.add_graph_property('radius_local_principal_curvature_estimation',radius)
-                    radius_2_compute = radius
-                except:
-                    existing_radius = set(graph.graph_property('radius_local_principal_curvature_estimation')) & set(radius)
-                    if existing_radius != set([]):
-                        radius_2_compute = list(set(radius) - existing_radius)
-                    graph.graph_property('radius_local_principal_curvature_estimation').extend(radius_2_compute)
-
-                for radius in radius_2_compute:
+                for radius in graph.graph_property('radius_2_compute'):
                     print 'Computing local_principal_curvature property with radius = {}voxels...'.format(radius)
                     print u"This represent a local curvature estimation area of {}\xb5m\xb2".format(round(math.pi*(radius*SpI_Analysis[tp].image.resolution[0])*(radius*SpI_Analysis[tp].image.resolution[1])))
                     SpI_Analysis[tp].compute_principal_curvatures(vids=labels, radius=radius, verbose=True)
@@ -1166,7 +1166,12 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 if not 'wall_median' in graph.edge_properties():
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_origin', SpI_Analysis[tp].principal_curvatures_origin, time_point=tp)
 
+            # - We want the `dict_wall_voxels` to be computed again at each `time_point`:
             try: del dict_wall_voxels
             except: pass
+
+        # - We want to compute the 'epidermis_local_principal_curvature' for all time points:
+        try: graph.remove_graph_property('radius_2_compute')
+        except: pass
 
     return graph
