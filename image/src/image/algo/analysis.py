@@ -18,13 +18,10 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-import warnings
-import math
-import copy
+import warnings, math, copy
+import gzip, pickle
 from os.path import exists
-import gzip
-import pickle
-
+from IPython import embed
 import numpy as np
 import scipy.ndimage as nd
 
@@ -39,7 +36,7 @@ from openalea.image.spatial_image import SpatialImage
 
 try:
     from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann)
-except:
+except :
     warnings.warn("'import (r_neighborhood, principal_curvatures, k_closest_points_from_ann)' failed, 'plantgl' seems to be missing!")
     warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
     pass
@@ -1503,6 +1500,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
                 if self.used_radius_for_curvature == radius:
                     recalculate_all = False
                 else:
+                    self.used_radius_for_curvature = radius
                     recalculate_all = True
 
             # -- We create voxels adjacencies
@@ -1528,17 +1526,19 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         Function computing principal curvature using a CGAL c++ wrapped function: 'principal_curvatures'.
         It's only doable for cells of the first layer.
         """
-        # - Recover `vid` position in the image:
-        x_vid, y_vid, z_vid = np.where(self.first_voxel_layer() == vid)
         # - Try to use the position of the closest voxel to the wall geometric median
         if self.external_wall_geometric_median_voxel.has_key(vid):
             min_dist = self.external_wall_geometric_median_voxel[vid]
         else:
+            # - Recover `vid` position in the image:
+            x_vid, y_vid, z_vid = np.where(self.first_voxel_layer() == vid)
+            # - Compute the geometric median:
             neighborhood_origin = geometric_median( np.array([list(x_vid),list(y_vid),list(z_vid)]) )
             self.external_wall_geometric_median[vid] = neighborhood_origin
             integers = np.vectorize(lambda x : int(x))
             neighborhood_origin = integers(neighborhood_origin)
             pts_vid = [tuple([int(x_vid[i]),int(y_vid[i]),int(z_vid[i])]) for i in xrange(len(x_vid))]
+            # - Find its closest voxel (belonging to the first layer of voxels)
             min_dist = closest_from_A(neighborhood_origin, pts_vid)
             self.external_wall_geometric_median_voxel[vid] = min_dist
 
@@ -1555,6 +1555,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         R = np.array( [pc[1][0], pc[2][0], pc[0]] ).T
         D = [ [k1,0,0], [0,k2,0], [0,0,0] ]
         self.curvatures_tensor[vid] = np.dot(np.dot(R,D),R.T)
+        embed()
 
     def __curvature_parameters_CGAL(func):
         def wrapped_function(self, vids = None, radius=60, verbose = False):

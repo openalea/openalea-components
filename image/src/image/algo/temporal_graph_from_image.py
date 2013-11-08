@@ -460,8 +460,11 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
      - `bbox_as_real` (bool) - If bbox_as_real = True, bounding boxes are in real-world units else in voxels.
 
     """
-    try: min_contact_surface = graph.graph_property('min_contact_surface')
-    except: min_contact_surface = None
+    try:
+        min_contact_surface = graph.graph_property('min_contact_surface')
+        assert isinstance(min_contact_surface, int) or isinstance(min_contact_surface, float)
+    except:
+        min_contact_surface = None
     available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall_orientation']
     properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
@@ -1098,7 +1101,6 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 extend_edge_property_from_dictionary(graph, 'wall_median', edge_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'epidermis_wall_median', vertex_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_median', unlabelled_wall_median, time_point=tp)
-                #embed()
 
 
             if 'all_walls_orientation' in spatio_temporal_properties:
@@ -1165,6 +1167,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_directions_r'+str(radius), SpI_Analysis[tp].principal_curvatures_directions, time_point=tp)
                 if not 'wall_median' in graph.edge_properties():
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_origin', SpI_Analysis[tp].principal_curvatures_origin, time_point=tp)
+                #embed()
 
             # - We want the `dict_wall_voxels` to be computed again at each `time_point`:
             try: del dict_wall_voxels
