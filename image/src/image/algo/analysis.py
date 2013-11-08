@@ -1555,7 +1555,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         R = np.array( [pc[1][0], pc[2][0], pc[0]] ).T
         D = [ [k1,0,0], [0,k2,0], [0,0,0] ]
         self.curvatures_tensor[vid] = np.dot(np.dot(R,D),R.T)
-        embed()
+
 
     def __curvature_parameters_CGAL(func):
         def wrapped_function(self, vids = None, radius=60, verbose = False):
