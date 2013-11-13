@@ -456,7 +456,7 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
 
 
-def epidermis_wall_gaussian_curvature( graph ):
+def epidermis_wall_gaussian_curvature(graph):
     """
     Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
     The principal curvature values saved there are based only on wall voxels
@@ -465,13 +465,13 @@ def epidermis_wall_gaussian_curvature( graph ):
     return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_wall_principal_curvature_values').iteritems()])
 
 
-def epidermis_local_gaussian_curvature( graph ):
+def epidermis_local_gaussian_curvature(graph, radius):
     """
     Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
     The principal curvature values saved there are based on voxels present in a within a certain radius around the wall median.
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
     """
-    radius = graph.graph_property('radius_local_curvature_estimation')
+    assert radius in graph.graph_property('radius_local_principal_curvature_estimation')
     return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
 
 
@@ -884,6 +884,7 @@ def __strain_parameters2(func):
             assert 'epidermis_2D_landmarks' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
             assert 'daughters_fused_epidermis_wall_median' in graph.vertex_property_names()
+            assert 'L1' in graph.vertex_property_names()
         else:
             assert '3D_landwarks' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
@@ -891,17 +892,11 @@ def __strain_parameters2(func):
 
         # -- If the vid is not associated through time it's not possible to compute the strain.
         if vids is None:
-            vids = list(graph.vertices())
+            vids = list(set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points,fully_lineaged=False)))
         if isinstance(vids,int):
-            vids=[vids]
+            assert vids in graph.lineaged_vertex(fully_lineaged=False)
+            vids = [vids]
 
-        # -- If the vid is not associated through time it's not possible to compute the strain.
-        tmp = copy.copy(vids)
-        for vid in vids:
-            if graph.descendants(vid, 1) == set([vid]):
-                tmp.remove(vid)
-
-        vids = tmp
         stretch_mat = {}
         missing_epidermis_wall_median = []
         for n,vid in enumerate(vids):
@@ -921,9 +916,12 @@ def __strain_parameters2(func):
             else:
                 ppt = '3D_landmarks'
 
-            # - We create two matrix of landmarks positions before(t1) and after(t2) to compute the strain:
+            # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
             nb_missing_data = 0
             for eid in spatial_edges:
+                nei = graph.edge_vertices(eid)[0] if graph.edge_vertices(eid)[0] != vid else graph.edge_vertices(eid)[1]
+                if use_projected_anticlinal_wall and nei not in graph.vertex_property('L1'):
+                    continue # no need to worry, this is not the droids you're looking for !
                 if graph.edge_property(ppt).has_key(eid):
                     landmarks_t1.append(graph.edge_property(ppt)[eid][0])
                     landmarks_t2.append(graph.edge_property(ppt)[eid][1])
