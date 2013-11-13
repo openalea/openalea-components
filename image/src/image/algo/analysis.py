@@ -1809,16 +1809,16 @@ def vector_correlation(vect1,vect2):
 
 def geometric_median(X, numIter = 200):
     """
-    Compute the geometric medians of cells according to the coordinates of their voxels.
-    The geometric medians coordinates will be expressed in the Spatial Image reference system (not in real world metrics).
+    Compute the geometric median of a point sample.
+    The geometric median coordinates will be expressed in the Spatial Image reference system (not in real world metrics).
     We use the Weiszfeld's algorithm (http://en.wikipedia.org/wiki/Geometric_median)
 
     :Parameters:
-        - `X` voxels coordinate (3xN matrix)
-        - `numIter` limit the length of the search for global optimum
-    
+     - `X` (list|np.array) - voxels coordinate (3xN matrix)
+     - `numIter` (int) - limit the length of the search for global optimum
+
     :Return:
-        - np.array((x,y,z)): geometric median of the coordinates;
+     - np.array((x,y,z)): geometric median of the coordinates;
     """
     # -- Initialising 'median' to the centroid
     y = np.mean(X,1)
@@ -1829,7 +1829,7 @@ def geometric_median(X, numIter = 200):
     convergence=False # boolean testing the convergence toward a global optimum
     dist=[] # list recording the distance evolution
 
-    # -- Minimizing the sum of the squares of the distances between each points in 'X' (cells walls voxels) and the median.
+    # -- Minimizing the sum of the squares of the distances between each points in 'X' and the median.
     i=0
     while ( (not convergence) and (i < numIter) ):
         num_x, num_y, num_z = 0.0, 0.0, 0.0

@@ -701,6 +701,8 @@ def check_properties(graph, spatio_temporal_properties):
             spatio_temporal_properties.append('projected_anticlinal_wall_median')
         if 'wall_median' not in graph.edge_properties() and 'wall_median' not in spatio_temporal_properties:
             spatio_temporal_properties.append('wall_median')
+        if 'L1' not in graph.vertex_properties() and 'L1' not in spatio_temporal_properties:
+            spatio_temporal_properties.append('L1')
 
     if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
         index_radius = spatio_temporal_properties.index('epidermis_local_principal_curvature')+1
@@ -1027,7 +1029,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             background_neighbors.intersection_update(labelset)
             if 'L1' in spatio_temporal_properties :
                 print 'Generating the list of cells belonging to the first layer...'
-                extend_vertex_property_from_dictionary(graph, 'L1', zip(labels, [(l in background_neighbors) for l in labels]), time_point=tp)
+                extend_vertex_property_from_dictionary(graph, 'L1', dict([(l, (l in background_neighbors)) for l in labels]), time_point=tp)
 
             if 'border' in spatio_temporal_properties :
                 print 'Generating the list of cells at the margins of the stack...'
@@ -1035,7 +1037,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 try: border_cells.remove(background)
                 except: pass
                 border_cells = set(border_cells)
-                extend_vertex_property_from_dictionary(graph, 'border', zip(labels, [(l in border_cells) for l in labels]), time_point=tp)
+                extend_vertex_property_from_dictionary(graph, 'border', dict([(l, (l in border_cells)) for l in labels]), time_point=tp)
 
             if 'inertia_axis' in spatio_temporal_properties :
                 print 'Computing inertia_axis property...'
@@ -1161,6 +1163,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 for radius in graph.graph_property('radius_2_compute'):
                     print 'Computing local_principal_curvature property with radius = {}voxels...'.format(radius)
                     print u"This represent a local curvature estimation area of {}\xb5m\xb2".format(round(math.pi*(radius*SpI_Analysis[tp].image.resolution[0])*(radius*SpI_Analysis[tp].image.resolution[1])))
+                    SpI_Analysis[tp].principal_curvatures, SpI_Analysis[tp].principal_curvatures_normal, SpI_Analysis[tp].principal_curvatures_directions = {}, {}, {}
                     SpI_Analysis[tp].compute_principal_curvatures(vids=labels, radius=radius, verbose=True)
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_values_r'+str(radius), SpI_Analysis[tp].principal_curvatures, time_point=tp)
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_normal_r'+str(radius), SpI_Analysis[tp].principal_curvatures_normal, time_point=tp)
