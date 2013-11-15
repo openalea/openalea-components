@@ -108,7 +108,7 @@ class TemporalPropertyGraph(PropertyGraph):
             if gname in [self.metavidtypepropertyname,self.metavidtypepropertyname]:
                 temporalgproperties[gname] = graph.graph_property(gname)
             else:
-                newgproperty = graph.translate_graph_property(gname, old_to_new_vids, old_to_new_eids)            
+                newgproperty = graph.translate_graph_property(gname, old_to_new_vids, old_to_new_eids)
                 temporalgproperties[gname] = temporalgproperties.get(gname,[])+[newgproperty]
 
         self._old_to_new_ids.append(relabel_ids)
