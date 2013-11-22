@@ -259,7 +259,7 @@ class PropertyGraph(IPropertyGraph, Graph):
     def translate_graph_property(self, prop_name, trans_vid, trans_eid):
         """ Translate a graph property according to meta info """
         old_prop = self.graph_property(prop_name)
-        
+        print type(old_prop)
         key_translator = self.get_graph_property_key_type(prop_name)
         value_translator = self.get_property_value_type(prop_name, GraphProperty)
         print 'translate_graph_property',prop_name, key_translator, value_translator
