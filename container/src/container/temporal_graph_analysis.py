@@ -933,7 +933,8 @@ def __strain_parameters2(func):
             if nb_missing_data == 0:
                 assert len(landmarks_t1) == len(landmarks_t2)
                 N = len(landmarks_t1)
-                stretch_mat[vid] = func(graph, landmarks_t1, landmarks_t2)
+                if N != 0:
+                    stretch_mat[vid] = func(graph, landmarks_t1, landmarks_t2)
 
         if missing_epidermis_wall_median != []:
             print 'Could not use the epidermis wall median as an extra landmark for vids: {}'.format(missing_epidermis_wall_median)
