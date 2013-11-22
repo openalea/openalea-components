@@ -28,9 +28,9 @@ from numpy.linalg import svd, lstsq
 
 
 def add_graph_vertex_property_from_dictionary(graph, name, dictionary):
-    """ 
-    Add a vertex property with name 'name' to the graph build from an image. 
-    The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels. 
+    """
+    Add a vertex property with name 'name' to the graph build from an image.
+    The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels.
     """
     if name in graph.vertex_properties():
         raise ValueError('Existing vertex property %s' % name)
@@ -76,14 +76,14 @@ def keys_to_daughter_id(graph, data, rank = 1):
 def translate_ids_Graph2Image(graph, id_list):
     """
     Return a list which contains SpatialImage ids type translated from the TPG ids type `id_list`.
-    
+
     :Parameters:
      - `graph` (TPG): the TemporalPropertyGraph containing the translation informations
      - `id_list` (list) - graphs ids type
     """
     if isinstance(id_list,int):
         return graph.vertex_property('old_label')[id_list]
-    
+
     if isinstance(id_list,set):
         id_list = list(id_list)
     if not isinstance(id_list,list):
@@ -94,12 +94,12 @@ def translate_ids_Graph2Image(graph, id_list):
 def translate_ids_Image2Graph(graph, id_list, time_point):
     """
     Return a list which contains TPG ids type translated from the SpatialImage ids type `id_list`.
-    
+
     :Parameters:
      - `graph` (TPG): the TemporalPropertyGraph containing the translation informations
      - `id_list` (list) - SpatialImage ids type
      - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph
-    
+
     :WARNING:
         `time_point` numbers starts at '0'
     """
@@ -134,11 +134,11 @@ def translate_keys_Graph2Image(graph, dictionary, time_point=None):
     """
     Return a dictionary which keys are SpatialImage ids type .
     Initial keys are graph ids type and need to be translated into SpatialImage ids type.
-    
+
     :Parameters:
     - `dictionary` (dict) - keys are SpatialImage ids type;
     - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
-    
+
     :WARNING:
         `time_point` numbers starts at '0'
     """
@@ -161,17 +161,17 @@ def translate_keys_Image2Graph(graph, dictionary, time_point):
     """
     Return a dictionary which keys are graph ids type .
     Initial keys are SpatialImage ids type and need to be translated into graph ids type.
-    
+
     :Parameters:
     - `dictionary` (dict) - keys are graph ids type;
     - `time_point` (int) - index of the SpatialImage in the TemporalPropertyGraph;
-    
+
     :WARNING:
         `time_point` numbers starts at '0'
     """
     if not isinstance(dictionary,dict):
         raise ValueError('This is not a "dict" type variable.')
-    
+
     return dict( (k,dictionary[v]) for k,v in graph.vertex_property('old_label').iteritems() if (graph.vertex_property('index')[k] == time_point) and (v in dictionary) )
 
 
@@ -240,10 +240,13 @@ def laplacian(graph, vertex_property, vid, rank, edge_type):
 
     result = 0
     ivalue = vertex_property[vid]
+    k=0
     if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
         for i in vid_neighborhood:
-            result = result + vertex_property[i]
-        return ivalue - (result / float(nb_neighborhood))
+            if i in vertex_property.keys():
+                result = result + vertex_property[i]
+                k+=1
+        return ivalue - (result / float(k))
 
 @__normalized_parameters
 def mean_abs_dev(graph, vertex_property, vid, rank, edge_type):
@@ -269,11 +272,13 @@ def mean_abs_dev(graph, vertex_property, vid, rank, edge_type):
 
     result = 0
     ivalue = vertex_property[vid]
+    k=0
     if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
         for i in vid_neighborhood:
-            result = result + abs(ivalue - vertex_property[i])
-        return result / float(nb_neighborhood)
-
+            if i in vertex_property.keys():
+                result = result + abs(ivalue - vertex_property[i])
+                k+=1
+        return result / float(k)
 
 @__normalized_parameters
 def change(graph, vertex_property, vid, rank, edge_type):
@@ -299,10 +304,13 @@ def change(graph, vertex_property, vid, rank, edge_type):
 
     result = 0
     ivalue = vertex_property[vid]
+    k=0
     if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
         for i in vid_neighborhood:
-            result = result + vertex_property[i]
-        return result/float(nb_neighborhood) - ivalue
+            if i in vertex_property.keys():
+                result = result + vertex_property[i]
+                k+=1
+        return result/float(k) - ivalue
 
 
 def __normalized_temporal_parameters(func):
@@ -314,7 +322,7 @@ def __normalized_temporal_parameters(func):
         - 'vids' : by default a vertex id or a list of vertex ids. If 'vids=None' the function `func` will be computed for all ids present in the graph provided.
         - 'rank' : temporal neighborhood at distance 'rank' will be used.
         - 'rank_lineage_check' : usefull if you want to check the lineage for a different rank than the temporal neighborhood rank.
-        
+
         :Example:
         VG12 = g.translate_keys_Graph2Image(relative_temporal_change(g, 'volume', rank = 1, rank_lineage_check = 4), 0 )
         VG15 = g.translate_keys_Graph2Image(relative_temporal_change(g, 'volume', rank = 4, rank_lineage_check = 4), 0 )
@@ -375,25 +383,25 @@ def __normalized_temporal_parameters(func):
                 print "Some of the `vids` have been omitted."
 
         # -- Now we return the results of temporal differentiation function:
-        if labels_at_t_n: 
+        if labels_at_t_n:
             return temporal_func
         else:
             return translate_keys2daughters_ids(graph, temporal_func)
 
     return  wrapped_function
-    
+
 
 @__normalized_temporal_parameters
 def temporal_rate(graph, vertex_property, vid, rank, time_interval):
     """
     Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
-    
+
     :Parameters:
     - 'graph' : a TPG.
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    
+
     :Return:
     - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
@@ -404,10 +412,10 @@ def temporal_rate(graph, vertex_property, vid, rank, time_interval):
     if rank > 1:
         vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
         vid_parent = vid
-    
+
     parent_value = vertex_property[vid_parent]
     descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
-    
+
     return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
 
 
@@ -415,13 +423,13 @@ def temporal_rate(graph, vertex_property, vid, rank, time_interval):
 def temporal_change(graph, vertex_property, vid, rank, time_interval):
     """
     Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
-    
+
     :Parameters:
     - 'graph' : a TPG.
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    
+
     :Return:
     - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
@@ -432,10 +440,10 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
     if rank > 1:
         vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
         vid_parent = vid
-    
+
     parent_value = vertex_property[vid_parent]
     descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
-    
+
     return (descendants_value - parent_value) / float(time_interval)
 
 
@@ -443,13 +451,13 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
 def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     """
     Sub-function computing the relative temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
-    
+
     :Parameters:
     - 'graph' : a TPG.
     - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
     - 'vid' : a vertex id.
     - 'rank' : neighborhood at distance 'rank' will be used.
-    
+
     :Return:
     - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
@@ -461,7 +469,7 @@ def epidermis_wall_gaussian_curvature(graph):
     Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
     The principal curvature values saved there are based only on wall voxels
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
-    """    
+    """
     return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_wall_principal_curvature_values').iteritems()])
 
 
@@ -471,7 +479,7 @@ def epidermis_local_gaussian_curvature(graph, radius):
     The principal curvature values saved there are based on voxels present in a within a certain radius around the wall median.
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
     """
-    assert radius in graph.graph_property('radius_local_principal_curvature_estimation')
+    #assert radius in graph.graph_property('radius_local_principal_curvature_estimation')
     return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
 
 
@@ -482,7 +490,7 @@ def division_rate(graph, rank=1, parent_ids = False):
      - 'graph' (TGP) - a TPG.
      - 'rank' (int) - children at distance 'rank' will be used.
      - 'parent_ids' (bool) - specify if the division rate values returned should be associated with parent ids or children ids.
-    
+
     :Return:
      - div_rate = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
     """
@@ -503,7 +511,7 @@ def division_rate(graph, rank=1, parent_ids = False):
         else:
             div_rate[vid] = (len(descendants) - 1) / float(time_interval)
 
-    if parent_ids: 
+    if parent_ids:
         return div_rate
     else:
         return translate_keys2daughters_ids(graph, div_rate)
@@ -534,9 +542,9 @@ def exist_relative_at_rank(graph, vid, rank):
 
 def exist_all_relative_at_rank(graph, vid, rank):
     """
-    Check if lineage is complete over several ranks. 
+    Check if lineage is complete over several ranks.
     i.e. every decendants cells from `vid` have a lineage up to rank `rank`.
-    
+
     :Parameters:
      - `graph` TPG to browse;
      - 'vid' : a vertex id.
@@ -579,7 +587,7 @@ def exist_all_relative_at_rank(graph, vid, rank):
 def time_point_property(graph, time_point, vertex_property, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
     """
     Allow to extract a property 'vertex_property' from the temporal graph for one time-point.
-    
+
     :Parameters:
     - `graph` (TemporalPropertyGraph) - Spatio-temporal graph to browse;
     - `time_point` (int) - define the time-point to consider;
@@ -590,20 +598,20 @@ def time_point_property(graph, time_point, vertex_property, lineaged=False, full
     # if a name is given, we use vertex_property stored in the graph with this name.
     if isinstance(vertex_property,str):
         vertex_property = graph.vertex_property(vertex_property)
-        
+
     if time_point not in graph.vertex_property('index').values():
         raise ValueError(str(time_point)+"not in"+str(graph))
 
     vids_at_time = graph.vertex_at_time(time_point, lineaged, fully_lineaged, as_parent, as_children)
-    
+
     return dict([(i,vertex_property[i]) for i in vids_at_time if vertex_property.has_key(i)])
-    
+
 
 def time_point_property_by_regions(graph, time_point, vertex_property, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
     """
     Allow to extract a property 'vertex_property' from the temporal graph for one time-point, sorted by regions.
     Return a dict of dict, first level of keys are region(s) name(s) and second layer are vertex ids and the values of their associated property.
-    
+
     :Parameters:
     - `graph` (TemporalPropertyGraph) - Spatio-temporal graph to browse;
     - `time_point` (int) - define the time-point to consider;
@@ -612,13 +620,13 @@ def time_point_property_by_regions(graph, time_point, vertex_property, lineaged=
     - dictionary of regions which values are a dictionnary of vertex property extracted from the time-point;
     """
     extracted_property = time_point_property(graph, time_point, vertex_property, lineaged, fully_lineaged, as_parent, as_children)
-    
+
     regions_names = list(np.unique([v[0] for k,v in graph.vertex_property('regions').iteritems() if graph.vertex_property('index')[k]==time_point]))
-    
+
     property_by_regions = {}
     for region_name in regions_names:
         property_by_regions[region_name] = dict( (k,v) for k,v in extracted_property.iteritems() if graph.vertex_property('regions').has_key(k) and (graph.vertex_property('regions')[k][0]==region_name) )
-    
+
     return property_by_regions
 
 
@@ -631,7 +639,7 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
         assert vertex_property in list(graph.vertex_properties())
         property_name = vertex_property
         vertex_property = graph.vertex_property(vertex_property)
-    
+
     if time_points is None:
         time_points = xrange(graph.nb_time_points)
     if vids is None:
@@ -649,7 +657,7 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     if 'bins' in kwargs: h_kwargs.update({'bins':kwargs['bins']})
     if 'normed' in kwargs: h_kwargs.update({'normed':kwargs['normed']})
     if 'histtype' in kwargs: h_kwargs.update({'histtype':kwargs['histtype']})
-    
+
     fig = plt.figure()
     n, bins, patches = plt.hist(data, label = ["time point #{}".format(tp) for tp in time_points], **h_kwargs)
     if kwargs.has_key('title'):
@@ -718,7 +726,7 @@ def weighted_mean( values, weights ):
          - wm = sum_i( value_i * weight_i/sum(weights) )
     """
     assert len(values)==len(weights)
-    
+
     if isinstance(values[0],int) or isinstance(values[0],np.ndarray):
         return sum( [v * w / float(sum(weights)) for v,w in zip(values, weights)] )
     if isinstance(values[0],list) or isinstance(values[0],tuple):
@@ -858,7 +866,7 @@ def __strain_parameters(func):
                     stretch_mat[vid] = func(graph, xyz_t1, xyz_t2)
 
         # -- Now we return the results of temporal differentiation function:
-        if labels_at_t_n: 
+        if labels_at_t_n:
             return stretch_mat
         else:
             stretch_mat_daughters={}
@@ -940,7 +948,7 @@ def __strain_parameters2(func):
             print 'Could not use the epidermis wall median as an extra landmark for vids: {}'.format(missing_epidermis_wall_median)
 
         # -- Now we return the results of temporal differentiation function:
-        if labels_at_t_n: 
+        if labels_at_t_n:
             return stretch_mat
         else:
             stretch_mat_daughters={}
@@ -1103,7 +1111,7 @@ def triplot(graphs_list, values2plot, labels_list=None, values_name="", normed=F
         labels_list=[]
         for g in graphs_list:
             labels_list.append(g.vertex_property('label'))
-    
+
     values=[]
     abs_dev_values=[]
     laplacian_values=[]
@@ -1138,7 +1146,7 @@ def triplot(graphs_list, values2plot, labels_list=None, values_name="", normed=F
     else:
         plt.ylabel('Number of observations')
     plt.legend()
-    
+
     dev=fig.add_subplot(2,2,2)
     dev.hist(abs_dev_values, bins=20,normed=normed,
         label=( ('t1, n='+str(len(abs_dev_values[0]))+', mean='+str(np.round(np.mean(abs_dev_values[0]), 2))) ,
@@ -1151,7 +1159,7 @@ def triplot(graphs_list, values2plot, labels_list=None, values_name="", normed=F
     else:
         plt.ylabel('Number of observations')
     plt.legend()
-    
+
     lap=fig.add_subplot(2,2,4)
     lap.hist(laplacian_values, bins=20,normed=normed,
         label=( ('t1, n='+str(len(laplacian_values[0]))+', mean='+str(np.round(np.mean(laplacian_values[0]), 2))) ,
@@ -1179,15 +1187,15 @@ def triplot(graphs_list, values2plot, labels_list=None, values_name="", normed=F
             #~ if not graph.vertex_property('inertia_axis').has_key(vid):
                 #~ warnings.warn("Inertia axis hasn't been computed for vid #"+str(vid))
                 #~ vids.remove(vid)
-    #~ 
+    #~
     #~ shape_anisotropy_2D = {}
     #~ for vid in vids:
         #~ axis_len = graph.vertex_property('inertia_axis')[vid][1]
         #~ shape_anisotropy_2D[vid] = float(axis_len[0]-axis_len[1])/(axis_len[0]+axis_len[1])
-    #~ 
+    #~
     #~ if add2vertex_property:
         #~ graph.add_vertex_property("2D shape anisotropy",shape_anisotropy_2D)
-    #~ 
+    #~
     #~ return shape_anisotropy_2D
-#~ 
-#~ 
+#~
+#~
