@@ -240,16 +240,11 @@ def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
     for label_1, label_2 in dict_wall_voxels:
         if label_1 in labels2exclude or label_2 in labels2exclude:
             continue # if 0 means that it wasn't in the labels list provided, so we skip it.
-        x,y,z = dict_wall_voxels[(label_1, label_2)]
+        xyz = np.array(dict_wall_voxels[(label_1, label_2)]).T
         # compute geometric median:
-        from openalea.image.algo.analysis import geometric_median, closest_from_A
-        neighborhood_origin = geometric_median( np.array([list(x),list(y),list(z)]) )
-        integers = np.vectorize(lambda x : int(x))
-        neighborhood_origin = integers(neighborhood_origin)
-        # closest points:
-        pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
-        min_dist = closest_from_A(neighborhood_origin, pts)
-        wall_median[(label_1, label_2)] = min_dist
+        from openalea.plantgl.algo import pointset_median
+        median_vox_id = pointset_median( xyz )
+        wall_median[(label_1, label_2)] = xyz[median_vox_id]
 
     return wall_median
 

@@ -35,9 +35,9 @@ except:
 from openalea.image.spatial_image import SpatialImage
 
 try:
-    from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann)
+    from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median)
 except :
-    warnings.warn("'import (r_neighborhood, principal_curvatures, k_closest_points_from_ann)' failed, 'plantgl' seems to be missing!")
+    warnings.warn("'import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median)' failed, 'plantgl' seems to be missing!")
     warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
     pass
 
@@ -1170,8 +1170,12 @@ class AbstractSpatialImageAnalysis(object):
         N = len(cells_in_image_margins)
         for n,c in enumerate(cells_in_image_margins):
             if verbose and n%20 == 0: print n,'/',N
-            xyz = np.where( (self.image[self.boundingbox(c)]) == c )
-            self.image[tuple((xyz[0]+self.boundingbox(c)[0].start,xyz[1]+self.boundingbox(c)[1].start,xyz[2]+self.boundingbox(c)[2].start))]=erase_value
+            try:
+                xyz = np.where( (self.image[self.boundingbox(c)]) == c )
+                self.image[tuple((xyz[0]+self.boundingbox(c)[0].start,xyz[1]+self.boundingbox(c)[1].start,xyz[2]+self.boundingbox(c)[2].start))]=erase_value
+            except:
+                print "No boundingbox found for cell id #{}, skipping...".format(vid)
+                continue
         
         ignoredlabels = copy.copy(self._ignoredlabels)
         ignoredlabels.update([erase_value])
