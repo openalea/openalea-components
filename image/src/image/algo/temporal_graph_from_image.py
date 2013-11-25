@@ -465,7 +465,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
         assert isinstance(min_contact_surface, int) or isinstance(min_contact_surface, float)
     except:
         min_contact_surface = None
-    available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall_orientation']
+    available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall_orientation', 'fused_daughters_inertia_axis']
     properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
         fused_image_analysis, neighborhood = {}, {}
@@ -530,6 +530,29 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
 
         if 'division_wall_orientation' in spatio_temporal_properties:
             pass
+
+        if 'fused_daughters_inertia_axis' in spatio_temporal_properties:
+            # Try to use 'fused_image_analysis' dict else compute it:
+            if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
+                for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
+                    ref_tp = tp_2fuse-1
+                    print "Extract the surfacic wall medians of daughters fused images between t{} and t{}".format(ref_tp, tp_2fuse)
+                    ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in vids]
+                    ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+                    # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
+                    fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
+                    # - Creating a `SpatialImageAnalysis`:
+                    fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+
+            for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
+                ref_tp = tp_2fuse-1
+                ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in vids]
+                ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+                print 'Computing fused_daughters_inertia_axis property...'
+                inertia_axis, inertia_values = fused_image_analysis[tp_2fuse].inertia_axis(ref_SpI_ids,fused_image_analysis[tp_2fuse].center_of_mass(ref_SpI_ids))
+                extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_axis', inertia_axis, time_point=ref_tp)
+                extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_values', inertia_values, time_point=ref_tp)
+
 
     return graph
 
