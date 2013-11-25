@@ -246,7 +246,8 @@ def laplacian(graph, vertex_property, vid, rank, edge_type):
             if i in vertex_property.keys():
                 result = result + vertex_property[i]
                 k+=1
-        return ivalue - (result / float(k))
+        if k!=0:
+            return ivalue - (result / float(k))
 
 @__normalized_parameters
 def mean_abs_dev(graph, vertex_property, vid, rank, edge_type):
@@ -278,7 +279,7 @@ def mean_abs_dev(graph, vertex_property, vid, rank, edge_type):
             if i in vertex_property.keys():
                 result = result + abs(ivalue - vertex_property[i])
                 k+=1
-        return result / float(k)
+        if k!=0:return result / float(k)
 
 @__normalized_parameters
 def change(graph, vertex_property, vid, rank, edge_type):
@@ -310,7 +311,7 @@ def change(graph, vertex_property, vid, rank, edge_type):
             if i in vertex_property.keys():
                 result = result + vertex_property[i]
                 k+=1
-        return result/float(k) - ivalue
+        if k!=0:return result/float(k) - ivalue
 
 
 def __normalized_temporal_parameters(func):
