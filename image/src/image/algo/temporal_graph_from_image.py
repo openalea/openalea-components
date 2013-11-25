@@ -240,10 +240,11 @@ def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
     for label_1, label_2 in dict_wall_voxels:
         if label_1 in labels2exclude or label_2 in labels2exclude:
             continue # if 0 means that it wasn't in the labels list provided, so we skip it.
-        from openalea.plantgl.algo import Vector3, pointset_median
+        from openalea.plantgl.math import Vector3
         xyz = np.array(dict_wall_voxels[(label_1, label_2)]).T
         xyz = [Vector3(list([int(i) for i in k])) for k in xyz]
         # compute geometric median:
+        from openalea.plantgl.algo import  pointset_median
         median_vox_id = pointset_median( xyz )
         wall_median[(label_1, label_2)] = xyz[median_vox_id]
 
