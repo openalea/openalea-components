@@ -245,7 +245,7 @@ def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
         xyz = [Vector3(list([float(i) for i in k])) for k in xyz]
         # compute geometric median:
         from openalea.plantgl.algo import approx_pointset_median, pointset_median
-        if len(xyz) =< 100:
+        if len(xyz) <= 100:
             median_vox_id = pointset_median( xyz )
         else:
             median_vox_id = approx_pointset_median( xyz )
