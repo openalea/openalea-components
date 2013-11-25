@@ -2,7 +2,7 @@
 #
 #       OpenAlea.Container
 #
-#       Copyright 2011 - 2012 INRIA - CIRAD - INRA
+#       Copyright 2011 - 2013 INRIA - CIRAD - INRA
 #
 #       File author(s): Jonathan Legrand <jonathan.legrand@ens-lyon.fr>
 #                       Christophe Pradal

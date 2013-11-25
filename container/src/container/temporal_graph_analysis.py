@@ -187,20 +187,16 @@ def __normalized_parameters(func):
         :Return:
         - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= "result of applyed fucntion `func`"
         """
-        # if a name is given, we use vertex_property stored in the graph with this name.
-        if isinstance(vertex_property,str):
-            vertex_property = graph.vertex_property(vertex_property)
-
         # -- If no vids provided we compute the function for all keys present in the vertex_property
         if vids==None:
             vids = vertex_property.keys()
 
-        # if an instancemethod is given, we use create a dictionary for the vids base ont the method.
+        # -- If a name is given, we use vertex_property stored in the graph with this name.
+        if isinstance(vertex_property,str):
+            vertex_property = graph.vertex_property(vertex_property)
+        # -- If an instancemethod is given, we use create a dictionary for the vids base ont the method.
         if isinstance(vertex_property,types.MethodType):
-            tmp_vertex_property = {}
-            for vid in graph.vertices():
-                tmp_vertex_property[vid] = vertex_property(vid)
-            vertex_property = tmp_vertex_property
+            vertex_property = dict([(vid,vertex_property(vid)) for vid in graph.vertices()])
 
         if type(vids)==int:
             # for single id, compute single result
@@ -465,6 +461,19 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
     return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
+
+
+def shape_anisotropy(graph):
+    """
+    Sub-function computing the shape anisotropy of one cell using.
+
+    :Parameters:
+     - 'graph' (TGP) - a TPG.
+    :Return:
+     - shape_anisotropy = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
+
+    """
+    return dict([ (vid, (inertia[0]-inertia[1])/(inertia[0]+inertia[1])) for vid, inertia in graph.vertex_property('inertia_values').iteritems()])
 
 
 def epidermis_wall_gaussian_curvature(graph):
