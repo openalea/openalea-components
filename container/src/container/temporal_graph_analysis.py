@@ -187,14 +187,15 @@ def __normalized_parameters(func):
         :Return:
         - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= "result of applyed fucntion `func`"
         """
-        # -- If no vids provided we compute the function for all keys present in the vertex_property
-        if vids==None:
-            vids = vertex_property.keys()
+
 
         # -- If a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
         # -- If an instancemethod is given, we use create a dictionary for the vids base ont the method.
+        # -- If no vids provided we compute the function for all keys present in the vertex_property
+        if vids==None:
+            vids = vertex_property.keys()
         if isinstance(vertex_property,types.MethodType):
             vertex_property = dict([(vid,vertex_property(vid)) for vid in graph.vertices()])
 
