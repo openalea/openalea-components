@@ -247,6 +247,39 @@ def laplacian(graph, vertex_property, vid, rank, edge_type):
             return ivalue - (result / float(k))
 
 @__normalized_parameters
+def mean_neigh(graph, vertex_property, vid, rank, edge_type):
+    """
+    Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
+
+    :Parameters:
+    - 'graph' : a TPG.
+    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
+    - 'vid' : a vertex id.
+    - 'rank' : neighborhood at distance 'rank' will be used.
+
+    :Return:
+    - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
+    """
+    if rank == 1:
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)
+        vid_neighborhood.remove(vid)
+    else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)-graph.neighborhood(vid,rank-1, edge_type)
+
+    nb_neighborhood = len(vid_neighborhood)
+
+    result = 0
+    ivalue = vertex_property[vid]
+    k=0
+    if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
+        for i in vid_neighborhood:
+            if i in vertex_property.keys():
+                result = result + vertex_property[i]
+                k+=1
+        if k!=0:
+            return (ivalue + result) / float(k+1))
+
+@__normalized_parameters
 def mean_abs_dev(graph, vertex_property, vid, rank, edge_type):
     """
     Sub-function computing the mean sum of absolute difference between ONE vertex ('vid') and its neighbors at rank 'rank'.
