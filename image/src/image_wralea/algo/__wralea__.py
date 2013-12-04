@@ -18,8 +18,8 @@ __license__ = "Cecill-C"
 __revision__ = " $Id: __wralea__.py 2585 2010-07-02 15:28:03Z chopard $ "
 
 from openalea.core import *
-from openalea.color import IColor,IColorWidget
-from openalea.image_wralea import IImage,IImageWidget
+#from openalea.color import IColor, IColorWidget
+#from openalea.image_wralea import IImage, IImageWidget
 
 __name__ = "openalea.image.algo"
 
@@ -30,12 +30,12 @@ crop = Factory(name = "crop",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "crop",
-                inputs = (dict(name = "img", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
                           dict(name = "x", interface = IInt, value = 0),
                           dict(name = "y", interface = IInt, value = 0),
                           dict(name = "dx", interface = IInt, value = 0),
                           dict(name = "dy", interface = IInt, value = 0),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("crop")
@@ -45,12 +45,12 @@ paste = Factory(name = "paste",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "paste",
-                inputs = (dict(name = "img", interface = IImage),
-                          dict(name = "im2", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
+                          dict(name = "im2", interface = "IImage"),
                           dict(name = "x", interface = IInt, value = 0),
                           dict(name = "y", interface = IInt, value = 0),
                           dict(name = "reshape", interface = IBool, value = False),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("paste")
@@ -60,12 +60,12 @@ apply_mask = Factory(name = "apply_mask",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "wra_apply_mask",
-                inputs = (dict(name = "img", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
                           dict(name = "mask", interface = None),
                           dict(name = "background_color",
-                               interface = IColor,
+                               interface = "IColor",
                                value = None),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("apply_mask")
@@ -76,7 +76,7 @@ flatten = Factory(name = "flatten",
                 nodemodule = "algo",
                 nodeclass = "flatten",
                 inputs = (dict(name = "data", interface = ISequence),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("flatten")
@@ -97,10 +97,10 @@ rotate = Factory(name = "rotate",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "wra_rotate",
-                inputs = (dict(name = "img", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
                           dict(name = "angle", interface = IInt, value = 0),
                           dict(name = "reshape", interface = IBool, value = True),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("rotate")
@@ -110,9 +110,9 @@ gaussian = Factory(name = "gaussian",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "gaussian",
-                inputs = (dict(name = "img", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
                           dict(name = "sigma", interface = IFloat, value = 0.),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("gaussian")
@@ -122,8 +122,8 @@ saturate = Factory(name = "saturate",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "wra_saturate",
-                inputs = (dict(name = "img", interface = IImage),),
-                outputs = (dict(name = "img", interface = IImage),),
+                inputs = (dict(name = "img", interface = "IImage"),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("saturate")
@@ -133,7 +133,7 @@ high_level = Factory(name = "high_level",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "wra_high_level",
-                inputs = (dict(name = "img", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
                           dict(name = "threshold", interface = IInt, value = 0),),
                 outputs = (dict(name = "alpha", interface = None),),
                 )
@@ -145,8 +145,8 @@ color_select = Factory(name = "color_select",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "wra_color_select",
-                inputs = (dict(name = "img", interface = IImage),
-                          dict(name = "color", interface = IColor, value = (0,0,0) ),
+                inputs = (dict(name = "img", interface = "IImage"),
+                          dict(name = "color", interface = "IColor", value = (0,0,0) ),
                           dict(name = "tol", interface = IInt, value = 0),),
                 outputs = (dict(name = "alpha", interface = None),),
                 )
@@ -169,12 +169,12 @@ scale_shift_intensities = Factory(name = "scale_shift_intensities",
                 category = "image",
                 nodemodule = "algo",
                 nodeclass = "scale_shift_intensities",
-                inputs = (dict(name = "img", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
                           dict(name = "dtype", interface = None),
                           dict(name = "maxIn", interface = IFloat, value=None),
                           dict(name = "maxOut", interface = IFloat, value=255),
                           ),
-                outputs = (dict(name = "im", interface = IImage),),
+                outputs = (dict(name = "im", interface = "IImage"),),
                 )
 
 __all__.append("scale_shift_intensities")

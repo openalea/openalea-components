@@ -18,7 +18,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id: __wralea__.py 2585 2010-07-02 15:28:03Z chopard $ "
 
 from openalea.core import *
-from openalea.image_wralea import IImage
+#from openalea.image_wralea import IImage
 
 __name__ = "openalea.image.serial"
 
@@ -33,7 +33,7 @@ load = Factory(name = "load",
                           dict(name = "mmap_mode",
                                interface = IStr,
                                value = None),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("load")
@@ -44,8 +44,8 @@ save = Factory(name = "save",
                 nodemodule = "serial",
                 nodeclass = "wra_save",
                 inputs = (dict(name = "name", interface = IFileStr),
-                          dict(name = "img", interface = IImage),),
-                outputs = (dict(name = "img", interface = IImage),),
+                          dict(name = "img", interface = "IImage"),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("save")
@@ -56,7 +56,7 @@ imread = Factory(name = "imread",
                 nodemodule = "serial",
                 nodeclass = "wra_imread",
                 inputs = (dict(name = "name", interface = IFileStr),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("imread")
@@ -67,8 +67,8 @@ imsave = Factory(name = "imsave",
                 nodemodule = "serial",
                 nodeclass = "wra_imsave",
                 inputs = (dict(name = "name", interface = IFileStr),
-                          dict(name = "img", interface = IImage),),
-                outputs = (dict(name = "img", interface = IImage),),
+                          dict(name = "img", interface = "IImage"),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("imsave")

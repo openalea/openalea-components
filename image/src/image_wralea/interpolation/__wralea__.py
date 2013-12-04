@@ -20,7 +20,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id:  $ "
 
 from openalea.core import *
-from openalea.image_wralea import IImage
+#from openalea.image_wralea import IImage
 
 __name__ = "openalea.image.interpolation"
 
@@ -100,7 +100,7 @@ resample = Factory(name = "resampling",
                 category = "image",
                 nodemodule = "interpolation",
                 nodeclass = "resample",
-                inputs = (dict(name = "img", interface = IImage),
+                inputs = (dict(name = "img", interface = "IImage"),
                           dict(name = "transformation", interface = None),
                           dict(name = "order", interface = IInt, value=1),
                           dict(name = "output_shape", interface = None, hide=True),
@@ -108,7 +108,7 @@ resample = Factory(name = "resampling",
                           dict(name = "mode", interface=IEnumStr(["constant", "nearest", "reflect", "wrap"]), value="constant", hide=True),
                           dict(name = "cval", interface=IFloat, value=0., hide=True),
                           dict(name = "prefilter", interface=IBool, value=True, hide=True),),
-                outputs = (dict(name = "img", interface = IImage),),
+                outputs = (dict(name = "img", interface = "IImage"),),
                 )
 
 __all__.append("resample")

@@ -21,8 +21,8 @@ from openalea.core import *
 from openalea.image.spatial_image import SpatialImage
 
 class IImage(IInterface) :
-	"""Interface for images expressed as array of colors
-	"""
-	__color__ = "#194BFF"
-        __pytype__ = SpatialImage
+    """Interface for images expressed as array of colors
+    """
+    __color__ = "#194BFF"
+    __pytype__ = SpatialImage
 

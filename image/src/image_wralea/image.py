@@ -31,20 +31,20 @@ def lena():
     return SpatialImage(sci_lena())
 
 def image (img) :
-	return img,
+    return img,
 
 def size2 (img) :
-	h,w = img.shape[:2]
-	return w,h
+    h,w = img.shape[:2]
+    return w,h
 
 def size3 (img) :
-	h,w,z = img.shape[:3]
-	return w,h,z
+    h,w,z = img.shape[:3]
+    return w,h,z
 
 def geom_size (img) :
-	try :
-		res = img.resolution
-	except AttributeError :
-		res = (1.,) * len(img.shape)
+    try :
+        res = img.resolution
+    except AttributeError :
+        res = (1.,) * len(img.shape)
 
-	return (v * res[i] for i,v in enumerate(img.shape) )
+    return (v * res[i] for i,v in enumerate(img.shape) )
