@@ -196,7 +196,7 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     t_stop = time.time()
     if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(t_stop-t_start)
     if not_found != []:
-        warnings.warn("You have asked to fuse these labels' daughters, but they have no known daughters: {}"format(not_found)
+        warnings.warn("You have asked to fuse these labels' daughters, but they have no known daughters: {}".format(not_found))
     tmp_img = SpatialImage(tmp_img)
     tmp_img.resolution = analysis.image.resolution
     tmp_img.info = analysis.image.info
