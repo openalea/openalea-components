@@ -88,10 +88,11 @@ def hollow_out_cells(image, background, remove_background = True, verbose = True
     """
     if verbose: print 'Hollowing out cells...'
     b = nd.laplace(image)
-    m = image.copy()
-    m[b==0] = 0
+    mask = b!=0
+    m = image * mask
     if remove_background:
-        m[np.where(m==background)] = 0
+        mask = m!=background
+        m = m*mask
     if verbose: print 'Done !!'
     return m
 

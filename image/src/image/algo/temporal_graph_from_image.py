@@ -182,9 +182,12 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     tmp_img.fill(0)
     tmp_img += analysis.image == background # retreive the background
     if verbose: print "Fusing daugthers from t{} at t{}:".format(reference_tp, tp_2fuse)
+    not_found = []
     for n, vid in enumerate(ref_vids):
         if verbose and n%50 == 0: print n,'/',len(ref_vids)
         graph_children = graph.descendants(vid, tp_2fuse-reference_tp) - graph.descendants(vid, tp_2fuse-reference_tp-1)
+        if graph_children == set([]):
+            not_found.append(vid)
         SpI_children = translate_ids_Graph2Image(graph, graph_children)
         for id_child in SpI_children:
             mask = analysis.image[analysis.boundingbox(id_child)] == id_child
@@ -192,6 +195,8 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
 
     t_stop = time.time()
     if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(t_stop-t_start)
+    if not_found != []:
+        warnings.warn("You have asked to fuse these labels' daughters, but they have no known daughters: {}"format(not_found)
     tmp_img = SpatialImage(tmp_img)
     tmp_img.resolution = analysis.image.resolution
     tmp_img.info = analysis.image.info
@@ -478,7 +483,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
                 ref_tp = tp_2fuse-1
                 print "Extract the surfacic wall medians of daughters fused images between t{} and t{}".format(ref_tp, tp_2fuse)
-                ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in vids]
+                ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
                 ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
                 # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
                 fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
@@ -536,19 +541,19 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
                 for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
                     ref_tp = tp_2fuse-1
-                    print "Extract the surfacic wall medians of daughters fused images between t{} and t{}".format(ref_tp, tp_2fuse)
-                    ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in vids]
+                    print "Fusing daughters of  t{} in image t{}".format(ref_tp, tp_2fuse)
+                    ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
                     ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
                     # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
                     fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
                     # - Creating a `SpatialImageAnalysis`:
                     fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
 
+            print 'Computing fused_daughters_inertia_axis property...'
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
                 ref_tp = tp_2fuse-1
                 ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in vids]
                 ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
-                print 'Computing fused_daughters_inertia_axis property...'
                 inertia_axis, inertia_values = fused_image_analysis[tp_2fuse].inertia_axis(ref_SpI_ids,fused_image_analysis[tp_2fuse].center_of_mass(ref_SpI_ids))
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_axis', inertia_axis, time_point=ref_tp)
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_values', inertia_values, time_point=ref_tp)
@@ -961,7 +966,7 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids, backgrou
     """
     for ppt in spatio_temporal_properties:
         if isinstance(ppt,str) and (ppt in graph.vertex_properties() or ppt in graph.edge_properties()):
-            print "The property '{}' is already in the graph !!!"
+            print "The property '{}' is already in the graph !!!".format(ppt)
             spatio_temporal_properties.remove(spatio_temporal_properties.index(ppt))
 
     nb_images = len(images)
