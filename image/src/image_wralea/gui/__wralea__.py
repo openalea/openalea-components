@@ -25,8 +25,6 @@ __name__ = "openalea.image.gui"
 
 __all__ = []
 
-from openalea.core import Factory
-from openalea.core.interface import *
 
 
 frames = Factory( name= "frames",
