@@ -637,11 +637,6 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     tpg.add_graph_property('min_contact_surface', min_contact_surface)
     print "Done\n"
 
-    # -- If we already removed cells at the margins of the stack, no need to look for them after:
-    if ignore_cells_at_stack_margins:
-        try: spatio_temporal_properties.remove('border')
-        except: pass
-
     # -- Registration step:
     if 'register_images' in kwargs and kwargs['register_images']:
         print "# -- Images registration..."
