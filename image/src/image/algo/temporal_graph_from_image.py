@@ -1073,13 +1073,10 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                         filtered_edges[source] = [ target for target in targets if source < target and target in labelset ]
                         unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background]
                 wall_surfaces = SpI_Analysis[tp].wall_surfaces(filtered_edges,real=property_as_real)
-                extend_vertex_property_from_dictionary(graph, 'wall_surface', wall_surfaces, time_point=tp)
+                extend_edge_property_from_dictionary(graph, 'wall_surface', wall_surfaces, time_point=tp)
 
-                graph.add_vertex_property('unlabelled_wall_surface')
-                for source in unlabelled_target:
-                    unlabelled_wall_surface = SpI_Analysis[tp].wall_surfaces({source:unlabelled_target[source]},real=property_as_real)
-                    graph.vertex_property('unlabelled_wall_surface')[label2vertex[source]] = sum(unlabelled_wall_surface.values())
-
+                unlabelled_wall_surface = dict( [(source, sum(SpI_Analysis[tp].wall_surfaces({source:unlabelled_target[source]},real=property_as_real).values())) for source in unlabelled_target] )
+                extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_surface', unlabelled_wall_surface, time_point=tp)
                 #~ graph._graph_property("units").update( {"wall_surface":(u'\xb5m\xb2' if property_as_real else 'voxels')} )
                 #~ graph._graph_property("units").update( {"unlabelled_wall_surface":(u'\xb5m\xb2'if property_as_real else 'voxels')} )
 
