@@ -260,7 +260,7 @@ def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
 
 #~ spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis']
 spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
-spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis', 'projected_anticlinal_wall_median', 'wall_median', 'wall_orientation', 'all_wall_orientation', 'division_wall_orientation', 'strain_landmarks']
+spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis', 'projected_anticlinal_wall_median', 'wall_median', 'wall_orientation', 'all_wall_orientation', 'division_wall_orientation', 'strain_landmarks', 'epidermis_local_principal_curvature']
 
 
 def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, label2vertex,
@@ -576,7 +576,7 @@ def graph_from_image3D(image, labels, background, spatio_temporal_properties,
 
 
 def temporal_graph_from_image(images, lineages, time_steps = [], background = 1, spatio_temporal_properties = None,
-     properties4lineaged_vertex = False, property_as_real = True, bbox_as_real = False, ignore_cells_at_stack_margins = True, **kwargs):
+     properties4lineaged_vertex = False, property_as_real = True, bbox_as_real = False, **kwargs):
     """
     Function creating a TemporalPropertyGraph based on a list of SpatialImages and list of lineage.
     Optional parameter can be provided, see below.
@@ -623,9 +623,6 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             analysis[n] = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background[n])
         if isinstance(image, AbstractSpatialImageAnalysis):
             analysis[n] = image
-        # - We modify it according to input parameters:
-        if ignore_cells_at_stack_margins:
-            analysis[n].add2ignoredlabels(analysis[n].cells_in_image_margins())
         labels[n] = analysis[n].labels()
         if background[n] in labels[n]: labels[n].remove(background[n])
         # -- Now we construct the Spatial Graph (topology):
