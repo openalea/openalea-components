@@ -839,7 +839,7 @@ class AbstractSpatialImageAnalysis(object):
         try:
             dilated_bbox =  dilation(self.boundingbox(label_id))
         except:
-            dilated_bbox = tuple(slice(0,self.image.shape.shape[i]-1) for i in xrange(len(self.image.shape) )) #if no slice can be found we use the whole image
+            dilated_bbox = tuple(slice(0,self.image.shape[i]-1) for i in xrange(len(self.image.shape) )) #if no slice can be found we use the whole image
         dilated_bbox_img = self.image[dilated_bbox]
 
         mask_img = (dilated_bbox_img == label_id)
