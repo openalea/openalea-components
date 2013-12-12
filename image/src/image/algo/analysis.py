@@ -671,14 +671,17 @@ class AbstractSpatialImageAnalysis(object):
             if  min_contact_surface is None:
                 return result
             else:
-                return self._neighbors_filtering_by_contact_surface(result, label, min_contact_surface, real_surface)
+                return self._neighbors_filtering_by_contact_surface(label, result, min_contact_surface, real_surface)
 
-        slices = self.boundingbox(label)
-        ex_slices = dilation(slices)
-        mask_img = self.image[ex_slices]
+        try:
+            slices = self.boundingbox(label)
+            ex_slices = dilation(slices)
+            mask_img = self.image[ex_slices]
+        except:
+            mask_img = self.image
         neigh = list(contact_surface(mask_img,label))
         if min_contact_surface is not None:
-            neigh = self._neighbors_filtering_by_contact_surface(neigh, label, min_contact_surface, real_surface)
+            neigh = self._neighbors_filtering_by_contact_surface(label, neigh, min_contact_surface, real_surface)
 
         return neigh
 
@@ -693,10 +696,12 @@ class AbstractSpatialImageAnalysis(object):
 
         edges = {}
         for label in labels:
-            slices = self.boundingbox(label)
-            if slices is None: continue
-            ex_slices = dilation(slices)
-            mask_img = self.image[ex_slices]
+            try:
+                slices = self.boundingbox(label)
+                ex_slices = dilation(slices)
+                mask_img = self.image[ex_slices]
+            except:
+                mask_img = self.image
             neigh = list(contact_surface(mask_img,label))
             if min_contact_surface is not None:
                 neigh = self._neighbors_filtering_by_contact_surface(label, neigh, min_contact_surface, real_surface)
@@ -720,10 +725,11 @@ class AbstractSpatialImageAnalysis(object):
             # and the enumerate begin at 0.
         for label_id, slices in slice_label.items():
             # sometimes, the label doesn't exist ans slices is None
-            if slices is None:
-               continue
-            ex_slices = dilation(slices)
-            mask_img = self.image[ex_slices]
+            try:
+                ex_slices = dilation(slices)
+                mask_img = self.image[ex_slices]
+            except:
+                mask_img = self.image
             neigh = list(contact_surface(mask_img,label_id))
             edges[label_id]=neigh
 
@@ -838,9 +844,10 @@ class AbstractSpatialImageAnalysis(object):
         resolution = self.get_voxel_face_surface()
         try:
             dilated_bbox =  dilation(self.boundingbox(label_id))
+            dilated_bbox_img = self.image[dilated_bbox]
         except:
-            dilated_bbox = tuple( [slice(0,self.image.shape[i]-1) for i in xrange(len(self.image.shape))] ) #if no slice can be found we use the whole image
-        dilated_bbox_img = self.image[dilated_bbox]
+            #~ dilated_bbox = tuple( [slice(0,self.image.shape[i]-1) for i in xrange(len(self.image.shape))] ) #if no slice can be found we use the whole image
+            dilated_bbox_img = self.image
 
         mask_img = (dilated_bbox_img == label_id)
 
