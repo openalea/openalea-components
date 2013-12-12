@@ -1059,7 +1059,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             if 'border' in spatio_temporal_properties :
                 print 'Generating the list of cells at the margins of the stack...'
                 border_cells = SpI_Analysis[tp].cells_in_image_margins()
-                try: border_cells.remove(background)
+                try: border_cells.remove(background[tp])
                 except: pass
                 border_cells = set(border_cells)
                 extend_vertex_property_from_dictionary(graph, 'border', dict([(l, (l in border_cells)) for l in labels]), time_point=tp)
@@ -1078,7 +1078,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 for source,targets in neighborhood.iteritems():
                     if source in labelset :
                         filtered_edges[source] = [ target for target in targets if source < target and target in labelset ]
-                        unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background]
+                        unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background[tp]]
                 wall_surfaces = SpI_Analysis[tp].wall_surfaces(filtered_edges,real=property_as_real)
                 extend_edge_property_from_dictionary(graph, 'wall_surface', wall_surfaces, time_point=tp)
 
@@ -1092,12 +1092,12 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 print 'Computing epidermis_surface property...'
                 def not_background(indices):
                     a,b = indices
-                    if a == background:
-                        if b == background: raise ValueError(indices)
+                    if a == background[tp]:
+                        if b == background[tp]: raise ValueError(indices)
                         else : return b
-                    elif b == background: return a
+                    elif b == background[tp]: return a
                     else: raise ValueError(indices)
-                epidermis_surfaces = SpI_Analysis[tp].cell_wall_surface(background, list(background_neighbors), real=property_as_real)
+                epidermis_surfaces = SpI_Analysis[tp].cell_wall_surface(background[tp], list(background_neighbors), real=property_as_real)
                 epidermis_surfaces = dict([(not_background(indices),value) for indices,value in epidermis_surfaces.iteritems()])
                 extend_vertex_property_from_dictionary(graph,'epidermis_surface', epidermis_surfaces, time_point=tp)
                 #~ graph._graph_property("units").update( {"epidermis_surface":(u'\xb5m\xb2' if property_as_real else 'voxels')} )
