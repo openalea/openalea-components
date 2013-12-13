@@ -244,7 +244,7 @@ def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
     wall_median = {}
     for label_1, label_2 in dict_wall_voxels:
         if label_1 in labels2exclude or label_2 in labels2exclude:
-            continue # if 0 means that it wasn't in the labels list provided, so we skip it.
+            continue
         from openalea.plantgl.math import Vector3
         xyz = np.array(dict_wall_voxels[(label_1, label_2)]).T
         xyz = [Vector3(list([float(i) for i in k])) for k in xyz]
@@ -735,8 +735,7 @@ def check_properties(graph, spatio_temporal_properties):
 
         try:
             graph.add_graph_property('radius_local_principal_curvature_estimation',radius)
-            radius_2_compute = radius
-            graph.add_graph_property('radius_2_compute',radius_2_compute)
+            graph.add_graph_property('radius_2_compute',radius)
         except:
             existing_radius = set(graph.graph_property('radius_local_principal_curvature_estimation')) & set(radius)
             if existing_radius != set([]):
@@ -1015,15 +1014,29 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
     available_properties = ['boundingbox', 'volume', 'barycenter', 'L1', 'border', 'inertia_axis', 'wall_surface', 'epidermis_surface', 'projected_anticlinal_wall_median', 'wall_median', 'all_walls_orientation', 'epidermis_local_principal_curvature']
     properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
+        # -- Loop over all time points to compute required properties:
         for tp in xrange(graph.nb_time_points+1):
             print "# - Analysing image #{}".format(tp)
+            # - Define SpatialImage type `labels` to compute for:
+            print "Define SpatialImage type `labels` to compute properties for..."
             labels = translate_ids_Graph2Image(graph, [k for k in graph.vertex_at_time(tp) if k in vids])
             labelset = set(labels)
+            # - Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use:
+            print "Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use..."
             neighborhood = translate_keys_Graph2Image(graph, dict([(vid, translate_ids_Graph2Image(graph, graph.neighbors(vid,'s'))) for vid in vids if graph.vertex_property('index')[vid]==tp]), tp)
+            # - Retrieve `min_contact_surface` and `background_neighbors` for further use:
+            print "Retrieving `min_contact_surface` and `background_neighbors` for further use..."
+            min_contact_surface = graph.graph_property('min_contact_surface')
+            background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface=min_contact_surface)
+            if isinstance(background_neighbors, dict):
+                background_neighbors = set(background_neighbors[background[tp]])
+            else:
+                background_neighbors = set(background_neighbors)
+            background_neighbors.intersection_update(labelset)
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
             except: pass
-
+            print "Done !"
 
             if 'boundingbox' in spatio_temporal_properties :
                 print 'Extracting boundingbox...'
@@ -1044,13 +1057,6 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 extend_vertex_property_from_dictionary(graph, 'barycenter', barycenters, time_point=tp)
                 #~ graph._graph_property("units").update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
 
-            min_contact_surface = graph.graph_property('min_contact_surface')
-            background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface=min_contact_surface)
-            if isinstance(background_neighbors, dict):
-                background_neighbors = set(background_neighbors[background[tp]])
-            else:
-                background_neighbors = set(background_neighbors)
-            background_neighbors.intersection_update(labelset)
             if 'L1' in spatio_temporal_properties :
                 print 'Generating the list of cells belonging to the first layer...'
                 extend_vertex_property_from_dictionary(graph, 'L1', dict([(l, (l in background_neighbors)) for l in labels]), time_point=tp)
