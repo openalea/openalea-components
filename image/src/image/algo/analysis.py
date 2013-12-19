@@ -371,7 +371,7 @@ class AbstractSpatialImageAnalysis(object):
         self._kernels = None
         self._neighbors = None
         self._layer1 = None
-        self._center_of_mass = None
+        self._center_of_mass = {} # voxel units
 
         # -- Variables for meta-informations:
         try:
@@ -518,7 +518,7 @@ class AbstractSpatialImageAnalysis(object):
         :Parameters:
          - `labels` (int) - single label number or a sequence of label numbers of the objects to be measured.
             If labels is None, all labels are used.
-         - `real` (bool) - If real = True, center of mass is in real-world units else in voxels.
+         - `real` (bool) - If True (default), center of mass is in real-world units else in voxels.
         
         :Examples:
         
@@ -548,19 +548,28 @@ class AbstractSpatialImageAnalysis(object):
         """
         if labels is None:
             labels = self.labels()
+        if isinstance(labels, int):
+            labels = [labels]
 
-        # img_as_float = self.image.astype(np.float)
-        # center = nd.center_of_mass(img_as_float, img_as_float, index=labels)
-        if self._center_of_mass is not None:
-            center = self._center_of_mass
-        else:
-            center = np.array(nd.center_of_mass(self.image, self.image, index=labels))
-            self._center_of_mass = center
+        center = {}
+        for l in labels:
+            if self._center_of_mass.has_key(l):
+                center[l] = self._center_of_mass[l]
+            else:
+                slices = self.boundingbox(l)
+                crop_im = self.image[slices]
+                c_o_m = np.array(nd.center_of_mass(crop_im, crop_im, index=l))
+                c_o_m = [c_o_m[i] + slice.start for i,slice in enumerate(slices)]
+                self._center_of_mass[l] = c_o_m
+                center[l] = c_o_m
 
         if real:
-            center = np.multiply(center,self.image.resolution)
+            center = dict([(l,np.multiply(center[l],self.image.resolution)) for l in labels])
 
-        return self.convert_return(center, labels)
+        if len(labels)==1:
+            return center[labels[0]]
+        else:
+            return center
 
 
     def boundingbox(self, labels = None, real = False):

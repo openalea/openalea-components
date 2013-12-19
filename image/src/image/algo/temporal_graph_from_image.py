@@ -943,7 +943,7 @@ def extend_vertex_property_from_dictionary(graph, name, dictionary, mlabel2verte
     graph.vertex_property(name).update( dict([(mlabel2vertex[k], dictionary[k]) for k in dictionary if k in mlabel2vertex.keys()]) )
 
 
-def add_property2graph(graph, images, spatio_temporal_properties, vids, background, property_as_real, bbox_as_real):
+def add_property2graph(graph, images, spatio_temporal_properties, vids, background, property_as_real=True, bbox_as_real=False):
     """
     Allow to add a property 'spatio_temporal_properties' to an existing `TemporalPropertyGraph` 'graph'.
     :Parameters:
@@ -965,6 +965,9 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids, backgrou
         background = [background for k in xrange(nb_images)]
     elif isinstance(background, list):
         assert len(background) == nb_images
+
+    if isinstance(spatio_temporal_properties, str):
+        spatio_temporal_properties = list(spatio_temporal_properties)
 
     if isinstance(images[0], AbstractSpatialImageAnalysis):
         assert [isinstance(image, AbstractSpatialImageAnalysis) for image in images]
@@ -1033,6 +1036,16 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             else:
                 background_neighbors = set(background_neighbors)
             background_neighbors.intersection_update(labelset)
+
+            import scipy.ndimage as nd
+            undefined_label = 0
+            img = (SpI_Analysis[tp].image == undefined_label)
+            dil = nd.binary_dilation(img)
+            contact = dil - img
+            img = SpI_Analysis[tp].image[contact]
+            undefined_label_neighbors = set( np.unique(img) ) - labelset
+            del img, dil, contact
+
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
             except: pass
