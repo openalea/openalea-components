@@ -30,6 +30,7 @@ import matplotlib.cm as cm
 from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 from sklearn.cluster import SpectralClustering, Ward, DBSCAN
 from sklearn import metrics
+from scipy.sparse import csr_matrix
 from openalea.container.temporal_graph_analysis import translate_keys_Image2Graph
 
 def distance_matrix_from_vector(data, variable_types, no_dist_index = []):
@@ -577,12 +578,12 @@ class Clusterer:
 
         # -- Detecting the kind of data we are facing !
         spatial_relation_data, temporal_data, spatial_data = False, False, False
-        for k,v in self._distance_matrix_info.iteritems():
+        for k in variable_names:
             if k == 'topological' or k == 'euclidean':
                 spatial_relation_data = True
-            if v[0] == 't':
+            if self._distance_matrix_info[k][0] == 't':
                 temporal_data = True
-            if v[0] == 's' and k != 'topological' and k != 'euclidean':
+            if self._distance_matrix_info[k][0] == 's' and k.lower() != 'topological' and k.lower() != 'euclidean':
                 spatial_data = True
 
         # -- Creating the list of vertices:
@@ -686,7 +687,7 @@ class Clusterer:
             print "Done."
 
 
-    def cluster(self, n_clusters, method = "ward", ids = None, global_matrix = None):
+    def cluster(self, n_clusters, method = "ward", ids = None, global_matrix = None, connectivity = None):
         """
         Actually run the clustering method.
         :Parameters:
@@ -703,18 +704,16 @@ class Clusterer:
         if ids is None:
             ids = self._global_distance_ids
 
+        if n_clusters is None:
+            raise ValueError("You have to provide the number of clusters you want for the Ward method.")
         if method.lower() == "ward":
-            if n_clusters is not None:
-                clustering = Ward(n_clusters = n_clusters).fit(global_matrix)
-                clustering_labels = clustering.labels_
-            else:
-                raise ValueError("You have to provide the number of clusters you want for the Ward method.")
+            clustering = Ward(n_clusters = n_clusters, compute_full_tree=True, connectivity=connectivity).fit(global_matrix)
+            clustering_labels = clustering.labels_
         if method.lower() == "spectral":
-            if n_clusters is not None:
-                clustering = SpectralClustering(n_clusters = n_clusters, precomputed=True).fit(global_matrix)
-                clustering_labels = clustering.labels_
-            else:
-                raise ValueError("You have to provide the number of clusters you want for the spectral method.")
+            if connectivity is not None:
+                print('Can not use connectivity matrix with Spectral clustering.')
+            clustering = SpectralClustering(n_clusters = n_clusters, affinity='precomputed').fit(global_matrix)
+            clustering_labels = clustering.labels_
 
         self._clustering = list(clustering_labels)
         self._method = method.lower()
@@ -764,7 +763,7 @@ class Clusterer:
 
         for k in xrange(k_min, k_max+1):
             if clustering_method.lower() == "ward":
-                clustering = Ward(n_clusters=k).fit(self._global_distance_matrix)
+                clustering = Ward(n_clusters=k, compute_full_tree=True).fit(self._global_distance_matrix)
                 clustering_labels[k] = clustering.labels_
             if clustering_method.lower() == "spectral":
                 similarity = np.exp(-beta * self._global_distance_matrix / self._global_distance_matrix.std())
@@ -779,6 +778,7 @@ class Clusterer:
             plt.title("Silhouette estimator")
 
         return sil
+
 
     def clustering_estimators(self, clustering_method, k_min=4, k_max=15, beta = 1, plot_estimator = True):
         """
@@ -797,7 +797,7 @@ class Clusterer:
 
         for k in xrange(k_min, k_max+1):
             if clustering_method.lower() == "ward":
-                clustering = Ward(n_clusters=k).fit(self._global_distance_matrix)
+                clustering = Ward(n_clusters=k, compute_full_tree=True).fit(self._global_distance_matrix)
                 clustering_labels[k] = clustering.labels_
             if clustering_method.lower() == "spectral":
                 similarity = np.exp(-beta * self._global_distance_matrix / self._global_distance_matrix.std())
@@ -859,7 +859,7 @@ class ClustererChecker:
         else:
             self.clustered_graph = None
 
-    def cluster_distance_matrix(self):
+    def cluster_distance_matrix(self, round_digits = 3):
         """
         Function computing distance between clusters.
         For $\ell \eq q$  :
@@ -868,9 +868,9 @@ class ClustererChecker:
         \[ D(q,\ell) = \dfrac{ \sum_{i \in q} \sum_{j \in \ell} D(i,j) }{N_{q} N_{\ell} } , \]
         where $D(i,j)$ is the distance matrix, $N_{q}$ and $N_{\ell}$ are the number of elements found in clusters $q$ and $\ell$.
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously be ordered the same way!
         """
@@ -885,7 +885,10 @@ class ClustererChecker:
                     index_l = np.where(self._clustering == l)[0]
                     D[n,m] = D[m,n]= sum( [self._distance_matrix[i,j] for i in index_q for j in index_l] ) / (self._nb_ids_by_clusters[n] * self._nb_ids_by_clusters[m])
 
-        return D
+        if round_digits is None:
+            return D
+        else:
+            return np.round(D,int(round_digits))
 
 
     def plot_cluster_distances(self):
@@ -908,26 +911,29 @@ class ClustererChecker:
 
         plt.format_coord = format_coord
         plt.title("Cluster distances heat-map")
+        plt.suptitle('Clusters of {}'.format(self.clustering_name))
         plt.colorbar()
         plt.show()
 
 
-    def cluster_diameters(self):
+    def cluster_diameters(self, round_digits = 3):
         """
         Function computing within cluster diameter, i.e. the max distance between two vertex from the same cluster.
         $$ \max_{i,j \in q} D(j,i) ,$$
         where $D(i,j)$ is the distance matrix and $q$ a cluster, .
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
         """
+        if round_digits is None:
+            round_digits = 13
         diameters = {}
         for q in self._clusters_ids:
             index_q = np.where(self._clustering == q)[0]
-            diameters[q] = max([self._distance_matrix[i,j] for i in index_q for j in index_q])
+            diameters[q] = np.round(max([self._distance_matrix[i,j] for i in index_q for j in index_q]),round_digits)
 
         if self._nb_clusters == 1:
             return diameters.values()
@@ -935,23 +941,25 @@ class ClustererChecker:
             return diameters
 
 
-    def cluster_separation(self):
+    def cluster_separation(self, round_digits = 3):
         """
         Function computing within cluster diameter, i.e. the min distance between two vertex from two diferent clusters.
         $$ \min_{i \in q, j \not\in q} D(j,i) ,$$
         where $D(i,j)$ is the distance matrix and $q$ a cluster.
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
         """
+        if round_digits is None:
+            round_digits = 13
         separation = {}
         for q in self._clusters_ids:
             index_q = np.where(self._clustering == q)[0]
             index_not_q = np.where(self._clustering != q)[0]
-            separation[q] = min([self._distance_matrix[i,j] for i in index_q for j in index_not_q ])
+            separation[q] = np.round(min([self._distance_matrix[i,j] for i in index_q for j in index_not_q ]),round_digits)
 
         if self._nb_clusters == 1:
             return separation.values()
@@ -1118,9 +1126,9 @@ class ClustererChecker:
         """
         Return the representativity of each time points (index+1) by clusters.
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
         """
@@ -1130,7 +1138,7 @@ class ClustererChecker:
         for q in self._clusters_ids:
             for t in index_time_points:
                 nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_at_time(t)])
-                percent[(q,t)] = [nb/float(self._nb_ids_by_clusters[q]), nb]
+                percent[(q,t)] = np.round([nb/float(self._nb_ids_by_clusters[q])*100, nb],3)
 
         return dict( ((q,t), percent[(q,t)]) for q in self._clusters_ids for t in index_time_points if percent[(q,t)][0] != 0)
 
@@ -1139,9 +1147,9 @@ class ClustererChecker:
         """
         Return the representativity of each time points (index+1) by clusters.
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
         """
@@ -1151,7 +1159,7 @@ class ClustererChecker:
         for t in index_time_points:
             for q in self._clusters_ids:
                 nb = len([k for k in self._ids_by_clusters[q] if k in graph.vertex_at_time(t)])
-                percent[(t,q)] = [nb/float(self._nb_ids_by_clusters[q]), nb]
+                percent[(t,q)] = np.round([nb/float(self._nb_ids_by_clusters[q])*100, nb],3)
 
         return dict( ((t,q), percent[(t,q)]) for q in self._clusters_ids for t in index_time_points if percent[(t,q)][0] != 0)
 
@@ -1179,9 +1187,9 @@ class ClustererChecker:
         $$ D(i,q) = \dfrac{ \sum_{i \neq j} D(i,j) }{ N_q } \: , \quad \forall i \in [1,self._N] \:, \: q \in [1,Q],$$
         where $D(i,j)$ is the distance matrix and $q$ a cluster.
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
         """
@@ -1204,9 +1212,9 @@ class ClustererChecker:
         """
         Compute the distance between a vertex and the center of its group.
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
         """
@@ -1222,9 +1230,9 @@ class ClustererChecker:
         """
         Plot the distance between a vertex and the center of its group.
 
-        :Parameters:
-         - `distance_matrix` (np.array) - distance matrix used to create the clustering.
-         - `clustering` (list) - list giving the resulting clutering.
+        :Hidden parameters:
+         - `self._distance_matrix` (np.array) - distance matrix used to create the clustering.
+         - `self._clustering` (list) - list giving the resulting clutering.
 
         :WARNING: `distance_matrix` and `clustering` should obviously ordered the same way!
         """
@@ -1235,10 +1243,12 @@ class ClustererChecker:
             index_q[q] = np.where(self._clustering == q)[0]
             vector = [vtx2center[i] for i in index_q[q]]
             vector.sort()
-            plt.plot( vector, label = "Cluster "+str(self._clusters_ids[n]) )
-            plt.axis([0,max(self._nb_ids_by_clusters), min(vtx2center.values()), max(vtx2center.values())])
+            plt.plot( vector, 'o-', label = "Cluster "+str(self._clusters_ids[n]), figure=fig )
+            plt.suptitle('Clusters of {}'.format(self.clustering_name))
+            plt.axis([0,max(self._nb_ids_by_clusters.values()), min(vtx2center.values()), max(vtx2center.values())])
 
         plt.legend(ncol=3)
+        plt.show()
 
 
     def clustered_temporal_property_graph(self):
@@ -1375,6 +1385,7 @@ class ClustererChecker:
         plt.xlabel('Successive time points')
         plt.ylabel('Cluster id')
         plt.title('Edge sizes are related to were children come from.')
+        plt.show()
 
 
     def nonHomogen_Markov_Chain(self):
@@ -1515,6 +1526,28 @@ def cluster_matching(clusters_dict_1, clusters_dict_2, return_all = False):
         return match
     else:
         return match[1]
+
+
+def csr_matrix_from_graph(graph, vids2keep):
+    """
+    Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
+    Defines for each vertex the neighbouring vertex following a given structure of the data.
+
+    :Parameters:
+     - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from which to extract connectivity.
+     - `vids2keep` (list) - list of vertex ids to build the sparse matrix from (columns and rows will be ordered according to this list).
+    """    
+    N = len(vids2keep)
+    data,row,col = [],[],[]
+
+    for edge in graph.edges(edge_type='s'):
+        s,t = graph.edge_vertices(edge)
+        if (s in vids2keep) and (t in vids2keep):
+            row.extend([vids2keep.index(s),vids2keep.index(t)])
+            col.extend([vids2keep.index(t),vids2keep.index(s)])
+            data.extend([1,1])
+
+    return csr_matrix((data,(row,col)), shape=(N,N))
 
 
 class ClustererComparison:

@@ -26,7 +26,6 @@ import matplotlib.pyplot as plt
 #from scipy.sparse import csr_matrix
 from numpy.linalg import svd, lstsq
 
-
 def add_graph_vertex_property_from_dictionary(graph, name, dictionary):
     """
     Add a vertex property with name 'name' to the graph build from an image.
@@ -187,23 +186,23 @@ def __normalized_parameters(func):
         :Return:
         - a single value if vids is an interger, or a dictionnary of *keys=vids and *values= "result of applyed fucntion `func`"
         """
-
-
         # -- If a name is given, we use vertex_property stored in the graph with this name.
         if isinstance(vertex_property,str):
             vertex_property = graph.vertex_property(vertex_property)
         # -- If an instancemethod is given, we use create a dictionary for the vids base ont the method.
-        # -- If no vids provided we compute the function for all keys present in the vertex_property
-        if vids==None:
-            vids = vertex_property.keys()
         if isinstance(vertex_property,types.MethodType):
             vertex_property = dict([(vid,vertex_property(vid)) for vid in graph.vertices()])
 
-        if type(vids)==int:
-            # for single id, compute single result
+        # -- If no vids provided we compute the function for all keys present in the vertex_property
+        if vids==None:
+            vids = vertex_property.keys()
+
+        # -- Now execute the called 'func':
+        if isinstance(vids, int):
+            # - for single id, compute single result
             return func(graph, vertex_property, vids, rank)
         else:
-            # for set of ids, we compute a dictionary of resulting values.
+            # - for set of ids, we compute a dictionary of resulting values.
             l={}
             for k in vids:
                 if verbose and k%10==0: print k,'/',len(vids)
@@ -245,39 +244,6 @@ def laplacian(graph, vertex_property, vid, rank, edge_type):
                 k+=1
         if k!=0:
             return ivalue - (result / float(k))
-
-@__normalized_parameters
-def mean_neigh(graph, vertex_property, vid, rank, edge_type):
-    """
-    Sub-function computing the laplacian between ONE vertex ('vid') and its neighbors at rank 'rank'.
-
-    :Parameters:
-    - 'graph' : a TPG.
-    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
-    - 'vid' : a vertex id.
-    - 'rank' : neighborhood at distance 'rank' will be used.
-
-    :Return:
-    - a single value = laplacian between vertex 'vid' and its neighbors at rank 'rank'.
-    """
-    if rank == 1:
-        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)
-        vid_neighborhood.remove(vid)
-    else: # if rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
-        vid_neighborhood = graph.neighborhood(vid,rank, edge_type)-graph.neighborhood(vid,rank-1, edge_type)
-
-    nb_neighborhood = len(vid_neighborhood)
-
-    result = 0
-    ivalue = vertex_property[vid]
-    k=0
-    if nb_neighborhood != 0 : # if ==0 it's mean that there is no neighbors for the vertex vid.
-        for i in vid_neighborhood:
-            if i in vertex_property.keys():
-                result = result + vertex_property[i]
-                k+=1
-        if k!=0:
-            return (ivalue + result) / float(k+1)
 
 @__normalized_parameters
 def mean_abs_dev(graph, vertex_property, vid, rank, edge_type):
@@ -505,9 +471,8 @@ def shape_anisotropy(graph):
      - 'graph' (TGP) - a TPG.
     :Return:
      - shape_anisotropy = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
-
     """
-    return dict([ (vid, (inertia[0]-inertia[1])/(inertia[0]+inertia[1])) for vid, inertia in graph.vertex_property('inertia_values').iteritems()])
+    return dict([ (vid, (inertia[0]-inertia[1])/(inertia[0]+inertia[1])) for vid, inertia in graph.vertex_property('inertia_values').iteritems() ])
 
 
 def epidermis_wall_gaussian_curvature(graph):
@@ -687,7 +652,7 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
         vertex_property = graph.vertex_property(vertex_property)
 
     if time_points is None:
-        time_points = xrange(graph.nb_time_points)
+        time_points = xrange(graph.nb_time_points+1)
     if vids is None:
         vids = [vid for vid in graph.vertices() if vid in vertex_property]
 
@@ -701,15 +666,18 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
 
     h_kwargs= {}
     if 'bins' in kwargs: h_kwargs.update({'bins':kwargs['bins']})
+    if 'range' in kwargs: h_kwargs.update({'range':kwargs['range']})
     if 'normed' in kwargs: h_kwargs.update({'normed':kwargs['normed']})
     if 'histtype' in kwargs: h_kwargs.update({'histtype':kwargs['histtype']})
 
-    fig = plt.figure()
-    n, bins, patches = plt.hist(data, label = ["time point #{}".format(tp) for tp in time_points], **h_kwargs)
+    fig = plt.figure(figsize=[14,8], dpi=80)
+    fig.subplots_adjust(left=0.04, right=0.97, top=0.93)
+
+    n, bins, patches = plt.hist(data, label = ["time point #{}".format(tp) for tp in time_points], rwidth=1., **h_kwargs)
     if kwargs.has_key('title'):
         plt.title(kwargs['title'])
     elif property_name is not None:
-        plt.title("Histogram of {0} property".format(property_name))
+        plt.title("Histogram of {} property".format(property_name))
     if kwargs.has_key('xlabel'):
         plt.xlabel(kwargs['xlabel'])
     elif property_name is not None:
