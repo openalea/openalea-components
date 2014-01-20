@@ -97,7 +97,7 @@ def hollow_out_cells(image, background, remove_background = True, verbose = True
     return m
 
 
-def wall_voxels_between_two_cells(image, label_1, label_2, bbox = None):
+def wall_voxels_between_two_cells(image, label_1, label_2, bbox = None, verbose = False):
     """
     Return the voxels coordinates defining the contact wall between two labels.
 
@@ -111,11 +111,12 @@ def wall_voxels_between_two_cells(image, label_1, label_2, bbox = None):
      - xyz 3xN array.
     """
 
-    if bbox is None or not isinstance(bbox,dict):
-        bbox = nd.find_objects( image, max_label = min([label_1, label_2]) )
-        boundingbox = bbox[-1]
-    if isinstance(bbox,dict):
-        boundingbox = bbox(label_1)
+    try:
+        boundingbox = bbox[label_1]
+    except:
+        boundingbox = bbox[label_2]
+    else:
+        if verbose: warnings.warn("No boundingbox for labels: {} & {} !".format(label_1, label_2))
 
     dilated_bbox = dilation( boundingbox )
     dilated_bbox_img = image[dilated_bbox]
@@ -148,7 +149,7 @@ def walls_voxels_per_cell(image, label_1, bbox = None, neighbors = None, neighbo
     # -- We use the bounding box to work faster (on a smaller image)
     if isinstance(bbox,dict):
         boundingbox = bbox(label_1)
-    elif isinstance(bbox,tuple) and isinstance(bbox[0],slice):
+    elif (isinstance(bbox,tuple) or isinstance(bbox,list)) and isinstance(bbox[0],slice):
         boundingbox = bbox
     elif bbox is None:
         bbox = nd.find_objects( image, max_label = label_1 )
@@ -556,7 +557,7 @@ class AbstractSpatialImageAnalysis(object):
             if self._center_of_mass.has_key(l):
                 center[l] = self._center_of_mass[l]
             else:
-                slices = self.boundingbox(l)
+                slices = self.boundingbox(l,real=False)
                 crop_im = self.image[slices]
                 c_o_m = np.array(nd.center_of_mass(crop_im, crop_im, index=l))
                 c_o_m = [c_o_m[i] + slice.start for i,slice in enumerate(slices)]
@@ -601,7 +602,10 @@ class AbstractSpatialImageAnalysis(object):
         (slice(1, 2), slice(2, 3), slice(0, 1)),
         (slice(1, 2), slice(1, 2), slice(0, 1)),
         (slice(0, 3), slice(2, 4), slice(0, 1))]
-        """        
+        """
+        if labels == 0:
+            return nd.find_objects(self.image==0)[0]
+
         if self._bbox is None:
             self._bbox = nd.find_objects(self.image)
         
@@ -1083,7 +1087,7 @@ class AbstractSpatialImageAnalysis(object):
         return pc_values, pc_normal, pc_directions, pc_origin
 
 
-    def inertia_axis_normal_to_surface(self, labels=None, center_of_mass=None, inertia_axis=None, real=False, verbose=True):
+    def inertia_axis_normal_to_surface(self, labels=None, inertia_axis=None, real=False, verbose=True):
         """
         Find the inertia axis defining the "Z" orientation of the cell.
         We define it to be the one correlated to the normal vector to the surface.
@@ -1097,18 +1101,26 @@ class AbstractSpatialImageAnalysis(object):
         # -- If 'labels' is `None`, we apply the function to all L1 cells:
         if labels == None:
             labels = self.layer1()
+        else:
+            tmp_labels = [label for label in labels if label in self.layer1()]
+            diff = set(labels)-set(tmp_labels)
+            if diff != set([]):
+                labels=tmp_labels
+                print "Some of the provided `labels` does not belong to the L1."
+                if verbose:
+                    print "Unused labels: {}".format(diff)
         
         # -- If 'inertia_axis' is `None`, we compute them:
         if inertia_axis == None:
             inertia_axis, inertia_length = self.inertia_axis(labels, real=real)
 
-        surface_normal_axis=[]
+        surface_normal_axis=[]; N = len(labels); percent = 0
         for n_cell, cell in enumerate(labels):
-            if verbose: print n_cell,'/',len(labels)
+            if verbose and n_cell*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
             try:
                 normal = self.principal_curvatures_normal[cell]
             except:
-                self.compute_principal_curvatures( cell, radius=30, fitting_degree=1, monge_degree=2, background=1, verbose=False)
+                self.compute_principal_curvatures( cell, radius=30, fitting_degree=1, monge_degree=2, verbose=False)
                 normal = self.principal_curvatures_normal[cell]
             max_corr = 0
             n_corr = 3
@@ -1140,10 +1152,10 @@ class AbstractSpatialImageAnalysis(object):
 
         assert isinstance(vids,list)
 
-        N=len(vids)
+        N=len(vids); percent = 0
         if verbose: print "Removing", N, "cells."
         for n, vid in enumerate(vids):
-            if verbose and n%20 == 0: print n,'/',N
+            if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 5
             try:
                 xyz = np.where( (self.image[self.boundingbox(vid)]) == vid )
                 self.image[tuple((xyz[0]+self.boundingbox(vid)[0].start, xyz[1]+self.boundingbox(vid)[1].start, xyz[2]+self.boundingbox(vid)[2].start))]=erase_value
@@ -1187,9 +1199,9 @@ class AbstractSpatialImageAnalysis(object):
         cells_in_image_margins = self.cells_in_image_margins()
         if 0 in cells_in_image_margins: cells_in_image_margins.remove(0)
         if self.background() in cells_in_image_margins: cells_in_image_margins.remove(self.background())
-        N = len(cells_in_image_margins)
+        N = len(cells_in_image_margins); percent= 0
         for n,c in enumerate(cells_in_image_margins):
-            if verbose and n%20 == 0: print n,'/',N
+            if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
             try:
                 xyz = np.where( (self.image[self.boundingbox(c)]) == c )
                 self.image[tuple((xyz[0]+self.boundingbox(c)[0].start,xyz[1]+self.boundingbox(c)[1].start,xyz[2]+self.boundingbox(c)[2].start))]=erase_value
@@ -1386,9 +1398,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
         # if center of mass is not specified
         if center_of_mass is None:
-            center_of_mass = self.center_of_mass(labels)
+            center_of_mass = self.center_of_mass(labels, real=False)
         for i,label in enumerate(labels):
-            slices = self.boundingbox(label)
+            slices = self.boundingbox(label, real=False)
             if len(labels) == 1:
                 center = center_of_mass
             elif isinstance(center_of_mass, dict):
@@ -1536,9 +1548,10 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             # -- Now we can compute the principal curvatures informations
             from openalea.image.algo.analysis import geometric_median
             if verbose: print 'Computing curvature :'
+            N = len(vids); percent = 0
             for n,vid in enumerate(vids):
                 if (recalculate_all) or (not self.principal_curvatures.has_key(vid)) :
-                    if verbose and n%20 == 0: print n,'/',len(vids)
+                    if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 5
                     func( self, vid, pts, adjacencies, fitting_degree, monge_degree )
 
         return wrapped_function
@@ -1603,9 +1616,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
                 warnings.warn('Principal curvature not defined...')
                 self.compute_principal_curvatures(vids, radius=radius, verbose = True)
 
-            curvature = {}
+            curvature = {}; N = len(vids); percent=0
             for n,vid in enumerate(vids):
-                if verbose: print n,'/',len(vids)
+                if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
                 if not self.principal_curvatures.has_key(vid):
                     c = self.compute_principal_curvatures(vid, radius = radius)
                 else:
@@ -1667,9 +1680,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             vids.remove(self.background())
         N = len(vids)
 
-        anisotropy = []
+        anisotropy = []; N=len(vids); percent=0
         for n,label in enumerate(vids):
-            if verbose: print n,'/',N
+            if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
             xyz = np.array(np.where(first_voxel_layer[self.boundingbox(label)] == label))
             # difference with the center of mass
             mean = np.mean(xyz, axis=1)
@@ -1713,8 +1726,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         [0, 1, 2], [2, 1, 0], [0, 2, 1], [2, 0, 1], [1, 1, 1], [2, 0, 0], [0, 2, 0], \
         [0, 0, 2], [1, 1, 0], [1, 0, 1], [0, 1, 1] ]
 
+        N=len(vids); percent=0
         for n,vid in enumerate(vids):
-            if verbose and n%5 == 0: print "Cell #",n,"/",len(vids)
+            if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
             x,y,z = np.where( (self.image[self.boundingbox(vid)]) == vid )
             x_mean,y_mean,z_mean = self.center_of_mass(vid,False)
             x_res, y_res, z_res = self.image.resolution

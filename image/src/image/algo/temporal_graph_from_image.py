@@ -67,8 +67,9 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
 
     new_barycenters = {}
     print "Computing daugthers barycenters:"
+    N = len(vids); percent = 0
     for n, vid in enumerate(vids):
-        if n%50 == 0: print n,'/',len(vids)
+        if n*100/float(N) >= percent: print '{} %'.format(percent); percent+=10
         graph_children = graph.descendants(vid, reference_tp-tp_2register) - graph.descendants(vid, reference_tp-tp_2register-1)
         SpI_children = translate_ids_Graph2Image(graph, graph_children)
         x,y,z = [],[],[]
@@ -182,9 +183,9 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     tmp_img.fill(0)
     tmp_img += analysis.image == background # retreive the background
     if verbose: print "Fusing daugthers from t{} at t{}:".format(reference_tp, tp_2fuse)
-    not_found = []
+    not_found = []; N = len(ref_vids); percent = 0
     for n, vid in enumerate(ref_vids):
-        if verbose and n%50 == 0: print n,'/',len(ref_vids)
+        if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 5
         graph_children = graph.descendants(vid, tp_2fuse-reference_tp) - graph.descendants(vid, tp_2fuse-reference_tp-1)
         if graph_children == set([]):
             not_found.append(vid)
@@ -241,8 +242,9 @@ def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
     if isinstance(labels2exclude,int):
         labels2exclude = [labels2exclude]
 
-    wall_median = {}
-    for label_1, label_2 in dict_wall_voxels:
+    wall_median = {}; N = len(dict_wall_voxels); percent = 0
+    for n,(label_1, label_2) in enumerate(dict_wall_voxels):
+        if n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
         if label_1 in labels2exclude or label_2 in labels2exclude:
             continue
         from openalea.plantgl.math import Vector3
@@ -264,7 +266,7 @@ spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1
 
 
 def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, label2vertex,
-         mlabelpair2edge, background, spatio_temporal_properties, property_as_real, bbox_as_real):
+         mlabelpair2edge, background, spatio_temporal_properties, property_as_real):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a PropertyGraph.
     """
@@ -277,20 +279,20 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, la
 
     if 'boundingbox' in spatio_temporal_properties :
         print 'Extracting boundingbox...'
-        add_vertex_property_from_label_and_value(graph, 'boundingbox', labels, SpI_Analysis.boundingbox(labels,real=bbox_as_real), mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"boundingbox":(u'\xb5m'if bbox_as_real else 'voxels')} )
+        add_vertex_property_from_label_and_value(graph, 'boundingbox', labels, SpI_Analysis.boundingbox(labels,real=False), mlabel2vertex=label2vertex)
+        #~ graph._graph_property["units"].update( {"boundingbox":'voxels'} )
 
     if 'volume' in spatio_temporal_properties and SpI_Analysis.is3D():
         print 'Computing volume property...'
         add_vertex_property_from_dictionary(graph, 'volume', SpI_Analysis.volume(labels,real=property_as_real), mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"volume":(u'\xb5m\xb3'if property_as_real else 'voxels')} )
+        #~ graph._graph_property["units"].update( {"volume":(u'\xb5m\xb3'if property_as_real else 'voxels')} )
 
     barycenters = None
     if 'barycenter' in spatio_temporal_properties :
         print 'Computing barycenter property...'
         barycenters = SpI_Analysis.center_of_mass(labels, real=property_as_real)
         add_vertex_property_from_dictionary(graph, 'barycenter', barycenters, mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
+        #~ graph._graph_property["units"].update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
 
     background_neighbors = set(SpI_Analysis.neighbors(background))
     background_neighbors.intersection_update(labelset)
@@ -327,8 +329,8 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, la
             unlabelled_wall_surface = SpI_Analysis.wall_surfaces({source:unlabelled_target[source]},real=property_as_real)
             graph.vertex_property('unlabelled_wall_surface')[label2vertex[source]] = sum(unlabelled_wall_surface.values())
 
-        #~ graph._graph_property("units").update( {"wall_surface":('\xb5m\xb2'if property_as_real else 'voxels')} )
-        #~ graph._graph_property("units").update( {"unlabelled_wall_surface":('\xb5m\xb2'if property_as_real else 'voxels')} )
+        #~ graph._graph_property["units"].update( {"wall_surface":('\xb5m\xb2'if property_as_real else 'voxels')} )
+        #~ graph._graph_property["units"].update( {"unlabelled_wall_surface":('\xb5m\xb2'if property_as_real else 'voxels')} )
 
     if 'epidermis_surface' in spatio_temporal_properties :
         print 'Computing epidermis_surface property...'
@@ -342,7 +344,7 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, la
         epidermis_surfaces = SpI_Analysis.cell_wall_surface(background, list(background_neighbors), real=property_as_real)
         epidermis_surfaces = dict([(not_background(indices),value) for indices,value in epidermis_surfaces.iteritems()])
         add_vertex_property_from_label_property(graph,'epidermis_surface',epidermis_surfaces,mlabel2vertex=label2vertex)
-        #~ graph._graph_property("units").update( {"epidermis_surface":('um2'if property_as_real else 'voxels')} )
+        #~ graph._graph_property["units"].update( {"epidermis_surface":('um2'if property_as_real else 'voxels')} )
 
 
     if 'projected_anticlinal_wall_median' in spatio_temporal_properties:
@@ -450,7 +452,7 @@ def _spatial_properties_from_image(graph, SpI_Analysis, labels, neighborhood, la
 
 
 def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real):
+         spatio_temporal_properties, property_as_real):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
 
@@ -462,17 +464,20 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
      - `background` (int) - label representing background.
      - `spatio_temporal_properties` (list) - the list of name of properties to create. It should be in spatio_temporal_properties.
      - `property_as_real` (bool) - If property_as_real = True, property is in real-world units else in voxels.
-     - `bbox_as_real` (bool) - If bbox_as_real = True, bounding boxes are in real-world units else in voxels.
 
     """
     try:
         min_contact_surface = graph.graph_property('min_contact_surface')
+        real_surface = graph.graph_property('real_min_contact_surface')
         assert isinstance(min_contact_surface, int) or isinstance(min_contact_surface, float)
     except:
         min_contact_surface = None
+        real_surface = property_as_real
+    # - Declare available properties and start computation if asked:
     available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall_orientation', 'fused_daughters_inertia_axis']
     properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
+        
         fused_image_analysis, neighborhood = {}, {}
         if 'epidermis_2D_landmarks' in spatio_temporal_properties:
             assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
@@ -529,9 +534,112 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             print "Done\n"
 
         if '3D_landmarks' in spatio_temporal_properties:
+            print "Computing 3D_landmarks..."
             assert 'wall_median' in graph.edge_property_names()
             assert 'unlabelled_wall_median' in graph.vertex_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
+            if not sum([fused_image_analysis.has_key(tp_2fuse) for tp_2fuse in xrange(1,graph.nb_time_points+1,1)])==graph.nb_time_points:
+                for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
+                    ref_tp = tp_2fuse-1
+                    ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
+                    ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+                    # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
+                    fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
+                    # - Creating a `SpatialImageAnalysis`:
+                    fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+            
+            fused_edge_wall_median = {}
+            for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
+                ref_tp = tp_2fuse-1
+                ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
+                ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+                print "Extract the wall medians of daughters fused cells in image t{} (ref. t{})".format(tp_2fuse, ref_tp)
+                # - Extracting neighborhood info:
+                fused_neighborhood = fused_image_analysis[tp_2fuse].neighbors(ref_SpI_ids, min_contact_surface = min_contact_surface)
+                fused_background_neighbors = fused_image_analysis[tp_2fuse].neighbors(background[tp_2fuse], min_contact_surface, real_surface)
+                if isinstance(fused_background_neighbors, dict): fused_background_neighbors = set(fused_background_neighbors[background[tp]])
+                else: fused_background_neighbors = set(fused_background_neighbors)
+                fused_background_neighbors.intersection_update(set(ref_SpI_ids))
+                fused_undefined_neighbors = fused_image_analysis[tp_2fuse].neighbors(0, min_contact_surface, real_surface)
+                if isinstance(fused_undefined_neighbors, dict): fused_undefined_neighbors = set(fused_undefined_neighbors[0])
+                else: fused_undefined_neighbors = set(fused_undefined_neighbors)
+                fused_undefined_neighbors.intersection_update(set(ref_SpI_ids))
+
+                # - We start by creating all pairs of cells defining a wall we want to extract:
+                fused_cell_pairs = np.unique([(background[tp_2fuse], nei) for nei in fused_background_neighbors] + [(0, nei) for nei in fused_undefined_neighbors] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in fused_neighborhood.keys() for label_2 in fused_neighborhood[label_1]])
+                fused_boundingboxes = fused_image_analysis[tp_2fuse].boundingbox(ref_SpI_ids, False)
+                from openalea.image.algo.analysis import wall_voxels_between_two_cells
+                fused_dict_wall_voxels = {}; nb_pairs = len(fused_cell_pairs); percent = 0
+                for n,(label_1, label_2) in enumerate(fused_cell_pairs):
+                    if n*100/nb_pairs>=percent: print "{}%...".format(percent),; percent += 10
+                    label_1, label_2 = sort_boundingbox(fused_boundingboxes, label_1, label_2)
+                    fused_dict_wall_voxels[min([label_1, label_2]), max([label_1, label_2])] = wall_voxels_between_two_cells(fused_image_analysis[tp_2fuse].image, label_1, label_2, fused_boundingboxes)
+
+                print "Searching for the median voxel of the walls..." 
+                fused_wall_median = find_wall_median_voxel(fused_dict_wall_voxels, labels2exclude = [])
+                fused_edge_wall_median[tp_2fuse], fused_unlabelled_wall_median, fused_vertex_wall_median = {},{},{}
+                for label_1, label_2 in fused_wall_median.keys():
+                    if (label_1 == 0): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
+                        fused_unlabelled_wall_median[label_2] = fused_wall_median[(label_1, label_2)]
+                    elif (label_1 == 1): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
+                        fused_vertex_wall_median[label_2] = fused_wall_median[(label_1, label_2)]
+                    else:
+                        fused_edge_wall_median[tp_2fuse][(label_1, label_2)] = fused_wall_median[(label_1, label_2)]
+
+                extend_vertex_property_from_dictionary(graph, 'daughters_fused_epidermis_wall_median', fused_vertex_wall_median, time_point=ref_tp)
+                extend_vertex_property_from_dictionary(graph, 'daughters_fused_unlabelled_wall_median', fused_unlabelled_wall_median, time_point=ref_tp)
+
+            # -- Now we can proceed to the landmarks association:
+            for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
+                ref_tp = tp_2fuse-1
+                print "3D landmarks association between t{} and t{}".format(ref_tp, tp_2fuse)
+                # -- Pairing t_n and t_n+1 'wall_median' as landmarks:
+                # - Translating 'wall_median' in `graph.edge_property()` with pair of labels as keys:
+                edge2labelpair_m = edge2labelpair_map(graph, ref_tp)
+                wall_median = dict([(edge2labelpair_m[eid],m) for eid,m in graph.edge_property('wall_median').iteritems() if edge2labelpair_m.has_key(eid)])
+                # - Starting the landmarks association:
+                asso, no_asso_found = {}, []
+                for k in wall_median:
+                    try: asso[k] = [wall_median[k], fused_edge_wall_median[tp_2fuse][k]]
+                    except: no_asso_found.append(k)
+                # - Saving detected landmarks association:
+                extend_edge_property_from_dictionary(graph, '3D_landmarks', asso, time_point=ref_tp)
+                # - Displaying informations about how good this landmarks association step went :
+                print "Found {} associations over {} ({}%) for 'wall_median'...".format(len(asso),len(wall_median),round(float(len(asso))/len(wall_median)*100,1))
+                
+                #~ # -- Pairing t_n and t_n+1 'epidermis_wall_median' as landmarks:
+                #~ ep_wall_median = dict([(k,v) for k,v in graph.vertex_property('epidermis_wall_median').iteritems() if k in ref_vids])
+                #~ # - Starting the landmarks association:
+                #~ ep_asso, ep_no_asso_found = {}, []
+                #~ for k in ep_wall_median:
+                    #~ try: ep_asso[k] = [ep_wall_median[k], fused_vertex_wall_median[tp_2fuse][k]]
+                    #~ except: ep_no_asso_found.append(k)
+                #~ # - Saving detected landmarks association:
+                #~ extend_vertex_property_from_dictionary(graph, 'epidermis_3D_landmarks', ep_asso, time_point=ref_tp)
+                #~ # - Displaying informations about how good this landmarks association step went :
+                #~ print "Found {} associations over {} ({}%) for epidermis_wall_median...".format(len(ep_asso), len(ep_wall_median), round( float(len(ep_asso))/len(ep_wall_median)*100,1))
+                #~ 
+                #~ # -- Pairing t_n and t_n+1 'unlabelled_wall_median' as landmarks:
+                #~ unlab_wall_median = dict([(k,v) for k,v in graph.vertex_property('unlabelled_wall_median').iteritems() if k in ref_vids])
+                #~ # - Starting the landmarks association:
+                #~ unlab_asso, unlab_no_asso_found = {}, []
+                #~ for k in unlab_wall_median:
+                    #~ try: unlab_asso[k] = [unlab_wall_median[k], fused_unlabelled_wall_median[tp_2fuse][k]]
+                    #~ except: unlab_no_asso_found.append(k)
+                #~ # - Saving detected landmarks association:
+                #~ extend_vertex_property_from_dictionary(graph, 'unlabelled_3D_landmarks', unlab_asso, time_point=ref_tp)
+                #~ # - Displaying informations about how good this landmarks association step went :
+                #~ print "Found {} associations over {} ({}%) for unlabelled_wall_median".format(len(unlab_asso), len(unlab_wall_median), round( float(len(unlab_asso))/len(unlab_wall_median)*100,1))
+                
+                # -- Keeping an eye on topological "errors" occuring because of the two "independant" segmentations:
+                new_contact_from_fusing = set(fused_edge_wall_median[tp_2fuse].keys())-set(asso.keys())
+                if not new_contact_from_fusing == set([]):
+                    print "New contact found after daughters fusion :"
+                    for label_1, label_2 in new_contact_from_fusing:
+                        print u"Contact between {} and {}, surface: {}\xb5m\xb2".format(label_1, label_2, round(fused_image_analysis[tp_2fuse].cell_wall_surface(label_1, label_2),1))
+                        print u"Contact surface between {} and {} at t_n-1: {}\xb5m\xb2".format(label_1, label_2, round(SpI_Analysis[ref_tp].cell_wall_surface(label_1, label_2),1))
+
+            print "Done\n"
 
         if 'division_wall_orientation' in spatio_temporal_properties:
             pass
@@ -563,20 +671,18 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
 
 
 def graph_from_image2D(image, labels, background, spatio_temporal_properties,
-                     property_as_real, bbox_as_real,
-                     ignore_cells_at_stack_margins, min_contact_surface):
+                     property_as_real, ignore_cells_at_stack_margins, min_contact_surface):
     return _graph_from_image(image, labels, background, spatio_temporal_properties,
-                            property_as_real, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
+                            property_as_real, ignore_cells_at_stack_margins, min_contact_surface)
 
 def graph_from_image3D(image, labels, background, spatio_temporal_properties,
-                     property_as_real, bbox_as_real,
-                     ignore_cells_at_stack_margins, min_contact_surface):
+                     property_as_real, ignore_cells_at_stack_margins, min_contact_surface):
     return _graph_from_image(image, labels, background, spatio_temporal_properties,
-                            property_as_real, bbox_as_real, ignore_cells_at_stack_margins, min_contact_surface)
+                            property_as_real, ignore_cells_at_stack_margins, min_contact_surface)
 
 
 def temporal_graph_from_image(images, lineages, time_steps = [], background = 1, spatio_temporal_properties = None,
-     properties4lineaged_vertex = False, property_as_real = True, bbox_as_real = False, **kwargs):
+     properties4lineaged_vertex = False, property_as_real = True, **kwargs):
     """
     Function creating a TemporalPropertyGraph based on a list of SpatialImages and list of lineage.
     Optional parameter can be provided, see below.
@@ -590,7 +696,6 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
      - `spatio_temporal_properties` (list) : list of strings related to spatio-temporal properties to compute
      - `properties4lineaged_vertex` (bool|str) : if `False` compute properties for every possible vertex, if `True` for lineaged vertex only and if `strict` vertices temporally linked from the beginning to the end
      - `property_as_real` (bool) : specify if the computed spatio-temporal properties should be return in real-world units
-     - `bbox_as_real` (bool) : specify if the (cells) bounding boxes should be return in real-world units
     """
     nb_images = len(images)
     assert len(lineages) == nb_images-1
@@ -609,7 +714,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
 
     try: min_contact_surface = kwargs['min_contact_surface']
     except: min_contact_surface = None
-    try: real_surface = kwargs['real_surface']
+    try: real_surface = kwargs['real_min_contact_surface']
     except: real_surface = property_as_real
 
     print "# -- Creating Spatial Graphs..."
@@ -626,7 +731,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         labels[n] = analysis[n].labels()
         if background[n] in labels[n]: labels[n].remove(background[n])
         # -- Now we construct the Spatial Graph (topology):
-        neighborhood[n] = analysis[n].neighbors(labels[n], min_contact_surface = min_contact_surface)
+        neighborhood[n] = analysis[n].neighbors(labels[n], min_contact_surface, real_surface)
         graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
     print "Done\n"
 
@@ -635,6 +740,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     tpg = TemporalPropertyGraph()
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
     tpg.add_graph_property('min_contact_surface', min_contact_surface)
+    tpg.add_graph_property('real_min_contact_surface', real_surface)
     print "Done\n"
 
     # -- Registration step:
@@ -679,7 +785,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             analysis[unreg_img_id].add2ignoredlabels(excluded_labels[unreg_img_id])
             # -- Now we RE-construct the Spatial Graph (topology):
             labels[n] = analysis[n].labels()
-            neighborhood[unreg_img_id] = analysis[n].neighbors(labels[n], min_contact_surface = min_contact_surface)
+            neighborhood[unreg_img_id] = analysis[n].neighbors(labels[n], min_contact_surface, real_surface)
             graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
         print "Done\n"
 
@@ -688,6 +794,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         tpg = TemporalPropertyGraph()
         tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
         tpg.add_graph_property('min_contact_surface', min_contact_surface)
+        tpg.add_graph_property('real_min_contact_surface', real_surface)
         print "Done\n"
 
 
@@ -700,11 +807,16 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     else:
         vids = tpg.lineaged_vertex(fully_lineaged=False)
 
+    from openalea.container.temporal_graph_analysis import translate_keys_Graph2Image
+    for n,spia in enumerate(analysis):
+        labels = translate_ids_Graph2Image(graph, [vid for vid in vids if tpg.vertex_property('index')==n])
+        spia.add2ignoredlabels(list( set(spia.labels()) - set(labels) - set(spia._background) ))
+
     tpg = _spatial_properties_from_images(tpg, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real)
+         spatio_temporal_properties, property_as_real)
 
     tpg = _temporal_properties_from_images(tpg, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real)
+         spatio_temporal_properties, property_as_real)
     print "Done\n"
 
     return tpg
@@ -720,7 +832,13 @@ def check_properties(graph, spatio_temporal_properties):
         if 'projected_anticlinal_wall_median' not in graph.edge_properties() and 'projected_anticlinal_wall_median' not in spatio_temporal_properties:
             spatio_temporal_properties.append('projected_anticlinal_wall_median')
         if 'wall_median' not in graph.edge_properties() and 'wall_median' not in spatio_temporal_properties:
-            spatio_temporal_properties.append('wall_median')
+            spatio_temporal_properties.append('wall_median') # will compute 'epidermis_wall_median' and 'unlabelled_wall_median' too !
+        if 'L1' not in graph.vertex_properties() and 'L1' not in spatio_temporal_properties:
+            spatio_temporal_properties.append('L1')
+
+    if '3D_landmarks' in spatio_temporal_properties:
+        if 'wall_median' not in graph.edge_properties() and 'wall_median' not in spatio_temporal_properties:
+            spatio_temporal_properties.append('wall_median') # will compute 'epidermis_wall_median' and 'unlabelled_wall_median' too !
         if 'L1' not in graph.vertex_properties() and 'L1' not in spatio_temporal_properties:
             spatio_temporal_properties.append('L1')
 
@@ -1000,22 +1118,23 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids, backgrou
         assert isinstance(vids, list)
 
     graph = _spatial_properties_from_images(graph, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real)
+         spatio_temporal_properties, property_as_real)
     graph = _temporal_properties_from_images(graph, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real)
+         spatio_temporal_properties, property_as_real)
     print "Done\n"
 
     return graph
 
 
 def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
-         spatio_temporal_properties, property_as_real, bbox_as_real):
+         spatio_temporal_properties, property_as_real):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
     """
     assert isinstance(graph, TemporalPropertyGraph)
     available_properties = ['boundingbox', 'volume', 'barycenter', 'L1', 'border', 'inertia_axis', 'wall_surface', 'epidermis_surface', 'projected_anticlinal_wall_median', 'wall_median', 'all_walls_orientation', 'epidermis_local_principal_curvature']
-    properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
+    #~ properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
+    properties = [ppt for ppt in spatio_temporal_properties] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
         # -- Loop over all time points to compute required properties:
         for tp in xrange(graph.nb_time_points+1):
@@ -1027,48 +1146,61 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             # - Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use:
             print "Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use..."
             neighborhood = translate_keys_Graph2Image(graph, dict([(vid, translate_ids_Graph2Image(graph, graph.neighbors(vid,'s'))) for vid in vids if graph.vertex_property('index')[vid]==tp]), tp)
-            # - Retrieve `min_contact_surface` and `background_neighbors` for further use:
-            print "Retrieving `min_contact_surface` and `background_neighbors` for further use..."
-            min_contact_surface = graph.graph_property('min_contact_surface')
-            background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface=min_contact_surface)
-            if isinstance(background_neighbors, dict):
-                background_neighbors = set(background_neighbors[background[tp]])
-            else:
-                background_neighbors = set(background_neighbors)
+            # - Retrieve `min_contact_surface`, `background_neighbors` and `undefined_neighbors` for further use:
+            print "Retrieving `background_neighbors` and `undefined_neighbors` for further use..."
+            try:
+                min_contact_surface = graph.graph_property('min_contact_surface')
+                real_surface = graph.graph_property('real_min_contact_surface')
+                assert isinstance(min_contact_surface, int) or isinstance(min_contact_surface, float)
+            except:
+                min_contact_surface = None
+                real_surface = property_as_real
+            background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface, real_surface)
+            if isinstance(background_neighbors, dict): background_neighbors = set(background_neighbors[background[tp]])
+            else: background_neighbors = set(background_neighbors)
             background_neighbors.intersection_update(labelset)
+            undefined_neighbors = SpI_Analysis[tp].neighbors(0, min_contact_surface, real_surface)
+            if isinstance(undefined_neighbors, dict): undefined_neighbors = set(undefined_neighbors[0])
+            else: undefined_neighbors = set(undefined_neighbors)
+            undefined_neighbors.intersection_update(labelset)
+            if undefined_neighbors == set([]):
+                undefined_cells_in_image = False
+            else:
+                undefined_cells_in_image = True
 
-            import scipy.ndimage as nd
-            undefined_label = 0
-            img = (SpI_Analysis[tp].image == undefined_label)
-            dil = nd.binary_dilation(img)
-            contact = dil - img
-            img = SpI_Analysis[tp].image[contact]
-            undefined_label_neighbors = set( np.unique(img) ) - labelset
-            del img, dil, contact
 
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
             except: pass
             print "Done !"
 
+            boundingboxes = SpI_Analysis[tp].boundingbox(labels, real=False)
             if 'boundingbox' in spatio_temporal_properties :
                 print 'Extracting boundingbox...'
-                extend_vertex_property_from_dictionary(graph, 'boundingbox', SpI_Analysis[tp].boundingbox(labels,real=bbox_as_real), time_point=tp)
-                #~ graph._graph_property("units").update( {"boundingbox":(u'\xb5m'if bbox_as_real else 'voxels')} )
+                extend_vertex_property_from_dictionary(graph, 'boundingbox', boundingboxes, time_point=tp)
+                graph._graph_property["units"].update( {"boundingbox":'voxels'} )
 
 
             if 'volume' in spatio_temporal_properties and SpI_Analysis[tp].is3D():
                 print 'Computing volume property...'
                 extend_vertex_property_from_dictionary(graph, 'volume', SpI_Analysis[tp].volume(labels,real=property_as_real), time_point=tp)
-                #~ graph._graph_property("units").update( {"volume":(u'\xb5m\xb3'if property_as_real else 'voxels')} )
+                graph._graph_property["units"].update( {"volume":(u'\xb5m\xb3'if property_as_real else 'voxels')} )
 
 
-            barycenters = None
+            barycenters_voxel = None
             if 'barycenter' in spatio_temporal_properties :
                 print 'Computing barycenter property...'
                 barycenters = SpI_Analysis[tp].center_of_mass(labels, real=property_as_real)
                 extend_vertex_property_from_dictionary(graph, 'barycenter', barycenters, time_point=tp)
-                #~ graph._graph_property("units").update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
+                if property_as_real:
+                    barycenters_voxel = SpI_Analysis[tp].center_of_mass(labels, real=False)
+                    extend_vertex_property_from_dictionary(graph, 'barycenter_voxel', barycenters, time_point=tp)
+                else:
+                    barycenters_voxel = barycenters
+                    graph.add_vertex_property('barycenter_voxel', graph.vertex_property('barycenter'))
+                graph._graph_property["units"].update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
+                graph._graph_property["units"].update( {"barycenter_voxel":'voxels'} )
+
 
             if 'L1' in spatio_temporal_properties :
                 print 'Generating the list of cells belonging to the first layer...'
@@ -1086,10 +1218,13 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
 
             if 'inertia_axis' in spatio_temporal_properties :
                 print 'Computing inertia_axis property...'
-                inertia_axis, inertia_values = SpI_Analysis[tp].inertia_axis(labels,barycenters)
+                if barycenters_voxel is None: barycenters_voxel = SpI_Analysis[tp].center_of_mass(labels, real=False)
+                inertia_axis, inertia_values = SpI_Analysis[tp].inertia_axis(labels, barycenters_voxel)
                 extend_vertex_property_from_dictionary(graph, 'inertia_axis', inertia_axis, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'inertia_values', inertia_values, time_point=tp)
-
+                print "Searching normal axis to epidermis surface..."
+                surface_normal_axis = SpI_Analysis[tp].inertia_axis_normal_to_surface(labels, real=property_as_real, verbose=True)
+                extend_vertex_property_from_dictionary(graph, 'normal_inertia_axis_to_surface', surface_normal_axis, time_point=tp)
 
             if 'wall_surface' in spatio_temporal_properties :
                 print 'Computing wall_surface property...'
@@ -1097,14 +1232,16 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 for source,targets in neighborhood.iteritems():
                     if source in labelset :
                         filtered_edges[source] = [ target for target in targets if source < target and target in labelset ]
-                        unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background[tp]]
-                wall_surfaces = SpI_Analysis[tp].wall_surfaces(filtered_edges,real=property_as_real)
+                        unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background[tp]] # if target == background[tp] => epidermis wall !!
+                wall_surfaces = SpI_Analysis[tp].wall_surfaces(filtered_edges, real=property_as_real)
                 extend_edge_property_from_dictionary(graph, 'wall_surface', wall_surfaces, time_point=tp)
 
+                if undefined_cells_in_image:
+                    unlabelled_target.update( dict([ (k,0)  if not unlabelled_target.has_key(k) else (k,unlabelled_target[k]+[0]) for k in undefined_neighbors ]) )
                 unlabelled_wall_surface = dict( [(source, sum(SpI_Analysis[tp].wall_surfaces({source:unlabelled_target[source]},real=property_as_real).values())) for source in unlabelled_target] )
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_surface', unlabelled_wall_surface, time_point=tp)
-                #~ graph._graph_property("units").update( {"wall_surface":(u'\xb5m\xb2' if property_as_real else 'voxels')} )
-                #~ graph._graph_property("units").update( {"unlabelled_wall_surface":(u'\xb5m\xb2'if property_as_real else 'voxels')} )
+                graph._graph_property["units"].update( {"wall_surface":(u'\xb5m\xb2' if property_as_real else 'voxels')} )
+                graph._graph_property["units"].update( {"unlabelled_wall_surface":(u'\xb5m\xb2'if property_as_real else 'voxels')} )
 
 
             if 'epidermis_surface' in spatio_temporal_properties :
@@ -1119,28 +1256,38 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 epidermis_surfaces = SpI_Analysis[tp].cell_wall_surface(background[tp], list(background_neighbors), real=property_as_real)
                 epidermis_surfaces = dict([(not_background(indices),value) for indices,value in epidermis_surfaces.iteritems()])
                 extend_vertex_property_from_dictionary(graph,'epidermis_surface', epidermis_surfaces, time_point=tp)
-                #~ graph._graph_property("units").update( {"epidermis_surface":(u'\xb5m\xb2' if property_as_real else 'voxels')} )
+                graph._graph_property["units"].update( {"epidermis_surface":(u'\xb5m\xb2' if property_as_real else 'voxels')} )
 
 
             if 'projected_anticlinal_wall_median' in spatio_temporal_properties:
                 print 'Computing projected_anticlinal_wall_median property...'
                 dict_anticlinal_wall_voxels = SpI_Analysis[tp].wall_voxels_per_cells_pairs( SpI_Analysis[tp].layer1(), neighborhood, only_epidermis = True, ignore_background = True )
                 wall_median = find_wall_median_voxel(dict_anticlinal_wall_voxels, labels2exclude = [0])
-
                 extend_edge_property_from_dictionary(graph, 'projected_anticlinal_wall_median', wall_median, time_point=tp)
+                graph._graph_property["units"].update( {"projected_anticlinal_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
 
 
             if 'wall_median' in spatio_temporal_properties:
                 print 'Computing wall_median property...'
                 try: dict_wall_voxels
-                except: dict_wall_voxels = SpI_Analysis[tp].wall_voxels_per_cells_pairs(labels+[background[tp]], neighborhood.update({background[tp]:list(background_neighbors)}), ignore_background=False )
+                except:
+                    print "Extracting walls voxels..."
+                    # -- We start by creating all pairs of cells defining a wall we want to extract:
+                    cell_pairs = np.unique([(background[tp], nei) for nei in background_neighbors] + [(0, nei) for nei in undefined_neighbors] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in neighborhood.keys() for label_2 in neighborhood[label_1]])
+                    from openalea.image.algo.analysis import wall_voxels_between_two_cells
+                    dict_wall_voxels = {}; nb_pairs = len(cell_pairs); percent = 0
+                    for n,(label_1, label_2) in enumerate(cell_pairs):
+                        if n*100/nb_pairs>=percent: print "{}%...".format(percent),; percent += 10
+                        label_1, label_2 = sort_boundingbox(boundingboxes, label_1, label_2)
+                        dict_wall_voxels[min([label_1, label_2]), max([label_1, label_2])] = wall_voxels_between_two_cells(SpI_Analysis[tp].image, label_1, label_2, boundingboxes, verbose=False)
 
+                print "Searching for the median voxel of the walls..." 
                 wall_median = find_wall_median_voxel(dict_wall_voxels, labels2exclude = [])
                 edge_wall_median, unlabelled_wall_median, vertex_wall_median = {},{},{}
                 for label_1, label_2 in dict_wall_voxels.keys():
-                    if (label_1 == 0): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
+                    if (label_1 == 0): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
                         unlabelled_wall_median[label_2] = wall_median[(label_1, label_2)]
-                    elif (label_1 == 1): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
+                    elif (label_1 == 1): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
                         vertex_wall_median[label_2] = wall_median[(label_1, label_2)]
                     else:
                         edge_wall_median[(label_1, label_2)] = wall_median[(label_1, label_2)]
@@ -1148,6 +1295,9 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 extend_edge_property_from_dictionary(graph, 'wall_median', edge_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'epidermis_wall_median', vertex_wall_median, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_median', unlabelled_wall_median, time_point=tp)
+                graph._graph_property["units"].update( {"wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
+                graph._graph_property["units"].update( {"epidermis_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
+                graph._graph_property["units"].update( {"unlabelled_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
 
 
             if 'all_walls_orientation' in spatio_temporal_properties:
@@ -1225,3 +1375,21 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
         except: pass
 
     return graph
+
+
+def sort_boundingbox(boundingbox, label_1, label_2):
+    """
+    Use this to determine which label as the smaller boundingbox !
+    """
+    assert isinstance(boundingbox, dict)
+    if not boundingbox.has_key(label_1) and boundingbox.has_key(label_2):
+        return (label_2, label_1)
+    if boundingbox.has_key(label_1) and not boundingbox.has_key(label_2):
+        return (label_1, label_2)
+
+    bbox_1 = boundingbox[label_1]
+    bbox_2 = boundingbox[label_2]
+    vol_bbox_1 = (bbox_1[0].stop - bbox_1[0].start)*(bbox_1[1].stop - bbox_1[1].start)*(bbox_1[2].stop - bbox_1[2].start)
+    vol_bbox_2 = (bbox_2[0].stop - bbox_2[0].start)*(bbox_2[1].stop - bbox_2[1].start)*(bbox_2[2].stop - bbox_2[2].start)
+    
+    return (label_1, label_2) if vol_bbox_1<vol_bbox_2 else (label_2, label_1)
