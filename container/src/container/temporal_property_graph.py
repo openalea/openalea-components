@@ -231,7 +231,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         return iter(self.sibling(vid))    
 
-    def descendants(self, vids, n):
+    def descendants(self, vids, n = None):
         """ Return the 0, 1, ..., nth descendants of the vertex vid
         
         :Parameters:
@@ -245,18 +245,20 @@ class TemporalPropertyGraph(PropertyGraph):
         vids=self.__to_set(vids)
         if n==0 :
             return vids
-        if n==1 :
+        elif n==1 :
             for vid in vids:
                 neighbs |= (self.out_neighbors(vid, edge_type) | set([vid]))
             return neighbs
         else :
+            if n is None :
+                n = self.nb_time_points                
             for vid in vids :
                 neighbs |= (self.descendants(self.out_neighbors(vid, edge_type), n-1) | set([vid]))
                 if list(neighbs)==self._vertices.keys():
                     return neighbs
         return neighbs
 
-    def iter_descendant(self, vids, n):
+    def iter_descendant(self, vids, n = None):
         """ Return the 0, 1, ..., nth descendants of the vertex vid
         
         :Parameters:
@@ -267,7 +269,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         return iter(self.descendant(vids, n))
 
-    def ancestors(self, vids, n):
+    def ancestors(self, vids, n = None):
         """Return the 0, 1, ..., nth ancestors of the vertex vid
         
         :Parameters:
@@ -281,11 +283,13 @@ class TemporalPropertyGraph(PropertyGraph):
         vids=self.__to_set(vids)
         if n==0 :
             return vids
-        if n==1 :
+        elif n==1 :
             for vid in vids:
                 neighbs |= (self.in_neighbors(vid, edge_type) | set([vid]))
             return neighbs
         else :
+            if n is None:
+                n = self.nb_time_points
             for vid in vids :
                 neighbs |= (self.ancestors(self.in_neighbors(vid, edge_type), n-1) | set([vid]))
                 if list(neighbs)==self._vertices.keys():
