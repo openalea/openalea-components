@@ -133,6 +133,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         """todo"""
         try:
             del self._vertex_property[property_name]
+            del self._graph_property['units'][property_name]
         except KeyError:
             raise PropertyError("property %s is undefined on vertices"
                                 % property_name)
@@ -151,6 +152,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         """todo"""
         try:
             del self._edge_property[property_name]
+            del self._graph_property['units'][property_name]
         except KeyError:
             raise PropertyError("property %s is undefined on edges"
                                 % property_name)
@@ -168,6 +170,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         """todo"""
         try:
             del self._graph_property[property_name]
+            del self._graph_property['units'][property_name]
         except KeyError:
             raise PropertyError("property %s is undefined on graph"
                                 % property_name)

@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 #from scipy.sparse import csr_matrix
 from numpy.linalg import svd, lstsq
 
-def add_graph_vertex_property_from_dictionary(graph, name, dictionary):
+def add_graph_vertex_property_from_dictionary(graph, name, dictionary, unit=None):
     """
     Add a vertex property with name 'name' to the graph build from an image.
     The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels.
@@ -36,6 +36,8 @@ def add_graph_vertex_property_from_dictionary(graph, name, dictionary):
 
     graph.add_vertex_property(name)
     graph.vertex_property(name).update( dictionary )
+    if unit is not None:
+        graph._graph_property["units"].update({name:unit})
 
 
 def keys_to_mother_id(graph, data, rank = 1):
@@ -652,7 +654,7 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
         vertex_property = graph.vertex_property(vertex_property)
 
     if time_points is None:
-        time_points = xrange(graph.nb_time_points+1)
+        time_points = range(graph.nb_time_points+1)
     if vids is None:
         vids = [vid for vid in graph.vertices() if vid in vertex_property]
 
@@ -660,9 +662,14 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     if 'lineaged' in kwargs: ppt_kwargs.update({'lineaged':kwargs['lineaged']})
     if 'as_parent' in kwargs: ppt_kwargs.update({'as_parent':kwargs['as_parent']})
     if 'as_children' in kwargs: ppt_kwargs.update({'as_children':kwargs['as_children']})
-    data = []
+    data = []; tmp_tp=time_points
     for tp in time_points:
-        data.append(time_point_property(graph, tp, vertex_property,**ppt_kwargs).values())
+        tmp = time_point_property(graph, tp, vertex_property,**ppt_kwargs).values() 
+        if tmp != []:
+            data.append(tmp)
+        else:
+            tmp_tp.remove(tp)
+    time_points = tmp_tp
 
     h_kwargs= {}
     if 'bins' in kwargs: h_kwargs.update({'bins':kwargs['bins']})
@@ -671,7 +678,7 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     if 'histtype' in kwargs: h_kwargs.update({'histtype':kwargs['histtype']})
 
     fig = plt.figure(figsize=[14,8], dpi=80)
-    fig.subplots_adjust(left=0.04, right=0.97, top=0.93)
+    fig.add_subplot(211)
 
     n, bins, patches = plt.hist(data, label = ["time point #{}".format(tp) for tp in time_points], rwidth=1., **h_kwargs)
     if kwargs.has_key('title'):
@@ -681,13 +688,20 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     if kwargs.has_key('xlabel'):
         plt.xlabel(kwargs['xlabel'])
     elif property_name is not None:
-        plt.xlabel(property_name)
+        plt.xlabel(property_name+" ("+graph.graph_property("units")[property_name]+")")
     if h_kwargs.has_key('normed') and h_kwargs['normed']:
         plt.ylabel("Relative Frequency")
     elif h_kwargs.has_key('normed') and not h_kwargs['normed']:
         plt.ylabel("Frequency")
     plt.legend()
 
+    bp = fig.add_subplot(212)
+    bp.boxplot(data, vert=0, positions=time_points)
+    if h_kwargs.has_key('range'):
+        bp.set_xlim(h_kwargs['range'][0], h_kwargs['range'][1])
+    bp.set_ylabel('Time points')
+    plt.tight_layout()
+    
     return n, bins, patches
 
 
@@ -908,9 +922,15 @@ def __strain_parameters2(func):
             assert 'daughters_fused_epidermis_wall_median' in graph.vertex_property_names()
             assert 'L1' in graph.vertex_property_names()
         else:
-            assert '3D_landwarks' in graph.edge_property_names()
+            assert '3D_landmarks' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
-            assert 'daughters_fused_wall_median' in graph.vertex_property_names()
+            assert 'unlabelled_wall_median' in graph.vertex_property_names()
+            assert 'daughters_fused_epidermis_wall_median' in graph.vertex_property_names()
+            assert 'daughters_fused_unlabelled_wall_median' in graph.vertex_property_names()
+            #~ assert 'daughters_fused_wall_median' in graph.vertex_property_names()
+            unlabelled_data = False
+            try: graph.vertex_property('unlabelled_wall_median')
+            except: unlabelled_data = True
 
         # -- If the vid is not associated through time it's not possible to compute the strain.
         if vids is None:
@@ -919,31 +939,40 @@ def __strain_parameters2(func):
             assert vids in graph.lineaged_vertex(fully_lineaged=False)
             vids = [vids]
 
-        stretch_mat = {}
-        missing_epidermis_wall_median = []
+        N = len(vids); percent=0
+        stretch_mat = {}; missing_epidermis_wall_median = []
         for n,vid in enumerate(vids):
-            if verbose and n%10==0: print n, " / ", len(vids)
+            if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
             spatial_edges = list(graph.edges( vid, 's' ))
-            # -- We recover the landmarks associated to each cell:
+            # -- We recover the landmarks associated to each vertex:
             landmarks_t1, landmarks_t2 = [], []
+            # - We use the epidermis wall median as an extra landmark if the vertex is in the L1:
+            ep_wm = graph.vertex_property('epidermis_wall_median')
+            daughters_fused_ep_wm = graph.vertex_property('daughters_fused_epidermis_wall_median')
+            if graph.vertex_property('L1').has_key(vid):
+                if ep_wm.has_key(vid) and daughters_fused_ep_wm.has_key(vid):
+                    landmarks_t1.append(ep_wm[vid])
+                    landmarks_t2.append(daughters_fused_ep_wm[vid])
+                else:
+                    missing_epidermis_wall_median.append(vid)
             if use_projected_anticlinal_wall:
                 ppt = 'epidermis_2D_landmarks'
-                # - We use the epidermis wall median as an extra landmark:
-                try:
-                    landmarks_t1.append(graph.vertex_property('epidermis_wall_median')[vid])
-                    landmarks_t2.append(graph.vertex_property('daughters_fused_epidermis_wall_median')[vid])
-                except:
-                    missing_epidermis_wall_median.append(vid)
-                    pass
             else:
                 ppt = '3D_landmarks'
-
+                unlab_wm = graph.vertex_property('unlabelled_wall_median')
+                fused_unlab_wm = graph.vertex_property('daughters_fused_unlabelled_wall_median')
+                if unlabelled_data and unlab_wm.has_key(vid) and fused_unlab_wm.has_key(vid):
+                    landmarks_t1.append(unlab_wm[vid])
+                    landmarks_t2.append(fused_unlab_wm[vid])
+ 
             # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
             nb_missing_data = 0
             for eid in spatial_edges:
-                nei = graph.edge_vertices(eid)[0] if graph.edge_vertices(eid)[0] != vid else graph.edge_vertices(eid)[1]
-                if use_projected_anticlinal_wall and nei not in graph.vertex_property('L1'):
-                    continue # no need to worry, this is not the droids you're looking for !
+                # - If the spatial edge we are looking at is pointing to a target outside the L1, we do not want to use it for surfacic 3D:
+                target = graph.edge_vertices(eid)[0] if graph.edge_vertices(eid)[0] != vid else graph.edge_vertices(eid)[1]
+                if use_projected_anticlinal_wall and target not in graph.vertex_property('L1'):
+                    continue # no need to worry, theese are not the droids you're looking for !
+                # - Now we add medians between used vertex as landmarks:
                 if graph.edge_property(ppt).has_key(eid):
                     landmarks_t1.append(graph.edge_property(ppt)[eid][0])
                     landmarks_t2.append(graph.edge_property(ppt)[eid][1])
@@ -968,9 +997,9 @@ def __strain_parameters2(func):
             stretch_mat_daughters={}
             print "You have asked for labels @ t_n+1"
             for vid in stretch_mat:
-                vid_descendants = graph.descendants(vid ,1)-graph.descendants(vid,0)
+                vid_descendants = graph.descendants(vid,1) - graph.descendants(vid,0)
                 for id_descendant in vid_descendants:
-                    stretch_mat_daughters[id_descendant]=stretch_mat[vid]
+                    stretch_mat_daughters[id_descendant] = stretch_mat[vid]
             return stretch_mat_daughters
 
     return  wrapped_function

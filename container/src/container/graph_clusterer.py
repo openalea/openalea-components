@@ -284,6 +284,7 @@ class Clusterer:
         self._nb_clusters = None
         self._clustering = None
 
+
     def add_vertex_variable(self, var_name, var_type, var_id = None):
         """
         Add a distance matrix related to vertices properties form the graph.
@@ -322,6 +323,7 @@ class Clusterer:
             self._distance_matrix_info[var_id[n]] = ('s', var_type[n].lower())
 
         return var_id
+
 
     def add_temporal_variable(self, var_name, var_type, var_id = None):
         """
@@ -369,6 +371,7 @@ class Clusterer:
             self._distance_matrix_info[var_id[n]] = ('t', var_type[n].lower())
 
         return var_id
+
 
     def add_topological_distance_matrix(self, force=False):
         """
