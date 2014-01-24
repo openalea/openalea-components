@@ -41,6 +41,9 @@ except :
     warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
     pass
 
+from openalea.plantgl.math import Vector3
+from openalea.plantgl.algo import approx_pointset_median, pointset_median
+
 
 def dilation(slices):
     """
@@ -97,6 +100,24 @@ def hollow_out_cells(image, background, remove_background = True, verbose = True
     return m
 
 
+def sort_boundingbox(boundingbox, label_1, label_2):
+    """
+    Use this to determine which label as the smaller boundingbox !
+    """
+    assert isinstance(boundingbox, dict)
+    if not boundingbox.has_key(label_1) and boundingbox.has_key(label_2):
+        return (label_2, label_1)
+    if boundingbox.has_key(label_1) and not boundingbox.has_key(label_2):
+        return (label_1, label_2)
+
+    bbox_1 = boundingbox[label_1]
+    bbox_2 = boundingbox[label_2]
+    vol_bbox_1 = (bbox_1[0].stop - bbox_1[0].start)*(bbox_1[1].stop - bbox_1[1].start)*(bbox_1[2].stop - bbox_1[2].start)
+    vol_bbox_2 = (bbox_2[0].stop - bbox_2[0].start)*(bbox_2[1].stop - bbox_2[1].start)*(bbox_2[2].stop - bbox_2[2].start)
+    
+    return (label_1, label_2) if vol_bbox_1<vol_bbox_2 else (label_2, label_1)
+
+
 def wall_voxels_between_two_cells(image, label_1, label_2, bbox = None, verbose = False):
     """
     Return the voxels coordinates defining the contact wall between two labels.
@@ -111,15 +132,19 @@ def wall_voxels_between_two_cells(image, label_1, label_2, bbox = None, verbose 
      - xyz 3xN array.
     """
 
-    try:
+    if bbox is not None:
+        label_1, label_2 = sort_boundingbox(bbox, label_1, label_2)
         boundingbox = bbox[label_1]
-    except:
-        boundingbox = bbox[label_2]
+        dilated_bbox = dilation( boundingbox )
+        dilated_bbox_img = image[dilated_bbox]
     else:
-        if verbose: warnings.warn("No boundingbox for labels: {} & {} !".format(label_1, label_2))
-
-    dilated_bbox = dilation( boundingbox )
-    dilated_bbox_img = image[dilated_bbox]
+        try:
+            boundingbox = nd.find_objects(image, max_label=max([label_1, label_2]))
+            boundingbox = {label_1:boundingbox[label_1-1], label_2:boundingbox[label_2-1]}
+            label_1, label_2 = sort_boundingbox(boundingbox, label_1, label_2)
+            boundingbox = bbox[label_1]
+        except:
+            dilated_bbox_img = image
 
     mask_img_1 = (dilated_bbox_img == label_1)
     mask_img_2 = (dilated_bbox_img == label_2)
@@ -129,7 +154,10 @@ def wall_voxels_between_two_cells(image, label_1, label_2, bbox = None, verbose 
     dil_2 = nd.binary_dilation(mask_img_2, structure=struct)
     x,y,z = np.where( ( (dil_1 & mask_img_2) | (dil_2 & mask_img_1) ) == 1 )
 
-    return np.array( (x+dilated_bbox[0].start, y+dilated_bbox[1].start, z+dilated_bbox[2].start) )
+    if bbox is not None:
+        return np.array( (x+dilated_bbox[0].start, y+dilated_bbox[1].start, z+dilated_bbox[2].start) )
+    else:
+        return np.array( (x, y, z) )
 
 
 def walls_voxels_per_cell(image, label_1, bbox = None, neighbors = None, neighbors2ignore = [], background = None, try_to_use_neighbors2ignore = False, verbose = False ):
@@ -1063,20 +1091,13 @@ class AbstractSpatialImageAnalysis(object):
                 proj_points = np.dot(centered_point_set_3D.T, np.dot(V[:2,:].T,V[:2,:]))
                 x,y,z = proj_points[:,0]+x_bar,proj_points[:,1]+y_bar,proj_points[:,2]+z_bar
             ## We need to find an origin: the closest point in set set from the geometric median
-            # compute geometric median:
-            try:
+            if dict_coord_points_ori is not None and dict_coord_points_ori.has_key((label_1, label_2)):
                 closest_voxel_coords = dict_coord_points_ori[(label_1, label_2)]
-            except:
-                neighborhood_origin = geometric_median( np.array([list(x),list(y),list(z)]) )
-                neighborhood_origin = integers(neighborhood_origin)
-                # closest points:
-                pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
-                closest_voxel_coords = closest_from_A(neighborhood_origin, pts)
-                id_min_dist = pts.index(closest_voxel_coords)
             else:
-                pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
-                id_min_dist = pts.index(closest_voxel_coords)
+                closest_voxel_coords = find_wall_median_voxel( {(label_1, label_2):dict_wall_voxels[(label_1, label_2)]}, verbose=False)
 
+            pts = [tuple([int(x[i]),int(y[i]),int(z[i])]) for i in xrange(len(x))]
+            id_min_dist = pts.index(closest_voxel_coords)
             ## We can now compute the curvature values, direction, normal and origin (Monge):
             pc = principal_curvatures(pts, id_min_dist, range(len(x)), fitting_degree, 2)
             pc_values[(label_1, label_2)] = [pc[1][1], pc[2][1]]
@@ -1084,7 +1105,10 @@ class AbstractSpatialImageAnalysis(object):
             pc_directions[(label_1, label_2)] = [pc[1][0], pc[2][0]]
             pc_origin[(label_1, label_2)] = pc[0]
 
-        return pc_values, pc_normal, pc_directions, pc_origin
+        if len(dict_wall_voxels)==1:
+            return pc_values.values()[0], pc_normal.values()[0], pc_directions.values()[0], pc_origin.values()[0]
+        else:
+            return pc_values, pc_normal, pc_directions, pc_origin
 
 
     def inertia_axis_normal_to_surface(self, labels=None, inertia_axis=None, real=False, verbose=True):
@@ -1843,6 +1867,32 @@ def vector_correlation(vect1,vect2):
         vect2 = vect2/norm(Vector3(vect2))
 
     return np.round(np.dot(vect1,vect2),3)
+
+
+def find_wall_median_voxel(dict_wall_voxels, labels2exclude = [], verbose = True):
+    """
+    """
+    if isinstance(labels2exclude,int):
+        labels2exclude = [labels2exclude]
+
+    wall_median = {}; N = len(dict_wall_voxels); percent = 0
+    for n,(label_1, label_2) in enumerate(dict_wall_voxels):
+        if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+        if label_1 in labels2exclude or label_2 in labels2exclude:
+            continue
+        xyz = np.array(dict_wall_voxels[(label_1, label_2)]).T
+        xyz = [Vector3(list([float(i) for i in k])) for k in xyz]
+        # compute geometric median:
+        if len(xyz) <= 100:
+            median_vox_id = pointset_median( xyz )
+        else:
+            median_vox_id = approx_pointset_median( xyz )
+        wall_median[(label_1, label_2)] = xyz[median_vox_id]
+
+    if len(dict_wall_voxels) == 1:
+        return wall_median.values()[0]
+    else:
+        return wall_median
 
 
 def geometric_median(X, numIter = 200):

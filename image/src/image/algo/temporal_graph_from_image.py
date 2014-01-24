@@ -22,7 +22,7 @@ import copy as cp
 from IPython import embed
 
 from openalea.image.serial.basics import SpatialImage, imread
-from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT
+from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT, find_wall_median_voxel, sort_boundingbox
 from openalea.image.spatial_image import is2D
 from openalea.container import PropertyGraph
 from openalea.container import TemporalPropertyGraph
@@ -236,29 +236,6 @@ def generate_graph_topology(labels, neighborhood):
 
     return graph, label2vertex, edges
 
-def find_wall_median_voxel(dict_wall_voxels, labels2exclude = []):
-    """
-    """
-    if isinstance(labels2exclude,int):
-        labels2exclude = [labels2exclude]
-
-    wall_median = {}; N = len(dict_wall_voxels); percent = 0
-    for n,(label_1, label_2) in enumerate(dict_wall_voxels):
-        if n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
-        if label_1 in labels2exclude or label_2 in labels2exclude:
-            continue
-        from openalea.plantgl.math import Vector3
-        xyz = np.array(dict_wall_voxels[(label_1, label_2)]).T
-        xyz = [Vector3(list([float(i) for i in k])) for k in xyz]
-        # compute geometric median:
-        from openalea.plantgl.algo import approx_pointset_median, pointset_median
-        if len(xyz) <= 100:
-            median_vox_id = pointset_median( xyz )
-        else:
-            median_vox_id = approx_pointset_median( xyz )
-        wall_median[(label_1, label_2)] = xyz[median_vox_id]
-
-    return wall_median
 
 #~ spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis']
 spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
@@ -474,10 +451,10 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
         min_contact_surface = None
         real_surface = property_as_real
     # - Declare available properties and start computation if asked:
-    available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall_orientation', 'fused_daughters_inertia_axis']
+    available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall', 'division_wall_orientation', 'projected_division_wall_orientation', 'fused_daughters_inertia_axis']
     properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
-        
+
         fused_image_analysis, neighborhood = {}, {}
         if 'epidermis_2D_landmarks' in spatio_temporal_properties:
             assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
@@ -534,6 +511,10 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             print "Done\n"
 
         if '3D_landmarks' in spatio_temporal_properties:
+            """
+            NOT WORKING YET !!!!!!!
+            """
+            pass
             print "Computing 3D_landmarks..."
             assert 'wall_median' in graph.edge_property_names()
             assert 'unlabelled_wall_median' in graph.vertex_property_names()
@@ -641,21 +622,85 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
 
             print "Done\n"
 
+
+        if 'division_wall' in spatio_temporal_properties:
+            print 'Detecting division_wall property...'
+            div_walls = dict([ (eid, True) for eid in graph.edges() if graph.sibling(graph.edge_vertices(eid)[1]) is not None and graph.edge_vertices(eid)[0] in graph.sibling(graph.edge_vertices(eid)[1])])
+            add_edge_property_from_eid_dictionary(graph, 'division_wall', div_walls)
+
+
         if 'division_wall_orientation' in spatio_temporal_properties:
+            from openalea.image.algo.analysis import wall_voxels_between_two_cells
+            pc_values, pc_normal, pc_directions, pc_origin = {}, {}, {}, {}
+            if 'all_walls_orientation' in graph.edge_properties():
+                print 'Retreiving division_wall_orientation property from previously computed all_walls_orientation property...'
+                for eid in graph.edge_property('division_wall'):
+                    pc_values[eid] = graph.edge_property('wall_principal_curvature_values')[eid]
+                    pc_normal[eid] = graph.edge_property('wall_principal_curvature_normal')[eid]
+                    pc_directions[eid] = graph.edge_property('wall_principal_curvature_directions')[eid]
+                    pc_origin[eid] = graph.edge_property('wall_principal_curvature_origin')[eid]
+            else:
+                print 'Computing division_wall_orientation property...'
+                div_wall_voxels = {}
+                for eid in graph.edge_property('division_wall'):
+                    vid_1, vid_2 = graph.edge_vertices(eid)
+                    vid_1, vid_2 = min([vid_1, vid_2]), max([vid_1, vid_2])
+                    if (vid_1, vid_2) in div_wall_voxels.keys():
+                        continue # skip the rest of the loop
+                    tp = graph.vertex_property('index')[vid_1]
+                    label_1, label_2 = translate_ids_Graph2Image(graph, [vid_1, vid_2])
+                    label_1, label_2 = sort_boundingbox(SpI_Analysis[tp].boundingbox([label_1, label_2]), label_1, label_2)
+                    div_wall_voxels[(vid_1, vid_2)] = wall_voxels_between_two_cells(SpI_Analysis[tp].image, label_1, label_2, SpI_Analysis[tp].boundingbox([label_1, label_2]))
+
+                    if 'wall_median' in graph.edge_properties() and graph.edge_property('wall_median').has_key(eid):
+                        median = {(label_1, label_2):graph.edge_property('wall_median')[eid]}
+                        pc_values[eid], pc_normal[eid], pc_directions[eid], pc_origin[eid] = SpI_Analysis[tp].wall_orientation( {(label_1, label_2):div_wall_voxels[(vid_1, vid_2)]}, fitting_degree = 2, plane_projection = False, dict_coord_points_ori = median )
+                    else:
+                        pc_values[eid], pc_normal[eid], pc_directions[eid], pc_origin[eid] = SpI_Analysis[tp].wall_orientation( {(label_1, label_2):div_wall_voxels[(vid_1, vid_2)]}, fitting_degree = 2, plane_projection = False )
+
+            add_edge_property_from_eid_dictionary(graph, 'division_wall_principal_curvature_values', pc_values)
+            add_edge_property_from_eid_dictionary(graph, 'division_wall_principal_curvature_normal', pc_normal)
+            add_edge_property_from_eid_dictionary(graph, 'division_wall_principal_curvature_directions', pc_directions)
+            if not 'wall_median' in graph.edge_properties():
+                add_edge_property_from_eid_dictionary(graph, 'division_wall_principal_curvature_origin', pc_origin)
+
+
+        if 'projected_division_wall_orientation' in spatio_temporal_properties:
+            """
+            NOT WORKING YET !!!!!!!
+            """
             pass
+            from openalea.image.algo.analysis import wall_voxels_between_two_cells
+            print 'Computing division_wall_orientation property...'
+            pc_values, pc_normal, pc_directions, pc_origin = {}, {}, {}, {}
+            projected_div_wall_voxels = {}
+            for eid in graph.edge_property('division_wall'):
+                vid_1, vid_2 = graph.edge_vertices(eid)
+                vid_1, vid_2 = min([vid_1, vid_2]), max([vid_1, vid_2])
+                if (vid_1, vid_2) in projected_div_wall_voxels.keys():
+                    continue # skip the rest of the loop
+                tp = graph.vertex_property('index')[vid_1]
+                label_1, label_2 = translate_ids_Graph2Image(graph, [vid_1, vid_2])
+                label_1, label_2 = sort_boundingbox(SpI_Analysis[tp].boundingbox([label_1, label_2]), label_1, label_2)
+                projected_div_wall_voxels[(vid_1, vid_2)] = wall_voxels_between_two_cells(SpI_Analysis[tp].layer1(), label_1, label_2, SpI_Analysis[tp].boundingbox([label_1, label_2]))
+
+            if 'projected_anticlinal_wall_median' in graph.edge_properties() and graph.edge_property('projected_anticlinal_wall_median').has_key(eid):
+                projected_anticlinal_median = {(label_1, label_2):graph.edge_property('projected_anticlinal_wall_median')[eid]}
+                pc_values[eid], pc_normal[eid], pc_directions[eid], pc_origin[eid] = SpI_Analysis[tp].wall_orientation( {(label_1, label_2):projected_div_wall_voxels[(vid_1, vid_2)]}, fitting_degree = 2, plane_projection = True, dict_coord_points_ori = projected_anticlinal_median )
+            else:
+                pc_values[eid], pc_normal[eid], pc_directions[eid], pc_origin[eid] = SpI_Analysis[tp].wall_orientation( {(label_1, label_2):projected_div_wall_voxels[(vid_1, vid_2)]}, fitting_degree = 2, plane_projection = True )
+
+            add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_values', pc_values)
+            add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_normal', pc_normal)
+            add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_directions', pc_directions)
+            if not 'projected_anticlinal_wall_median' in graph.edge_properties():
+                add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_origin', pc_origin)
+
 
         if 'fused_daughters_inertia_axis' in spatio_temporal_properties:
             # Try to use 'fused_image_analysis' dict else compute it:
             if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
-                for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
-                    ref_tp = tp_2fuse-1
-                    print "Fusing daughters of  t{} in image t{}".format(ref_tp, tp_2fuse)
-                    ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
-                    ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
-                    # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
-                    fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
-                    # - Creating a `SpatialImageAnalysis`:
-                    fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+                fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis, background)
 
             print 'Computing fused_daughters_inertia_axis property...'
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
@@ -669,6 +714,20 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
 
     return graph
 
+def create_fused_image_analysis(graph, SpI_Analysis, background):
+    """
+    """
+    for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
+        ref_tp = tp_2fuse-1
+        print "Fusing daughters of  t{} in image t{}".format(ref_tp, tp_2fuse)
+        ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
+        ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+        # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
+        fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
+        # - Creating a `SpatialImageAnalysis`:
+        fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
+
+    return fused_image_analysis
 
 def graph_from_image2D(image, labels, background, spatio_temporal_properties,
                      property_as_real, ignore_cells_at_stack_margins, min_contact_surface):
@@ -807,11 +866,6 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     else:
         vids = tpg.lineaged_vertex(fully_lineaged=False)
 
-    from openalea.container.temporal_graph_analysis import translate_keys_Graph2Image
-    for n,spia in enumerate(analysis):
-        labels = translate_ids_Graph2Image(graph, [vid for vid in vids if tpg.vertex_property('index')==n])
-        spia.add2ignoredlabels(list( set(spia.labels()) - set(labels) - set(spia._background) ))
-
     tpg = _spatial_properties_from_images(tpg, analysis, vids, background,
          spatio_temporal_properties, property_as_real)
 
@@ -842,6 +896,10 @@ def check_properties(graph, spatio_temporal_properties):
         if 'L1' not in graph.vertex_properties() and 'L1' not in spatio_temporal_properties:
             spatio_temporal_properties.append('L1')
 
+    if 'division_wall_orientation' in spatio_temporal_properties or 'projected_division_wall_orientation' in spatio_temporal_properties:
+        if 'division_wall' not in graph.edge_properties() and 'division_wall' not in spatio_temporal_properties:
+            spatio_temporal_properties.append('division_wall')
+
     if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
         index_radius = spatio_temporal_properties.index('epidermis_local_principal_curvature')+1
         if isinstance(spatio_temporal_properties[index_radius],int):
@@ -861,6 +919,7 @@ def check_properties(graph, spatio_temporal_properties):
             graph.graph_property('radius_local_principal_curvature_estimation').extend(radius_2_compute)
             graph.add_graph_property('radius_2_compute',radius_2_compute)
 
+    print "Selected `spatio_temporal_properties`: {}".format(spatio_temporal_properties)
     return spatio_temporal_properties
 
 def label2vertex_map(graph, time_point = None):
@@ -992,6 +1051,17 @@ def add_edge_property_from_dictionary(graph, name, dictionary, mlabelpair2edge =
 
     graph.add_edge_property(name)
     graph.edge_property(name).update( dict([(mlabelpair2edge[k], dictionary[k]) for k in dictionary]) )
+
+def add_edge_property_from_eid_dictionary(graph, name, dictionary):
+    """
+        Add an edge property with name 'name' to the graph build from an image.
+        The values of the property are given as by a dictionary where keys are vertex labels.
+    """
+    if name in graph.edge_properties():
+        raise ValueError("Existing edge property '{}'".format(name))
+
+    graph.add_edge_property(name)
+    graph.edge_property(name).update(dictionary)
 
 def add_edge_property_from_label_and_value(graph, name, label_pairs, property_values, mlabelpair2edge = None):
     """
@@ -1377,19 +1447,3 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
     return graph
 
 
-def sort_boundingbox(boundingbox, label_1, label_2):
-    """
-    Use this to determine which label as the smaller boundingbox !
-    """
-    assert isinstance(boundingbox, dict)
-    if not boundingbox.has_key(label_1) and boundingbox.has_key(label_2):
-        return (label_2, label_1)
-    if boundingbox.has_key(label_1) and not boundingbox.has_key(label_2):
-        return (label_1, label_2)
-
-    bbox_1 = boundingbox[label_1]
-    bbox_2 = boundingbox[label_2]
-    vol_bbox_1 = (bbox_1[0].stop - bbox_1[0].start)*(bbox_1[1].stop - bbox_1[1].start)*(bbox_1[2].stop - bbox_1[2].start)
-    vol_bbox_2 = (bbox_2[0].stop - bbox_2[0].start)*(bbox_2[1].stop - bbox_2[1].start)*(bbox_2[2].stop - bbox_2[2].start)
-    
-    return (label_1, label_2) if vol_bbox_1<vol_bbox_2 else (label_2, label_1)
