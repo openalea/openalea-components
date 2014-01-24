@@ -94,8 +94,15 @@ def tpg2mtg(graph, properties=['index'], root_ids=None, mtg = None, binary_sorte
     
     return mtg
 
+def expert_sorter(graph, chtcids):
+    """
+    """
+    assert 'sub_lineage' in graph.graph_properties()
+    parent = graph.parent(chtcids[0])
+    return graph.graph_property('sub_lineage')[parent]
 
-def binary_sorter(graph, chtcids):
+
+def auto_binary_sorter(graph, chtcids):
     """
     """
     # !!!!!!!!!!!!!!!!! the latest binary sibling should have the closest ppt !!!!!!!!!!!!!!!!!

@@ -121,14 +121,49 @@ class TemporalPropertyGraph(PropertyGraph):
         for old_vid, vid in old_to_new_vids.iteritems():
             old_vertex_labels[vid] = old_vid
             indices[vid] = current_index
+
+        def use_sub_lineage(mother, daughters, on_ids_source, on_ids_target):
+            found_sub_lineage=False; tmp_daughters = []
+            for d in daughters:
+                if iterable(d):
+                    found_sub_lineage=True; tmp_d = []
+                    if "sub_lineage" not in self.graph_properties():
+                        self.add_graph_property("sub_lineage")
+                    for sub_d in d:
+                        if iterable(sub_d):
+                            use_sub_lineage(mother, sub_d, on_ids_source, on_ids_target)
+                        else:
+                            tmp_d.append(on_ids_target[0][sub_d])
+                    tmp_daughters.append(tmp_d)
+                else:
+                    tmp_daughters.append(on_ids_target[0][d])
+            if found_sub_lineage:
+                self.graph_property("sub_lineage").update({on_ids_source[0][mother]:tmp_daughters})
+
+        def flatten(l):
+            import collections
+            for el in l:
+                if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
+                    for sub in flatten(el):
+                        yield sub
+                else:
+                    yield el
+
         if mapping:
+            unused_lineage = {}
             on_ids_source, on_ids_target = self._old_to_new_ids[-2:]
             for k, l in mapping.iteritems():
+                l_flat = list(flatten(l)) # flatten the lineage after saving sub_lineage if present
                 # Check if the mother cell and ALL daugthers are present in their respective graph : WE DON'T WANT TO CREATE A PARTIAL LINEAGE !!!!
-                if on_ids_source[0].has_key(k) and ( sum([on_ids_target[0].has_key(v) for v in l]) == len(l) ):
-                    for v in l:
+                if on_ids_source[0].has_key(k) and ( sum([on_ids_target[0].has_key(v) for v in l_flat]) == len(l_flat) ):
+                    use_sub_lineage(k, l, on_ids_source, on_ids_target)
+                    for v in l_flat:
                         eid = self.add_edge(on_ids_source[0][k], on_ids_target[0][v])
                         edge_types[eid] = self.TEMPORAL
+                else:
+                    unused_lineage.update({k:l})
+            if unused_lineage != {}:
+                print "Un-used lineage info between t{} and t{}: {}".format(current_index-1,current_index,unused_lineage)
 
         return relabel_ids
 
@@ -389,3 +424,9 @@ class TemporalPropertyGraph(PropertyGraph):
             return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in translate_ids_Image2Graph(self,image_labels2keep,time_point))) 
 
 
+def iterable(obj):
+    try :
+        iter(obj)
+        return True
+    except TypeError,te:
+        return False
