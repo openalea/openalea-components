@@ -98,7 +98,7 @@ def expert_sorter(graph, chtcids):
     """
     """
     assert 'sub_lineage' in graph.graph_properties()
-    parent = graph.parent(chtcids[0])
+    parent = list(graph.parent(list(chtcids)[0]))[0]
     return graph.graph_property('sub_lineage')[parent]
 
 

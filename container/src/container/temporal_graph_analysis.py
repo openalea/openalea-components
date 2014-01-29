@@ -22,6 +22,7 @@ import numpy as np
 import copy
 #from interface.property_graph import IPropertyGraph, PropertyError
 import matplotlib.pyplot as plt
+import math
 
 #from scipy.sparse import csr_matrix
 from numpy.linalg import svd, lstsq
@@ -465,16 +466,42 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
 
 
-def shape_anisotropy(graph):
+def shape_anisotropy_2D(graph):
     """
     Sub-function computing the shape anisotropy of one cell using.
 
     :Parameters:
      - 'graph' (TGP) - a TPG.
     :Return:
+     - shape_anisotropy (dict) .
+    """
+    assert len(graph.vertex_property('inertia_values').values()[0])==2
+    return dict([ (vid, (inertia[0]-inertia[1])/(inertia[0]+inertia[1])) for vid, inertia in graph.vertex_property('inertia_values').iteritems() ])
+
+
+def fractional_anisotropy(eigenvalues):
+    """
+    Compute fractional anisotropy of a tensor considered to represent a diffusion ellipsoid.
+    $$    \text{FA} = \sqrt{\frac{3}{2}} \frac{\sqrt{(\lambda_1 - \hat{\lambda})^2 + (\lambda_2 - \hat{\lambda})^2 + (\lambda_3 - \hat{\lambda})^2}}{\sqrt{\lambda_1^2 + \lambda_2^2 + \lambda_3^2}}$$
+    with the trace $\hat{\lambda} = (\lambda_1 + \lambda_2 + \lambda_3)/3$
+    """
+    assert len(eigenvalues)==3
+    l1, l2, l3 = eigenvalues
+    if (l1+l2+l3) == 0: return None
+    l = (l1+l2+l3)/3.
+    return math.sqrt(3./2.) * (math.sqrt( (l1-l)**2+(l2-l)**2+(l3-l)**2 )/math.sqrt(l1**2+l2**2+l3**2))
+
+
+def shape_anisotropy_3D(graph):
+    """
+    Sub-function computing the shape anisotropy of one cell using the Fractional anisotropy scalar
+
+    :Parameters:
+     - 'graph' (TGP) - a TPG.
+    :Return:
      - shape_anisotropy = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
     """
-    return dict([ (vid, (inertia[0]-inertia[1])/(inertia[0]+inertia[1])) for vid, inertia in graph.vertex_property('inertia_values').iteritems() ])
+    return dict([ (vid, fractional_anisotropy(inertia)) for vid, inertia in graph.vertex_property('inertia_values').iteritems() ])
 
 
 def epidermis_wall_gaussian_curvature(graph):
@@ -494,6 +521,16 @@ def epidermis_local_gaussian_curvature(graph, radius):
     """
     #assert radius in graph.graph_property('radius_local_principal_curvature_estimation')
     return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
+
+
+def epidermis_local_curvature_ratio(graph, radius):
+    """
+    Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
+    The principal curvature values saved there are based on voxels present in a within a certain radius around the wall median.
+    Gaussian curvature is the product of principal curvatures 'k1*k2'.
+    """
+    #assert radius in graph.graph_property('radius_local_principal_curvature_estimation')
+    return dict([ (vid, curv_values[0] / curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
 
 
 def division_rate(graph, rank=1, parent_ids = False):
@@ -980,7 +1017,7 @@ def __strain_parameters2(func):
                     nb_missing_data+=1
 
             if nb_missing_data != 0:
-                warnings.warn("Missing {} landmark{} for the vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
+                warnings.warn("Missing {} landmark{} for the t_n vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
             if nb_missing_data == 0:
                 assert len(landmarks_t1) == len(landmarks_t2)
                 N = len(landmarks_t1)
