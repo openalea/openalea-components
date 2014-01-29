@@ -585,10 +585,14 @@ class AbstractSpatialImageAnalysis(object):
             if self._center_of_mass.has_key(l):
                 center[l] = self._center_of_mass[l]
             else:
-                slices = self.boundingbox(l,real=False)
-                crop_im = self.image[slices]
-                c_o_m = np.array(nd.center_of_mass(crop_im, crop_im, index=l))
-                c_o_m = [c_o_m[i] + slice.start for i,slice in enumerate(slices)]
+                try:
+                    slices = self.boundingbox(l,real=False)
+                    crop_im = self.image[slices]
+                    c_o_m = np.array(nd.center_of_mass(crop_im, crop_im, index=l))
+                    c_o_m = [c_o_m[i] + slice.start for i,slice in enumerate(slices)]
+                except:
+                    crop_im = self.image
+                    c_o_m = np.array(nd.center_of_mass(crop_im, crop_im, index=l))
                 self._center_of_mass[l] = c_o_m
                 center[l] = c_o_m
 
@@ -1306,8 +1310,8 @@ class SpatialImageAnalysis2D (AbstractSpatialImageAnalysis):
             y = y - center[1]
             coord = np.array([x,y])
 
-            # compute P.P^T
-            cov = np.dot(coord,coord.T)
+            # compute 1/N*P.P^T
+            cov = 1./len(x)*np.dot(coord,coord.T)
 
             # Find the eigen values and vectors.
             eig_val, eig_vec = np.linalg.eig(cov)
@@ -1352,7 +1356,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         self.principal_curvatures_origin = {}
         self.curvatures_tensor = {}
         self.external_wall_geometric_median = {}
-        self.external_wall_geometric_median_voxel = {}
+        self.epidermis_wall_median_voxel = {}
 
     def is3D(self): return True
     
@@ -1432,10 +1436,12 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             else:
                 center = center_of_mass[i]
             # project center into the slices sub_image coordinate
-            for i,slice in enumerate(slices):
-                center[i] = center[i] - slice.start
-            
-            label_image = (self.image[slices] == label)
+            if slices is not None:
+                for i,slice in enumerate(slices):
+                    center[i] = center[i] - slice.start
+                label_image = (self.image[slices] == label)
+            else:
+                label_image = (self.image == label)
 
             # compute the indices of voxel with adequate label
             x,y,z = label_image.nonzero()
@@ -1446,8 +1452,8 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             z = z - center[2]
             coord = np.array([x,y,z])
 
-            # compute P.P^T
-            cov = np.dot(coord,coord.T)
+            # compute 1/N*P.P^T
+            cov = 1./len(x)*np.dot(coord,coord.T)
 
             # Find the eigen values and vectors.
             eig_val, eig_vec = np.linalg.eig(cov)
@@ -1588,34 +1594,29 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         It's only doable for cells of the first layer.
         """
         # - Try to use the position of the closest voxel to the wall geometric median
-        if self.external_wall_geometric_median_voxel.has_key(vid):
-            min_dist = self.external_wall_geometric_median_voxel[vid]
+        if self.epidermis_wall_median_voxel.has_key(vid):
+            closest_voxel_coords = self.epidermis_wall_median_voxel[vid]
         else:
             # - Recover `vid` position in the image:
-            x_vid, y_vid, z_vid = np.where(self.first_voxel_layer() == vid)
-            # - Compute the geometric median:
-            neighborhood_origin = geometric_median( np.array([list(x_vid),list(y_vid),list(z_vid)]) )
-            self.external_wall_geometric_median[vid] = neighborhood_origin
-            integers = np.vectorize(lambda x : int(x))
-            neighborhood_origin = integers(neighborhood_origin)
-            pts_vid = [tuple([int(x_vid[i]),int(y_vid[i]),int(z_vid[i])]) for i in xrange(len(x_vid))]
-            # - Find its closest voxel (belonging to the first layer of voxels)
-            min_dist = closest_from_A(neighborhood_origin, pts_vid)
-            self.external_wall_geometric_median_voxel[vid] = min_dist
+            bbox = self.boundingbox(vid)
+            coord = np.where(self.first_voxel_layer()[bbox] == vid)
+            x_vid, y_vid, z_vid = [coord[i] + slice.start for i,slice in enumerate(bbox)]
+            # find the median voxel (more precisely, the closest voxel to the median)
+            closest_voxel_coords = find_wall_median_voxel( {(1, vid): [x_vid, y_vid, z_vid]}, verbose=False)
+            self.epidermis_wall_median_voxel[vid] = closest_voxel_coords
 
-        id_min_dist = pts.index(min_dist)
+        id_min_dist = pts.index(closest_voxel_coords)
         neigborids = r_neighborhood(id_min_dist, pts, adjacencies, self.used_radius_for_curvature)
         # - Principal curvature computation:
         pc = principal_curvatures(pts, id_min_dist, neigborids, fitting_degree, monge_degree)
-        k1 = pc[1][1]
-        k2 = pc[2][1]
-        self.principal_curvatures[vid] = [k1, k2]
+        self.principal_curvatures[vid] = [pc[1][1], pc[2][1]]
         self.principal_curvatures_normal[vid] = pc[3]
         self.principal_curvatures_directions[vid] = [pc[1][0], pc[2][0]]
         self.principal_curvatures_origin[vid] = pc[0]
-        R = np.array( [pc[1][0], pc[2][0], pc[0]] ).T
-        D = [ [k1,0,0], [0,k2,0], [0,0,0] ]
-        self.curvatures_tensor[vid] = np.dot(np.dot(R,D),R.T)
+        #~ k1 = pc[1][1]; k2 = pc[2][1]
+        #~ R = np.array( [pc[1][0], pc[2][0], pc[0]] ).T
+        #~ D = [ [k1,0,0], [0,k2,0], [0,0,0] ]
+        #~ self.curvatures_tensor[vid] = np.dot(np.dot(R,D),R.T)
 
 
     def __curvature_parameters_CGAL(func):
