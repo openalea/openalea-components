@@ -1508,7 +1508,7 @@ def ensemble_cost_function( cluster2labels_1, cluster2labels_2, similarity = Fal
     for clusters_1, ids_1 in cluster2labels_1.iteritems():
         for clusters_2, ids_2 in cluster2labels_2.iteritems():
             if set(ids_1) & set(ids_2) != set([]):
-                cost_triplets.append([clusters_1, clusters_2, cost_function(ids_1, ids_2)])
+                cost_triplets.append([clusters_1, clusters_2, cost_function(ids_1, ids_2, similarity)])
 
     return cost_triplets
 
