@@ -5,7 +5,7 @@
 
 .. module:: $PACKAGE
 
-$PROJECT_NAME $PACKAGE_NAME documentation
+$FULL_NAME documentation
 #########################################################################
 
 Module description
@@ -58,4 +58,4 @@ License
 .. note:: `Cecill-C <http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html>`_ 
     license is a LGPL compatible license.
 
-.. |$PACKAGE| replace:: $PROJECT_NAME.$PACKAGE_NAME
+.. |$PACKAGE| replace:: $FULL_NAME

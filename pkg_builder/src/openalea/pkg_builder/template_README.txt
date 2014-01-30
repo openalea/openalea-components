@@ -1,4 +1,4 @@
-====== $PROJECT_NAME.$PACKAGE_NAME ======
+====== $FULL_NAME ======
 
 **Authors** : XXX
 
@@ -14,13 +14,13 @@
 
 === Description ===
 
-$PROJECT_NAME.$PACKAGE_NAME is a XXX
+$FULL_NAME is a XXX
 
 
 
 === Content ===
 
-The $PROJECT_NAME.$PACKAGE_NAME package contains :
+The $FULL_NAME package contains :
 
 
 ===== Installation =====
@@ -31,7 +31,7 @@ Go to http://gforge.inria.fr/frs/?group_id=79
 
 === Requirements ===
 
-* Scons >= 0.96.93
+* Scons >= 1
 * SconsX
 * OpenAlea.Deploy
 * Boost.Python

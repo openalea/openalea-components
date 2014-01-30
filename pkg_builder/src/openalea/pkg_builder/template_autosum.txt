@@ -7,12 +7,12 @@ Reference guide
 ###################################
 .. contents::
 
-.. currentmodule:: $PROJECT.$PACKAGE.__init__
+.. currentmodule:: $FULL_NAME.__init__
 
 
-:mod:`$PROJECT.$PACKAGE` module
+:mod:`$FULL_NAME` module
 ===============================================
-.. automodule:: $PROJECT.$PACKAGE.__init__
+.. automodule:: $FULL_NAME.__init__
     :members:
     :undoc-members:
     :inherited-members:

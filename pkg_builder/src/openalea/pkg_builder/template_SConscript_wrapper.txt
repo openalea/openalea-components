@@ -2,7 +2,7 @@
 
 Import("env")
 
-py_dir = '../$PROJECT/$PACKAGE'
+py_dir = '../$PROJECT/$PACKAGE' if '$PROJECT' else '../$PACKAGE'
 
 # Build wrappers as shared libraries
 # First wrapper

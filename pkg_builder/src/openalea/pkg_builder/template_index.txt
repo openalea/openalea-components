@@ -1,6 +1,6 @@
 .. _${PACKAGE}_user:
 
-$PROJECT_NAME.$PACKAGE_NAME User Guide
+$FULL_NAME User Guide
 #######################################
 
 :Version: |version|
@@ -8,13 +8,13 @@ $PROJECT_NAME.$PACKAGE_NAME User Guide
 :Date: |today|
 
 This manual details functions, modules, and objects included in 
-OpenAlea.$PACKAGE_NAME, describing what they are and what they do. For a complete 
+$FULL_NAME, describing what they are and what they do. For a complete 
 reference guide, see :ref:`${PACKAGE}_reference`.
 
 .. warning::
 
    This "User Guide" is still very much in progress. 
-   Many aspects of OpenAlea.$PACKAGE_NAME are not covered.
+   Many aspects of $FULL_NAME are not covered.
 
    More documentation can be found on the
    `openalea <http://openalea.gforge.inria.fr>`__ wiki.

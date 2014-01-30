@@ -72,7 +72,9 @@ class PackageBuilder(object):
         self.metainfo = {'PACKAGE':self.package,
                         'PACKAGE_NAME':self.name,
                         'PROJECT':self.project,
+                        'DEFAULT_PROJECT':self.project if self.project else 'openalea',
                         'PROJECT_NAME':self.project_name[self.project] if self.project else '',
+                        'FULL_NAME':self.project_name[self.project]+'.'+self.name if self.project else self.name,
                         'RELEASE':self.release,
                 }
 

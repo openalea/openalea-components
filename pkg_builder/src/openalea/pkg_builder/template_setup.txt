@@ -18,7 +18,7 @@ for key,value in metadata.iteritems():
 # authors, authors_email, url and license
 # * version is $RELEASE.0 and release $RELEASE
 # * project must be in [openalea, vplants, alinea]
-# * name is the full name (e.g., $PROJECT_NAME.$PACKAGE_NAME) whereas pkg_name is only '$PACKAGE'
+# * name is the full name (e.g., $FULL_NAME) whereas pkg_name is only '$PACKAGE'
 
 # name will determine the name of the egg, as well as the name of 
 # the pakage directory under Python/lib/site-packages). It is also 
