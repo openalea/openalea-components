@@ -38,14 +38,18 @@ class IdDict (dict) :
         except KeyError :
             gen_name = "set"
         dict.__init__(self,*args,**kwdargs)
+        
+        self._gen_id_generator(gen_name)
+        
+        for k,v in self.iteritems() :
+            self._id_generator.get_id(k)
+
+    def _gen_id_generator(self, gen_name = 'set'):        
         try :
             self._id_generator=IdGen[gen_name]()
         except KeyError :
             raise UserWarning("the required id generator (%s) is unknown,\navailable generator are %s" % (gen_name,str(IdGen.keys())) )
-
-        for k,v in self.iteritems() :
-            self._id_generator.get_id(k)
-
+            
     def add (self, val, key=None) :
         try :
             key=self._id_generator.get_id(key)
@@ -72,6 +76,7 @@ class IdDict (dict) :
 
     def __setitem__ (self, key, val) :
         if key not in self :
+            if not hasattr(self,'_id_generator') : self._gen_id_generator()
             self._id_generator.get_id(key)
         dict.__setitem__(self,key,val)
 
