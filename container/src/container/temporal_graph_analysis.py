@@ -313,7 +313,7 @@ def mean_neigh(graph, vertex_property, vid, rank, edge_type):
                 result = result + vertex_property[i]
                 k+=1
         if k!=0:
-            return (ivalue + result) / float(k+1))
+            return (ivalue + result) / float(k+1)
 
 
 
