@@ -1500,8 +1500,8 @@ def ensemble_cost_function( cluster2labels_1, cluster2labels_2, similarity = Fal
     Cost function between two clusters relating to the number of common ids in them.
 
     :Parameters:
-     - `cluster2labels_1` (dict) - 
-     - `cluster2labels_2` (dict) - 
+     - `cluster2labels_1` (dict) - a dict *key=clusters; *labels=ids
+     - `cluster2labels_2` (dict) - a dict *key=clusters; *labels=ids
      - `similarity` (bool) - if True, return similarity function instead of dissimilarity
     """
     cost_triplets = []
@@ -1516,8 +1516,11 @@ def ensemble_cost_function( cluster2labels_1, cluster2labels_2, similarity = Fal
 def cluster_matching(clusters_dict_1, clusters_dict_2, return_all = False):
     """
     Function calling the BipartiteMatching C++ code to match clusters based on a Minimum cost flow algorithm over their ids composition.
+
     :Parameters:
-    
+     - `cluster2labels_1` (dict) - a dict *key=clusters; *labels=ids
+     - `cluster2labels_2` (dict) - a dict *key=clusters; *labels=ids
+     - `return_all` (bool) - if True, return score and unassociated groups
     """
     from openalea.tree_matching.bipartitematching import BipartiteMatching
     c2l1 = cluster2labels(clusters_dict_1)
@@ -1530,27 +1533,6 @@ def cluster_matching(clusters_dict_1, clusters_dict_2, return_all = False):
     else:
         return match[1]
 
-
-def csr_matrix_from_graph(graph, vids2keep):
-    """
-    Create a sparse matrix representing a connectivity matrix recording the topological information of the graph.
-    Defines for each vertex the neighbouring vertex following a given structure of the data.
-
-    :Parameters:
-     - `graph` (Graph | PropertyGraph | TemporalPropertyGraph) - graph from which to extract connectivity.
-     - `vids2keep` (list) - list of vertex ids to build the sparse matrix from (columns and rows will be ordered according to this list).
-    """    
-    N = len(vids2keep)
-    data,row,col = [],[],[]
-
-    for edge in graph.edges(edge_type='s'):
-        s,t = graph.edge_vertices(edge)
-        if (s in vids2keep) and (t in vids2keep):
-            row.extend([vids2keep.index(s),vids2keep.index(t)])
-            col.extend([vids2keep.index(t),vids2keep.index(s)])
-            data.extend([1,1])
-
-    return csr_matrix((data,(row,col)), shape=(N,N))
 
 
 class ClustererComparison:

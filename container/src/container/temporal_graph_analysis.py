@@ -1020,8 +1020,8 @@ def __strain_parameters2(func):
                 warnings.warn("Missing {} landmark{} for the t_n vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
             if nb_missing_data == 0:
                 assert len(landmarks_t1) == len(landmarks_t2)
-                N = len(landmarks_t1)
-                if N != 0:
+                Nb_ldmk = len(landmarks_t1)
+                if Nb_ldmk != 0:
                     stretch_mat[vid] = func(graph, landmarks_t1, landmarks_t2)
 
         if missing_epidermis_wall_median != []:
