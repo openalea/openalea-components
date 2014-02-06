@@ -1097,14 +1097,14 @@ def stretch_matrix(graph, xyz_t1, xyz_t2):
 
     return A
 
-def strain_orientations(stretch_mat, nb_directions=None, after_deformation=True):
+def strain_orientations(stretch_mat, return_values=True, nb_directions=None, after_deformation=True):
     """
     Return the strain main directions after deformation (default) or before.
     """
     if nb_directions is None:
         nb_directions = 3
 
-    directions = {}
+    directions = {}; values={}
     for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
         R,D_A,Q=svd(stretch_mat[vid])
@@ -1113,8 +1113,11 @@ def strain_orientations(stretch_mat, nb_directions=None, after_deformation=True)
             directions[vid] = Q[:nb_directions,:]
         else:
             directions[vid] = R[:,:nb_directions]
-
-    return directions
+        values[vid] = D_A[:nb_directions]
+    if return_values:
+        return directions, values
+    else:
+        return directions
 
 def strain_rates(graph, stretch_mat):
     """
