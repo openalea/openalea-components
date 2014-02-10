@@ -125,9 +125,9 @@ class PropertyGraph(IPropertyGraph, Graph):
                 if not self._vertex_property[property_name].has_key(k):
                     self._vertex_property[property_name][k] = v
                 else:
-                    print "Vertex id",k,"already has a value for vertex property",property_name
+                    print "Vertex id {} already has a value for vertex property {}".format(k, property_name)
             else:
-                print "Vertex id #%s doesn't exist in the graph !!" % k
+                print "Vertex id {} doesn't exist in the graph !!".format(k)
 
     def remove_vertex_property(self, property_name):
         """todo"""
@@ -168,6 +168,23 @@ class PropertyGraph(IPropertyGraph, Graph):
                                 % property_name)
         if values is None: values = {}
         self._graph_property[property_name] = values
+    
+    def extend_graph_property(self, property_name, values):
+        """todo"""
+        assert values is not None
+        if property_name not in self._graph_property:
+            raise PropertyError("property %s is not defined on graph"
+                                % property_name)
+
+        if self.graph_property(property_name) is not None or self.graph_property(property_name) != []:
+            assert isinstance(values, type(self.graph_property(property_name)))
+
+        if isinstance(self.graph_property(property_name), list):
+            self._graph_property[property_name].extend(values)
+        elif isinstance(self.graph_property(property_name), dict):
+            self._graph_property[property_name].update( dict([(k,v) for k,v in values.iteritems() if k not in self.graph_property(property_name).keys()] )
+        else:
+            print "Unable to extend 'graph_property' with this type of data: {}".format(type(values))
 
     def remove_graph_property(self, property_name):
         """todo"""
