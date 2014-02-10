@@ -182,7 +182,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         if isinstance(self.graph_property(property_name), list):
             self._graph_property[property_name].extend(values)
         elif isinstance(self.graph_property(property_name), dict):
-            self._graph_property[property_name].update( dict([(k,v) for k,v in values.iteritems() if k not in self.graph_property(property_name).keys()] )
+            self._graph_property[property_name].update( dict([(k,v) for k,v in values.iteritems() if k not in self.graph_property(property_name).keys()]) )
         else:
             print "Unable to extend 'graph_property' with this type of data: {}".format(type(values))
 
