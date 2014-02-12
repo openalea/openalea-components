@@ -21,13 +21,13 @@ This module defines functions to transform images into QPixmaps
 __license__= "Cecill-C"
 __revision__ = " $Id: __init__.py 2245 2010-02-08 17:11:34Z cokelaer $ "
 
+from openalea.vpltk.qt import QtCore, QtGui
 from openalea.vpltk.qt import qt
-#from qt.QtGui import QPixmap,QImage
-from numpy import array,zeros,uint32,uint8
-from PIL import Image,ImageQt
+from numpy import array, zeros, uint32, uint8
 
 from openalea.image.spatial_image import SpatialImage
 from openalea.image.gui.palette import palette_factory, from_argb_swap_columns_and_recast
+from openalea.image.pil import Image, ImageQt
 
 QPixmap = qt.QtGui.QPixmap
 QImage = qt.QtGui.QImage
@@ -46,12 +46,6 @@ def to_img (img, scalar_type=None, lut=None, forceNativeLut=None) :
     # applied automatically in viewing code, except for transpositions
     # explicitly asked by the user view GUI or what. If the image is not
     # properly oriented it is up to the reading code to fix the orientation! --
-
-    try:
-        import Image, ImageQt
-    except ImportError:
-        return None
-    #print isinstance(img, SpatialImage)
     if isinstance(img, SpatialImage):
         nb_dim = len(img.shape)
         if nb_dim == 3:
@@ -59,7 +53,6 @@ def to_img (img, scalar_type=None, lut=None, forceNativeLut=None) :
         elif nb_dim == 4:
             img = img.transpose(1,0,2,3)
         elif nb_dim == 2:
-            print "hello world !!"
             img = img.transpose(1,0)
         else:
             raise Exception("Unknown image shape, cannot deduce pixel format")
@@ -173,8 +166,7 @@ def to_img_fast( img, scalar_type=None, lut=None, forceNativeLut=False):
         return qim.copy()
 
     else:
-        raise Exception( "Arrays of shape length %s are not handled"%shape_len )
-
+        raise Exception( "Arrays of shape length %s are not handled" % l_sh )
 
 def to_pix( img, scalar_type=None, lut=None, forceNativeLut=False):
     """Transform an image array into a QPixmap

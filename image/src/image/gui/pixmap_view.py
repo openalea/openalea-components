@@ -229,7 +229,7 @@ class PixmapStackView (PixmapView) :
         #construct pixmaps
         pix = []
 
-	if len(data.shape) == 4:
+        if len(data.shape) == 4:
             vdim = data.shape[3]
         else:
             vdim = 1
@@ -239,7 +239,7 @@ class PixmapStackView (PixmapView) :
         # the system's native LUT
         forceNativeLut = False  #True if axis == 2 else False
 
-	# set to true to copy img to a c_contiguous buffer
+        # set to true to copy img to a c_contiguous buffer
         make_contiguous = False if (vdim == 1 or axis!=2) else True
 
         for z in xrange(data.shape[axis]) :
@@ -252,7 +252,7 @@ class PixmapStackView (PixmapView) :
 
             if make_contiguous:
                 dat = dat.copy()
-            print "hello"
+
             dat = to_pix(dat,
                          lut=pal,
                          forceNativeLut=forceNativeLut)
