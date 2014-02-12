@@ -729,8 +729,7 @@ def check_properties(graph, spatio_temporal_properties):
             graph.add_graph_property('radius_2_compute',radius)
         except:
             existing_radius = set(graph.graph_property('radius_local_principal_curvature_estimation')) & set(radius)
-            if existing_radius != set([]):
-                radius_2_compute = list(set(radius) - existing_radius)
+            radius_2_compute = list(set(radius) - existing_radius)
             graph.extend_graph_property('radius_local_principal_curvature_estimation', radius_2_compute)
             graph._graph_property['radius_2_compute'] = radius_2_compute
 
