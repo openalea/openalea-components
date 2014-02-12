@@ -717,8 +717,10 @@ def check_properties(graph, spatio_temporal_properties):
         index_radius = spatio_temporal_properties.index('epidermis_local_principal_curvature')+1
         if isinstance(spatio_temporal_properties[index_radius],int):
             radius = [spatio_temporal_properties[index_radius]]
+            spatio_temporal_properties.pop(index_radius)
         elif isinstance(spatio_temporal_properties[index_radius],list):
             radius = spatio_temporal_properties[index_radius]
+            spatio_temporal_properties.pop(index_radius)
         else:
             radius = [60]
 
@@ -729,10 +731,15 @@ def check_properties(graph, spatio_temporal_properties):
             existing_radius = set(graph.graph_property('radius_local_principal_curvature_estimation')) & set(radius)
             if existing_radius != set([]):
                 radius_2_compute = list(set(radius) - existing_radius)
-            graph.graph_property('radius_local_principal_curvature_estimation').extend(radius_2_compute)
-            graph.add_graph_property('radius_2_compute',radius_2_compute)
+            graph.extend_graph_property('radius_local_principal_curvature_estimation', radius_2_compute)
+            graph._graph_property['radius_2_compute'] = radius_2_compute
 
-    print "Selected `spatio_temporal_properties`: {}".format(spatio_temporal_properties)
+    print "Selected `spatio_temporal_propert{}`: {}".format("ies" if len(spatio_temporal_properties)>1 else "y", spatio_temporal_properties)
+    try:
+        print "Selected radius{} to compute: {}".format("es" if len(radius_2_compute)>1 else "",radius_2_compute)
+    except:
+        pass
+
     return spatio_temporal_properties
 
 def label2vertex_map(graph, time_point = None):

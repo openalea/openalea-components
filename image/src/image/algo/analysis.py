@@ -1445,7 +1445,8 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
             # compute the indices of voxel with adequate label
             x,y,z = label_image.nonzero()
-
+            if len(x)==0:
+                continue # obviously no reasons to go further !
             # difference with the center
             x = x - center[0]
             y = y - center[1]
