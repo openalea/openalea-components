@@ -570,18 +570,18 @@ def epidermis_local_curvature_ratio(graph, radius):
     return dict([ (vid, curv_values[0] / curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
 
 
-def division_rate(graph, rank=1, parent_ids = False):
+def division_rate(graph, rank=1, labels_at_t_n = False):
     """
     Division rate
     :Parameters:
      - 'graph' (TGP) - a TPG.
      - 'rank' (int) - children at distance 'rank' will be used.
-     - 'parent_ids' (bool) - specify if the division rate values returned should be associated with parent ids or children ids.
+     - 'labels_at_t_n' (bool) - specify if the division rate values returned should be associated with parent ids or children ids.
 
     :Return:
      - div_rate = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
     """
-    if (rank > 1) and (parent_ids is False):
+    if (rank > 1) and (labels_at_t_n is False):
         raise ValueError("The translation function `translate_keys2daughters_ids` doesn't work for rank != 1.")
 
     div_rate = {}
@@ -598,7 +598,7 @@ def division_rate(graph, rank=1, parent_ids = False):
         else:
             div_rate[vid] = (len(descendants) - 1) / float(time_interval)
 
-    if parent_ids:
+    if labels_at_t_n:
         return div_rate
     else:
         return translate_keys2daughters_ids(graph, div_rate)

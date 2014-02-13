@@ -331,7 +331,7 @@ class Clusterer:
 
         :Parameters:
          - `var_name` (str|dict|list) - string or list of strings related to one or several vertex_property name in the graph. If one is a dict type, we will construct the distance matrix based on ids matching with those from the graph
-         - `var_type` (str|list) - string or list of strings declaring the type of properties used
+         - `var_type` (str|list) - string or list of strings declaring the type of properties used (ex. "numeric", "rank" ...)
          - `var_id` (str|list) - (Optional) name to give to the variable
 
         :WARNING:
