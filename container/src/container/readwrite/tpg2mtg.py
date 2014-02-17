@@ -40,7 +40,10 @@ def tpg2mtg(graph, properties=['index'], root_ids=None, mtg = None, binary_sorte
     def translate_property(mtg, graph, mcid, tcid):
         mtg.property('tpg_cid')[mcid] = tcid
         for p in properties:
-            mtg.property(p)[mcid] = graph.vertex_property(p)[tcid]
+            try:
+                mtg.property(p)[mcid] = graph.vertex_property(p)[tcid]
+            except:
+                continue
     
     def iterable(obj):
         try :

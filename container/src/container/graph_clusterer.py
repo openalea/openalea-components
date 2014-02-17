@@ -31,7 +31,8 @@ from openalea.container.temporal_graph_analysis import exist_relative_at_rank
 from sklearn.cluster import SpectralClustering, Ward, DBSCAN
 from sklearn import metrics
 from scipy.sparse import csr_matrix
-from openalea.container.temporal_graph_analysis import translate_keys_Image2Graph
+from openalea.container.temporal_graph_analysis import translate_keys_Image2Graph, add_graph_vertex_property_from_dictionary
+
 
 def distance_matrix_from_vector(data, variable_types, no_dist_index = []):
     """
@@ -321,6 +322,10 @@ class Clusterer:
             # - Adding it tho the list
             self._distance_matrix_dict[var_id[n]] = distance_matrix_from_vector(variable_vector, var_type[n])
             self._distance_matrix_info[var_id[n]] = ('s', var_type[n].lower())
+            try:
+                add_graph_vertex_property_from_dictionary(self.graph, var_id[n], dict([(k,variable_vector[k]) for k in self.labels]))
+            except:
+                print "Not able to add vertex property {} to the graph while computing the related vertex distance matrix for Clusterer object".format(var_id[n])
 
         return var_id
 
@@ -369,6 +374,10 @@ class Clusterer:
             temporal_distance_list = [dict_temporal[vid] if dict_temporal.has_key(vid) else None for vid in self.labels]# we need to do that if we want to have all matrix ordered the same way
             self._distance_matrix_dict[var_id[n]] = distance_matrix_from_vector(temporal_distance_list, var_type[n])
             self._distance_matrix_info[var_id[n]] = ('t', var_type[n].lower())
+            try:
+                add_graph_vertex_property_from_dictionary(self.graph, var_id[n], dict_temporal)
+            except:
+                print "Not able to add vertex property {} to the graph while computing the related temporal distance matrix for Clusterer object".format(var_id[n])
 
         return var_id
 
@@ -848,8 +857,8 @@ class ClustererChecker:
         self._N = len(self._clustering)
         self._clusters_ids = list(set(self._clustering))
         self._nb_clusters = len(self._clusters_ids)
-        self._nb_ids_by_clusters = dict( [ (q,len(np.where(self._clustering == q)[0])) for q in self._clusters_ids] )
-        self._ids_by_clusters = dict( (q, [self._vtx_list[k] for k in np.where(self._clustering == q)[0]]) for q in self._clusters_ids )
+        self._nb_ids_by_clusters = dict( [ (q, self._clustering.count(q)) for q in self._clusters_ids] )
+        self._ids_by_clusters = dict( [(q, [self._vtx_list[k] for k in [i for i,j in enumerate(self._clustering) if j==q]]) for q in self._clusters_ids] )
         # - Reformat inherited (usefull) info :
         self.info_clustering = {'method': clusterer._method,
                                 'variables': clusterer._global_distance_variables,
@@ -881,11 +890,11 @@ class ClustererChecker:
         for n,q in enumerate(self._clusters_ids):
             for m,l in enumerate(self._clusters_ids):
                 if n==m:
-                    index_q = np.where(self._clustering == q)[0]
+                    index_q = [i for i,j in enumerate(self._clustering) if j==q]
                     D[n,m] = sum( [self._distance_matrix[i,j] for i in index_q for j in index_q if i!=j] ) / ( (self._nb_ids_by_clusters[n]-1) * self._nb_ids_by_clusters[n])
                 if n>m:
-                    index_q = np.where(self._clustering == q)[0]
-                    index_l = np.where(self._clustering == l)[0]
+                    index_q = [i for i,j in enumerate(self._clustering) if j==q]
+                    index_l = [i for i,j in enumerate(self._clustering) if j==l]
                     D[n,m] = D[m,n]= sum( [self._distance_matrix[i,j] for i in index_q for j in index_l] ) / (self._nb_ids_by_clusters[n] * self._nb_ids_by_clusters[m])
 
         if round_digits is None:
@@ -935,7 +944,7 @@ class ClustererChecker:
             round_digits = 13
         diameters = {}
         for q in self._clusters_ids:
-            index_q = np.where(self._clustering == q)[0]
+            index_q = [i for i,j in enumerate(self._clustering) if j==q]
             diameters[q] = np.round(max([self._distance_matrix[i,j] for i in index_q for j in index_q]),round_digits)
 
         if self._nb_clusters == 1:
@@ -960,8 +969,8 @@ class ClustererChecker:
             round_digits = 13
         separation = {}
         for q in self._clusters_ids:
-            index_q = np.where(self._clustering == q)[0]
-            index_not_q = np.where(self._clustering != q)[0]
+            index_q = [i for i,j in enumerate(self._clustering) if j==q]
+            index_not_q = [i for i,j in enumerate(self._clustering) if j!=q]
             separation[q] = np.round(min([self._distance_matrix[i,j] for i in index_q for j in index_not_q ]),round_digits)
 
         if self._nb_clusters == 1:
@@ -1170,6 +1179,7 @@ class ClustererChecker:
     def forward_projection_match(self, graph):
         """
         Compute the temporal evolution of ids of each clusters.
+        !!! TODO !!!
         """
         index_time_points = list(set(graph.vertex_property('index').values()))
 
@@ -1198,7 +1208,7 @@ class ClustererChecker:
         """
         index_q = {}
         for n,q in enumerate(self._clusters_ids):
-            index_q[q] = np.where(self._clustering == q)[0]
+            index_q[q] = [i for i,j in enumerate(self._clustering) if j==q]
 
         vertex_cluster_distance = {}
         for i in xrange(self._N):
@@ -1229,7 +1239,7 @@ class ClustererChecker:
         return vertex_distance2center
 
 
-    def plot_vertex_distance2cluster_center(self):
+    def plot_vertex_distance2cluster_center(self, cluster_names=None):
         """
         Plot the distance between a vertex and the center of its group.
 
@@ -1243,11 +1253,16 @@ class ClustererChecker:
         index_q = {}
         fig = plt.figure()
         for n,q in enumerate(self._clusters_ids):
-            index_q[q] = np.where(self._clustering == q)[0]
+            index_q[q] = [i for i,j in enumerate(self._clustering) if j==q]
             vector = [vtx2center[i] for i in index_q[q]]
             vector.sort()
-            plt.plot( vector, 'o-', label = "Cluster "+str(self._clusters_ids[n]), figure=fig )
+            if cluster_names is None:
+                plt.plot( vector, 'o-', label = "Cluster "+str(self._clusters_ids[n]), figure=fig)
+            else:
+                plt.plot( vector, 'o-', label = str(cluster_names[n]), figure=fig)
             plt.suptitle('Clusters of {}'.format(self.clustering_name))
+            plt.xlabel("Ranked elements")
+            plt.ylabel("Distance to cluster center")
             plt.axis([0,max(self._nb_ids_by_clusters.values()), min(vtx2center.values()), max(vtx2center.values())])
 
         plt.legend(ncol=3)
@@ -1458,6 +1473,25 @@ class ClustererChecker:
         self.__init__( self.clusterer, contruct_clustered_graph )
         print "Clustering labels have been udpated !"
 
+
+    def properties_boxplot_by_cluster(self, cluster_names=None):
+        """
+        Display boxplots of properties (used for clustering) by clusters.
+        """
+        ppts = [d for d in self.info_clustering['variables']]
+        N_ppts = len(ppts)
+        
+        fig = plt.figure()
+        for n,ppt in enumerate(ppts):
+            ax = plt.subplot(1,N_ppts,n+1)
+            data = [[self.clusterer.graph.vertex_property[ppt] for k, v in self.clusterer._distance_matrix_dict[ppt].iteritems() if k in self._ids_by_clusters[c]] for c in self._clusters_ids]
+            plt.boxplot(data)
+            plt.title(ppt)
+            if cluster_names is not None:
+                xtickNames = plt.setp(ax, xticklabels=cluster_names)
+            else:
+                xtickNames = plt.setp(ax, xticklabels=["cluster_{}".format(n) for n in xrange(5)])
+            plt.setp(xtickNames, rotation=45, fontsize=8)
 
 
 def cluster2labels(clusters_dict):
