@@ -37,7 +37,7 @@ def write_txt(filename, vertex_properties, path=""):
                 s+="\t"
         s=s[:-1]+"\n"
 
-    f=open(path+filename".txt","w")
+    f=open(path+filename+".txt","w")
     f.write(s)
     f.close()
 
