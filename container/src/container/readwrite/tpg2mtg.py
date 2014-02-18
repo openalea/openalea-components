@@ -24,8 +24,8 @@ def tpg2mtg(graph, properties=['index'], root_ids=None, mtg = None, binary_sorte
      - `root_ids`(list) - list of root ids (@t0) to build the MTG
     """
     if root_ids is None:
-        root_ids = graph.vertex_at_time(0,True)
-    
+        root_ids = [i for i in graph.vertices() if len(graph.parents(i)) == 0 and len(graph.children(i)) > 0]
+            
     from openalea.mtg import MTG
     
     if mtg is None:
@@ -56,7 +56,7 @@ def tpg2mtg(graph, properties=['index'], root_ids=None, mtg = None, binary_sorte
         for chcid in sortedchcids:
             if iterable(chcid):
                 # creating a virtual cell to have binary lineage
-                mcid = mtg.add_component(parentmtgcid, label='C')
+                mcid = mtg.add_child(parentmtgcid, label='C')
                 for lchcid in chcid:
                     if iterable(lchcid) :
                         # if we have a new level of recursion, we apply the same algo.
@@ -90,7 +90,7 @@ def tpg2mtg(graph, properties=['index'], root_ids=None, mtg = None, binary_sorte
                     parents[chtcid] = parentmtgcid
             
             for chtcid in chtcids:
-                mcid = mtg.add_component(parents[chtcid], label='C')
+                mcid = mtg.add_child(parents[chtcid], label='C')
                 translate_property(mtg, graph, mcid, chtcid)
                 tcid2mcid[chtcid] = mcid
                 tcidstack.append(chtcid)
