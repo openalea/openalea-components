@@ -1184,6 +1184,7 @@ class AbstractSpatialImageAnalysis(object):
         if verbose: print "Removing", N, "cells."
         for n, vid in enumerate(vids):
             if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 5
+            if verbose and n+1==N: print "100%"
             try:
                 xyz = np.where( (self.image[self.boundingbox(vid)]) == vid )
                 self.image[tuple((xyz[0]+self.boundingbox(vid)[0].start, xyz[1]+self.boundingbox(vid)[1].start, xyz[2]+self.boundingbox(vid)[2].start))]=erase_value
@@ -1583,6 +1584,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             for n,vid in enumerate(vids):
                 if (recalculate_all) or (not self.principal_curvatures.has_key(vid)) :
                     if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 5
+                    if verbose and n+1==N: print "100%"
                     func( self, vid, pts, adjacencies, fitting_degree, monge_degree )
 
         return wrapped_function

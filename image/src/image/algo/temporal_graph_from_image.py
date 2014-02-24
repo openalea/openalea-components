@@ -182,10 +182,10 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     tmp_img = np.asarray(cp.copy(analysis.image))
     tmp_img.fill(0)
     tmp_img += analysis.image == background # retreive the background
-    if verbose: print "Fusing daugthers from t{} at t{}:".format(reference_tp, tp_2fuse)
     not_found = []; N = len(ref_vids); percent = 0
     for n, vid in enumerate(ref_vids):
         if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 5
+        if verbose and n+1==N: print "100%"
         graph_children = graph.descendants(vid, tp_2fuse-reference_tp) - graph.descendants(vid, tp_2fuse-reference_tp-1)
         if graph_children == set([]):
             not_found.append(vid)
@@ -202,6 +202,51 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     tmp_img.resolution = analysis.image.resolution
     tmp_img.info = analysis.image.info
     return tmp_img
+
+
+def create_fused_image_analysis(graph, SpI_Analysis, image2fuse=[], starting_SpI_A_index=0, return_SpI_A = True):
+    """
+    Based on a TemporalPropertyGraph (for lineage informations), this script fuse daughters cells for `SpI_Analysis` indexed in `image2fuse`.
+
+    :Parameters:
+     - `graph` (TemporalPropertyGraph) - a TemporalPropertyGraph used for the lineage information
+     - `SpI_Analysis` (list of AbstractSpatialImageAnalysis) - 
+     - `image2fuse` (list) - list giving the index of `SpI_Analysis` to fuse (e.g. 0 can not be fused !)
+     - `starting_SpI_A_index` (int) - index of the first `SpI_Analysis` in the list regarding the time_point sequence of the `graph`
+     - `return_SpI_A` (bool) - if False return `SpatialImage` type instead of `AbstractSpatialImageAnalysis`
+
+    :Returns:
+     - `starting_SpI_A_index` (AbstractSpatialImageAnalysis|list of AbstractSpatialImageAnalysis) - SpatialImageAnalysis or list of SpatialImageAnalysis containing the fused images
+    """
+    N_SpI_A = len(SpI_Analysis)
+    if isinstance(image2fuse, int):
+        image2fuse = list(image2fuse)
+    if image2fuse==[]:
+        image2fuse=np.arange(1+starting_SpI_A_index, N_SpI_A+starting_SpI_A_index)
+    # - Basic paranoia (avoid wasting time computing things to get an error in the end!):
+    assert min(image2fuse) >= 1
+    assert max(image2fuse) <= graph.nb_time_points+1
+    assert N_SpI_A+starting_SpI_A_index <= graph.nb_time_points+1
+    
+    # - Start the fusion(s):
+    fused_image_analysis = {}
+    for tp_2fuse in image2fuse:
+        ref_tp = tp_2fuse-1
+        print "Fusion of t{} daugther cells (fusing t{}):".format(ref_tp, tp_2fuse)
+        ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True)]
+        ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+        # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
+        fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=SpI_Analysis[tp_2fuse]._background, verbose=True)
+        if return_SpI_A:
+            # - Creating a `SpatialImageAnalysis`:
+            fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = SpI_Analysis[tp_2fuse]._background)
+        else:
+            fused_image_analysis[tp_2fuse] = fused_image
+
+    if len(image2fuse)==1:
+        return fused_image_analysis[tp_2fuse]
+    else:
+        return fused_image_analysis
 
 
 def generate_graph_topology(labels, neighborhood):
@@ -237,10 +282,8 @@ def generate_graph_topology(labels, neighborhood):
     return graph, label2vertex, edges
 
 
-#~ spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis']
 spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
-spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis', 'projected_anticlinal_wall_median', 'wall_median', 'wall_orientation', 'all_wall_orientation', 'division_wall_orientation', 'strain_landmarks', 'epidermis_local_principal_curvature']
-
+spatio_temporal_properties3D = ['volume','barycenter','boundingbox','border','L1','epidermis_surface','wall_surface','inertia_axis', 'projected_anticlinal_wall_median', 'wall_median', 'wall_orientation', 'all_wall_orientation', 'epidermis_local_principal_curvature', 'division_wall', 'division_wall_orientation', 'projected_division_wall_orientation', 'surfacic_3D_landmarks', '3D_landmarks', 'fused_daughters_inertia_axis']
 
 
 def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
@@ -266,19 +309,19 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
         min_contact_surface = None
         real_surface = property_as_real
     # - Declare available properties and start computation if asked:
-    available_properties = ['epidermis_2D_landmarks', '3D_landmarks', 'division_wall', 'division_wall_orientation', 'projected_division_wall_orientation', 'fused_daughters_inertia_axis']
+    available_properties = ['surfacic_3D_landmarks', '3D_landmarks', 'division_wall', 'division_wall_orientation', 'projected_division_wall_orientation', 'fused_daughters_inertia_axis']
     properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
 
         fused_image_analysis, neighborhood = {}, {}
-        if 'epidermis_2D_landmarks' in spatio_temporal_properties:
+        if 'surfacic_3D_landmarks' in spatio_temporal_properties:
             assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
 
-            print "Computing epidermis_2D_landmarks..."
+            print "Computing surfacic_3D_landmarks..."
             # -- First we need to extract the medians of 'anticlinal walls' at the surface for the daughters fused images:
             # Try to use 'fused_image_analysis' dict else compute it:
             if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
-                fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis, vids, background)
+                fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis)
 
             fused_anticlinal_wall_median, fused_vertex_wall_median = {}, {}
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
@@ -305,7 +348,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 # - Translating 'projected_anticlinal_wall_median' in `graph.edge_property()` with pair of labels as keys:
                 edge2labelpair_m = edge2labelpair_map(graph, ref_tp)
                 wall_median = dict([(edge2labelpair_m[eid],m) for eid,m in graph.edge_property('projected_anticlinal_wall_median').iteritems() if edge2labelpair_m.has_key(eid)])
-                # - Starting the landmarks association:
+                # - Starting the anticlinal wall landmarks association:
                 asso, no_asso_found = {}, []
                 for k in wall_median:
                     if fused_anticlinal_wall_median[tp_2fuse].has_key(k):
@@ -313,7 +356,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                     else:
                         no_asso_found.append(k)
                 # - Saving detected landmarks association:
-                extend_edge_property_from_dictionary(graph, 'epidermis_2D_landmarks', asso, time_point=ref_tp)
+                extend_edge_property_from_dictionary(graph, 'surfacic_3D_landmarks', asso, time_point=ref_tp)
                 # - Displaying informations about how good this landmarks association step went :
                 print "Found {} associations over {} ({}%)".format(len(asso),len(wall_median),round(float(len(asso))/len(wall_median)*100,1))
                 new_contact_from_fusing = set(fused_anticlinal_wall_median[tp_2fuse].keys())-set(asso.keys())
@@ -336,9 +379,8 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             assert 'epidermis_wall_median' in graph.vertex_property_names()
             # Try to use 'fused_image_analysis' dict else compute it:
             if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
-                fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis, vids, background)
+                fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis)
 
-            
             fused_edge_wall_median = {}
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
                 ref_tp = tp_2fuse-1
@@ -510,7 +552,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
         if 'fused_daughters_inertia_axis' in spatio_temporal_properties:
             # Try to use 'fused_image_analysis' dict else compute it:
             if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
-                fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis, vids, background)
+                fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis)
 
             print 'Computing fused_daughters_inertia_axis property...'
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
@@ -523,23 +565,6 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
 
 
     return graph
-
-
-def create_fused_image_analysis(graph, SpI_Analysis, vids, background):
-    """
-    """
-    fused_image_analysis = {}
-    for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
-        ref_tp = tp_2fuse-1
-        print "Fusing daughters of t{} in image t{}".format(ref_tp, tp_2fuse)
-        ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
-        ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
-        # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
-        fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=background[tp_2fuse], verbose=True)
-        # - Creating a `SpatialImageAnalysis`:
-        fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = background[tp_2fuse])
-
-    return fused_image_analysis
 
 
 def graph_from_image2D(image, labels, background, spatio_temporal_properties,
@@ -695,7 +720,7 @@ def check_properties(graph, spatio_temporal_properties):
     if ("wall_orientation" in spatio_temporal_properties) and ('all_wall_orientation' in spatio_temporal_properties):
         spatio_temporal_properties.remove("wall_orientation")
 
-    if 'epidermis_2D_landmarks' in spatio_temporal_properties:
+    if 'surfacic_3D_landmarks' in spatio_temporal_properties:
         if 'projected_anticlinal_wall_median' not in graph.edge_properties() and 'projected_anticlinal_wall_median' not in spatio_temporal_properties:
             spatio_temporal_properties.append('projected_anticlinal_wall_median')
         if 'wall_median' not in graph.edge_properties() and 'wall_median' not in spatio_temporal_properties:
@@ -965,7 +990,10 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids, backgrou
     for ppt in spatio_temporal_properties:
         if isinstance(ppt,str) and (ppt in graph.vertex_properties() or ppt in graph.edge_properties()):
             print "The property '{}' is already in the graph !!!".format(ppt)
-            spatio_temporal_properties.remove(spatio_temporal_properties.index(ppt))
+            spatio_temporal_properties.pop(spatio_temporal_properties.index(ppt))
+    # - Nothing to do if nothing left to compute !!
+    if len(spatio_temporal_properties)==0:
+        return "Nothing to do if nothing left to compute !!"
 
     nb_images = len(images)
     if isinstance(background, int):
