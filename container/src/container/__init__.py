@@ -1,5 +1,6 @@
-#from _container import *
-#from id_dict import IdDict
+# CPL: Do not import anything in the __init__
+# Otherelse it may breaks everything see commit  15337
+
 from utils import IdDict
 from data_prop import Quantity,DataProp
 from graph import Graph
@@ -18,7 +19,3 @@ from topomesh import *
 from topomesh_txt import write_topomesh,read_topomesh
 from topomesh_algo import *
 from topomesh_geom_algo import *
-#from mesh import *
-#from mesh_shapes import *
-#from mesh_algo import *
-#from mesh_txt import *
