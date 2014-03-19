@@ -16,11 +16,13 @@ platform = sys.platform
 if platform.startswith('win'):
     external_dependencies = ['matplotlib>=0.99.1',
                              'scipy>=0.7.1',
-                             'numpy>=1.4.0']
+                             'numpy>=1.4.0',
+                             'pandas>=0.10.0']
 else:
     external_dependencies = ['matplotlib',
                              'scipy',
-                             'numpy']
+                             'numpy',
+                             'pandas']
 
 #if platform != 'darwin':
 #    external_dependencies.append('PIL<=1.1.6')
@@ -41,6 +43,7 @@ alea_dependencies = [
 'openalea.pkgbuilder >= 1.0.0',
 #'openalea.container >=2.0.1.dev', part of vplants 
 #'openalea.mtg >=0.7.0.dev', part of vplants
+'openalea.pandas >= 1.0.0',
 ]
 
 install_requires = alea_dependencies
