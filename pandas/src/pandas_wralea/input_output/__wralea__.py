@@ -17,7 +17,7 @@ __institutes__ = 'INRIA/CIRAD/INRA'
 __icon__ = ''
 
 
-__all__ = ['data2PandasDataframe', 'pandasDataframe2data', 'io_to_csv', 'io_read_csv']
+__all__ = ['data2PandasDataframe', 'pandasDataframe2data', 'io_utils_to_csv', 'io_utils_read_csv']
 
 
 
@@ -224,11 +224,11 @@ pandasDataframe2data = CompositeNodeFactory(name='pandasDataframe2data',
 
 
 
-io_to_csv = Factory(name='to_csv',
+io_utils_to_csv = Factory(name='to_csv',
                 authors='C. Chambon',
                 description='Write a pandas.DataFrame into a comma-separated-values (CSV) file. Wrapping of pandas.DataFrame.to_csv.',
                 category='data i/o',
-                nodemodule='io',
+                nodemodule='io_utils',
                 nodeclass='to_csv',
                 inputs=[{'interface': None, 'hide': False, 'name': 'dataframe', 'value': None, 'desc': 'The dataframe to write.'}, {'hide': False, 'name': 'path_or_buf', 'value': None, 'label': 'filepath', 'interface': IFileStr, 'desc': 'File path.'}, {'interface': IStr, 'hide': True, 'name': 'sep', 'value': ',', 'desc': 'Field delimiter for the output file.'}, {'interface': IStr, 'hide': False, 'name': 'na_rep', 'value': '', 'desc': 'Missing data representation.'}, {'interface': ISequence, 'hide': True, 'name': 'cols', 'value': None, 'desc': 'Columns to write.'}, {'interface': IBool, 'hide': True, 'name': 'header', 'value': True, 'desc': 'Write out column names.'}, {'interface': IBool, 'hide': False, 'name': 'index', 'value': True, 'desc': 'Write row names (index).'}, {'interface': IInterface, 'hide': True, 'name': 'index_label', 'value': None, 'desc': 'Can be either a string or a sequence of strings. If a string is given, then the string is the column label for index column(s) if desired. If None is given, and `header` and `index` are True, then the index names are used. A sequence should be given if the DataFrame uses MultiIndex.'}, {'interface': IStr, 'hide': True, 'name': 'mode', 'value': 'w', 'desc': 'Python write mode.'}, {'interface': IStr, 'hide': True, 'name': 'nanRep', 'value': None, 'desc': 'A string representation of a missing value.'}, {'interface': IStr, 'hide': True, 'name': 'encoding', 'value': None, 'desc': 'A string representing the encoding to use if the contents are non-ascii, for python versions prior to 3.'}],
                 outputs=[{'interface': IFileStr, 'name': 'filepath', 'desc': 'The path of the CSV file.'}],
@@ -239,11 +239,11 @@ io_to_csv = Factory(name='to_csv',
 
 
 
-io_read_csv = Factory(name='read_csv',
+io_utils_read_csv = Factory(name='read_csv',
                 authors='C. Chambon',
                 description='Read a CSV (comma-separated-values) file into a pandas.DataFrame. Wrapping of pandas.read_csv.',
                 category='data i/o',
-                nodemodule='io',
+                nodemodule='io_utils',
                 nodeclass='read_csv',
                 inputs=[{'hide': False, 'name': 'filepath_or_buffer', 'value': None, 'label': 'filepath', 'interface': IFileStr, 'desc': 'The path of the CSV file to read.'}, {'interface': IStr, 'hide': True, 'name': 'sep', 'value': ',', 'desc': 'Delimiter to use. If sep is None, will try to automatically determine this.'}, {'interface': IInt, 'hide': True, 'name': 'header', 'value': 0, 'desc': 'Row to use for the column labels of the parsed DataFrame.'}, {'interface': IInterface, 'hide': True, 'name': 'index_col', 'value': None, 'desc': 'Can be either an integer or a sequence. If an integer is given, then it represents the index of the column to use as the row labels of the DataFrame. If a sequence is given, then a MultiIndex is used.'}, {'interface': ISequence, 'hide': True, 'name': 'names', 'value': None, 'desc': ' List of column names.'}, {'interface': IInterface, 'hide': True, 'name': 'skiprows', 'value': None, 'desc': 'Can be either an integer or a sequence of integers. If an integer is given, then it represents the number of rows to skip. If a sequence is given, then it represents the row numbers to skip (0-indexed).'}, {'interface': IInterface, 'hide': True, 'name': 'na_values', 'value': None, 'desc': 'Additional strings to recognize as NA/NaN. Can be either a sequence or a dict. If dict passed, specific per-column NA values.'}, {'interface': IBool, 'hide': True, 'name': 'parse_dates', 'value': False, 'desc': 'Attempt to parse dates in the index column(s).'}, {'interface': IInterface, 'hide': True, 'name': 'date_parser', 'value': None, 'desc': 'Function to use for converting dates to strings. If None, defaults to dateutil.parser.'}, {'interface': IInt, 'hide': True, 'name': 'nrows', 'value': None, 'desc': 'Number of rows of file to read. Useful for reading pieces of large files.'}, {'interface': IBool, 'hide': True, 'name': 'iterator', 'value': False, 'desc': 'Return TextParser object.'}, {'interface': IInt, 'hide': True, 'name': 'chunksize', 'value': None, 'desc': 'Return TextParser object for iteration.'}, {'interface': IInt, 'hide': True, 'name': 'skip_footer', 'value': 0, 'desc': 'Number of line at bottom of file to skip.'}, {'interface': IDict, 'hide': True, 'name': 'converters', 'value': None, 'desc': 'Dict of functions for converting values in certain columns. Keys can either be integers or column labels.'}, {'interface': IBool, 'hide': True, 'name': 'verbose', 'value': False, 'desc': 'Indicate number of NA values placed in non-numeric columns.'}, {'interface': IStr, 'hide': True, 'name': 'delimiter', 'value': None, 'desc': 'Alternative argument name for sep.'}, {'interface': IStr, 'hide': True, 'name': 'encoding', 'value': None, 'desc': 'Encoding to use for UTF when reading/writing (ex. "utf-8").'}],
                 outputs=[{'interface': IInterface, 'name': 'dataframe', 'desc': 'The dataframe created from the CSV file.'}],

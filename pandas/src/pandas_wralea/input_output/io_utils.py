@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#       math : pandas package
+#       pandas package
 #
 #       Copyright 2006 - 2010 INRIA - CIRAD - INRA  
 #
