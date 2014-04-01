@@ -154,8 +154,11 @@ class PropertyGraph(IPropertyGraph, Graph):
     def remove_edge_property(self, property_name):
         """todo"""
         try:
-            del self._edge_property[property_name]
             del self._graph_property['units'][property_name]
+        except:
+            pass
+        try:
+            del self._edge_property[property_name]
         except KeyError:
             raise PropertyError("property %s is undefined on edges"
                                 % property_name)
@@ -575,15 +578,15 @@ class PropertyGraph(IPropertyGraph, Graph):
 
 
     def topological_distance(self, vid, edge_type = None, edge_dist = lambda x,y : 1, max_depth=float('inf'), full_dict=True, return_inf = True):
-        """ Return the distances of each vertices at the vertex vid according a cost function
+        """ Return the distances of each vertices from the vertex `vid` according a cost function
         
         :Parameters:
-        - `vid` : a vertex id
-        - `edges_type` : type of edges we want to consider
-        - `edge_dist` : the cost function
-        - `max_depth` : the maximum depth that we want to reach
-        - `full_dict` : if True this function will return the entire dictionary (with inf values)
-        - `return_inf` : if True (default) return 'inf' values, else 'nan'.
+        - `vid` (int) - a vertex id
+        - `edges_type` (str) - type of edges we want to consider e.g. 's' or 't'
+        - `edge_dist` (function) - the cost function
+        - `max_depth` (float) - the maximum depth that we want to reach
+        - `full_dict` (bool) - if True this function will return the entire dictionary (with inf values)
+        - `return_inf` (bool) - if True (default) return 'inf' values, else 'nan'.
 
         :Returns:
         - `dist_dict` : a dictionary of the distances, key : vid, value : distance

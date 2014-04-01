@@ -1479,19 +1479,22 @@ class ClustererChecker:
         Display boxplots of properties (used for clustering) by clusters.
         """
         ppts = [d for d in self.info_clustering['variables']]
+        if 'topological' in ppts:
+            ppts.remove('topological')
+        
         N_ppts = len(ppts)
         
         fig = plt.figure()
         for n,ppt in enumerate(ppts):
             ax = plt.subplot(1,N_ppts,n+1)
-            data = [[self.clusterer.graph.vertex_property[ppt] for k, v in self.clusterer._distance_matrix_dict[ppt].iteritems() if k in self._ids_by_clusters[c]] for c in self._clusters_ids]
+            data = [[v for k, v in self.clusterer.graph.vertex_property(ppt).iteritems() if k in self._ids_by_clusters[c]] for c in self._clusters_ids]
             plt.boxplot(data)
             plt.title(ppt)
             if cluster_names is not None:
                 xtickNames = plt.setp(ax, xticklabels=cluster_names)
             else:
                 xtickNames = plt.setp(ax, xticklabels=["cluster_{}".format(n) for n in xrange(5)])
-            plt.setp(xtickNames, rotation=45, fontsize=8)
+            plt.setp(xtickNames, rotation=45, fontsize=10)
 
 
 def cluster2labels(clusters_dict):
