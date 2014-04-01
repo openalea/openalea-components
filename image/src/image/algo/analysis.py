@@ -24,6 +24,7 @@ from os.path import exists
 from IPython import embed
 import numpy as np
 import scipy.ndimage as nd
+from numpy.linalg import svd
 
 try:
     from sklearn.decomposition import PCA
@@ -298,21 +299,6 @@ def cell_vertex_extraction(image, hollow_out = True, verbose = False):
 
     return barycentric_vtx
 
-#~ def OLS_wall(xyz):
-    #~ """
-    #~ Compute OLS (Ordinary Least Square) fitting of a plane in a 3D space.
-    #~ 
-    #~ :Parameters:
-        #~ - `xyz` voxels coordinate (3xN or Nx3 matrix)
-    #~ """
-    #~ if xyz.shape()[0] == 3: #if the matrix is 3xN, we convert it to a Nx3 matrix.
-        #~ xyz = xyz.transpose()
-    #~ 
-    #~ ols_fit = ln.lstsq( xyz[:,0:2], xyz[:,2] )
-        #~ 
-    #~ return ols_fit
-
-
 def distance(ptsA, ptsB):
     """
     Function computing the Euclidian distance between two points A & B.
@@ -351,12 +337,6 @@ def closest_from_A(A, pts2search):
 
     return pts_min_dist
 
-def shape_anisotropy(inertia_tensor, vids=None, dimension = 2):
-    """
-
-    """
-
-    return
 
 
 NPLIST, LIST, DICT = range(3)
@@ -1018,7 +998,7 @@ class AbstractSpatialImageAnalysis(object):
             image = self.image
 
         compute_neighborhood=False
-        if labels is None and neighborhood is None:
+        if neighborhood is None:
             compute_neighborhood=True
         if isinstance(labels,list) and isinstance(neighborhood,dict):
             labels = [label for label in labels if neighborhood.has_key(label)]
@@ -1145,6 +1125,7 @@ class AbstractSpatialImageAnalysis(object):
         surface_normal_axis=[]; N = len(labels); percent = 0
         for n_cell, cell in enumerate(labels):
             if verbose and n_cell*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+            if verbose and n+1==N: print "100%"
             try:
                 normal = self.principal_curvatures_normal[cell]
             except:
@@ -1231,6 +1212,7 @@ class AbstractSpatialImageAnalysis(object):
         N = len(cells_in_image_margins); percent= 0
         for n,c in enumerate(cells_in_image_margins):
             if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+            if verbose and n+1==N: print "100%"
             try:
                 xyz = np.where( (self.image[self.boundingbox(c)]) == c )
                 self.image[tuple((xyz[0]+self.boundingbox(c)[0].start,xyz[1]+self.boundingbox(c)[1].start,xyz[2]+self.boundingbox(c)[2].start))]=erase_value
@@ -1647,6 +1629,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             curvature = {}; N = len(vids); percent=0
             for n,vid in enumerate(vids):
                 if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+                if verbose and n+1==N: print "100%"
                 if not self.principal_curvatures.has_key(vid):
                     c = self.compute_principal_curvatures(vid, radius = radius)
                 else:
@@ -1711,6 +1694,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         anisotropy = []; N=len(vids); percent=0
         for n,label in enumerate(vids):
             if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+            if verbose and n+1==N: print "100%"
             xyz = np.array(np.where(first_voxel_layer[self.boundingbox(label)] == label))
             # difference with the center of mass
             mean = np.mean(xyz, axis=1)
@@ -1757,6 +1741,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         N=len(vids); percent=0
         for n,vid in enumerate(vids):
             if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+            if verbose and n+1==N: print "100%"
             x,y,z = np.where( (self.image[self.boundingbox(vid)]) == vid )
             x_mean,y_mean,z_mean = self.center_of_mass(vid,False)
             x_res, y_res, z_res = self.image.resolution
@@ -1882,6 +1867,7 @@ def find_wall_median_voxel(dict_wall_voxels, labels2exclude = [], verbose = True
     wall_median = {}; N = len(dict_wall_voxels); percent = 0
     for n,(label_1, label_2) in enumerate(dict_wall_voxels):
         if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+        if verbose and n+1==N: print "100%"
         if label_1 in labels2exclude or label_2 in labels2exclude:
             continue
         xyz = np.array(dict_wall_voxels[(label_1, label_2)]).T
@@ -2018,6 +2004,49 @@ def save_id_list(id_list, filename, sep='\n' ):
     f.close()
 
 
+def projection_matrix(point_set, subspace_rank = 2):
+    """
+    Compute the projection matrix of a set of point depending on the subspace rank.
+    
+    :Parameters:
+     - point_set (np.array): list of coordinates of shape (n_point, init_dim).
+     - dimension_reduction (int) : the dimension reduction to apply
+    """
+    point_set = np.array(point_set)
+    nb_coord = point_set.shape[0]
+    init_dim = point_set.shape[1]
+    assert init_dim > subspace_rank
+    assert subspace_rank > 0
+
+    centroid = point_set.mean(axis=0)
+    if sum(centroid) != 0:
+        # - Compute the centered matrix:
+        centered_point_set = point_set - centroid
+    else:
+        centered_point_set = point_set
+    
+    # -- Compute the Singular Value Decomposition (SVD) of centered coordinates:
+    U,D,V = svd(centered_point_set, full_matrices=False)
+    V = V.T
+
+    # -- Compute the projection matrix:
+    H = np.dot(V[:,0:subspace_rank], V[:,0:subspace_rank].T)
+
+    return H
+
+#~ def OLS_wall(xyz):
+    #~ """
+    #~ Compute OLS (Ordinary Least Square) fitting of a plane in a 3D space.
+    #~ 
+    #~ :Parameters:
+        #~ - `xyz` voxels coordinate (3xN or Nx3 matrix)
+    #~ """
+    #~ if xyz.shape()[0] == 3: #if the matrix is 3xN, we convert it to a Nx3 matrix.
+        #~ xyz = xyz.transpose()
+    #~ 
+    #~ ols_fit = ln.lstsq( xyz[:,0:2], xyz[:,2] )
+        #~ 
+    #~ return ols_fit
 
     #~ def mask_intersection(self, vid, geometric_mask):
         #~ """

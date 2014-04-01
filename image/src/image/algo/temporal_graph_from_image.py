@@ -22,7 +22,7 @@ import copy as cp
 from IPython import embed
 
 from openalea.image.serial.basics import SpatialImage, imread
-from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT, find_wall_median_voxel, sort_boundingbox
+from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT, find_wall_median_voxel, sort_boundingbox, projection_matrix
 from openalea.image.spatial_image import is2D
 from openalea.container import PropertyGraph
 from openalea.container import TemporalPropertyGraph
@@ -70,6 +70,7 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
     N = len(vids); percent = 0
     for n, vid in enumerate(vids):
         if n*100/float(N) >= percent: print '{} %'.format(percent); percent+=10
+        if n+1==N: print "100%"
         graph_children = graph.descendants(vid, reference_tp-tp_2register) - graph.descendants(vid, reference_tp-tp_2register-1)
         SpI_children = translate_ids_Graph2Image(graph, graph_children)
         x,y,z = [],[],[]
@@ -323,7 +324,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
                 fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis)
 
-            fused_anticlinal_wall_median, fused_vertex_wall_median = {}, {}
+            fused_anticlinal_wall_median, fused_vertex_wall_median, epidermis_proj_matrix= {}, {}, {}
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
                 ref_tp = tp_2fuse-1
                 print "Extract the surfacic wall medians of daughters fused images between t{} and t{}".format(ref_tp, tp_2fuse)
@@ -339,7 +340,10 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                     if (label_1 == 1): # no need to check `label_2` because labels are sorted in keys returned by `wall_voxels_per_cells_pairs`
                         fused_vertex_wall_median[label_2] = fused_anticlinal_wall_median[tp_2fuse][(label_1, label_2)]
                         fused_anticlinal_wall_median[tp_2fuse].pop((label_1, label_2))
+                        epidermis_proj_matrix[label_2] = projection_matrix(fused_dict_anticlinal_wall_voxels[(label_1, label_2)].T, 2)
+
                 extend_vertex_property_from_dictionary(graph, 'daughters_fused_epidermis_wall_median', fused_vertex_wall_median, time_point = ref_tp)
+                extend_vertex_property_from_dictionary(graph, 'daughters_fused_epidermis_rank-2_projection_matrix', epidermis_proj_matrix, time_point = ref_tp)
 
             # -- Now we can proceed to the landmarks association:
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
@@ -405,6 +409,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 fused_dict_wall_voxels = {}; nb_pairs = len(fused_cell_pairs); percent = 0
                 for n,(label_1, label_2) in enumerate(fused_cell_pairs):
                     if n*100/nb_pairs>=percent: print "{}%...".format(percent),; percent += 10
+                    if n+1==nb_pairs: print "100%"
                     label_1, label_2 = sort_boundingbox(fused_boundingboxes, label_1, label_2)
                     fused_dict_wall_voxels[min([label_1, label_2]), max([label_1, label_2])] = wall_voxels_between_two_cells(fused_image_analysis[tp_2fuse].image, label_1, label_2, fused_boundingboxes)
 
@@ -738,6 +743,9 @@ def check_properties(graph, spatio_temporal_properties):
         if 'division_wall' not in graph.edge_properties() and 'division_wall' not in spatio_temporal_properties:
             spatio_temporal_properties.append('division_wall')
 
+    if 'rank-2_projection_matrix' in spatio_temporal_properties and 'wall_median' in spatio_temporal_properties:
+        spatio_temporal_properties.pop(spatio_temporal_properties.index('rank-2_projection_matrix'))
+
     if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
         index_radius = spatio_temporal_properties.index('epidermis_local_principal_curvature')+1
         if isinstance(spatio_temporal_properties[index_radius],int):
@@ -1049,7 +1057,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
     """
     assert isinstance(graph, TemporalPropertyGraph)
-    available_properties = ['boundingbox', 'volume', 'barycenter', 'L1', 'border', 'inertia_axis', 'wall_surface', 'epidermis_surface', 'projected_anticlinal_wall_median', 'wall_median', 'all_walls_orientation', 'epidermis_local_principal_curvature']
+    available_properties = ['boundingbox', 'volume', 'barycenter', 'L1', 'border', 'inertia_axis', 'wall_surface', 'epidermis_surface', 'projected_anticlinal_wall_median', 'wall_median', 'all_walls_orientation', 'epidermis_local_principal_curvature', 'rank-2_projection_matrix']
     #~ properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     properties = [ppt for ppt in spatio_temporal_properties] # we want to compare str types, no extra args passed
     if set(properties) & set(available_properties) != set([]):
@@ -1087,6 +1095,9 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             else:
                 undefined_cells_in_image = True
 
+            # -- Saving images resolutions (useful for converting voxel units in real-world units)
+            graph.add_graph_property("images_resolution",dict())
+            graph._graph_property["images_resolution"].update({tp:analysis.image.resolution})
 
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
@@ -1197,26 +1208,61 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                     dict_wall_voxels = {}; nb_pairs = len(cell_pairs); percent = 0
                     for n,(label_1, label_2) in enumerate(cell_pairs):
                         if n*100/nb_pairs>=percent: print "{}%...".format(percent),; percent += 10
+                        if n+1==nb_pairs: print "100%"
                         label_1, label_2 = sort_boundingbox(boundingboxes, label_1, label_2)
                         dict_wall_voxels[min([label_1, label_2]), max([label_1, label_2])] = wall_voxels_between_two_cells(SpI_Analysis[tp].image, label_1, label_2, boundingboxes, verbose=False)
 
-                print "Searching for the median voxel of the walls..." 
+                print "Searching for the median voxel of the walls and their rank-2 projection matrix..." 
                 wall_median = find_wall_median_voxel(dict_wall_voxels, labels2exclude = [])
                 edge_wall_median, unlabelled_wall_median, vertex_wall_median = {},{},{}
+                epidermis_proj_matrix, proj_matrix = {},{}
                 for label_1, label_2 in dict_wall_voxels.keys():
                     if (label_1 == 0): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
                         unlabelled_wall_median[label_2] = wall_median[(label_1, label_2)]
                     elif (label_1 == 1): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
                         vertex_wall_median[label_2] = wall_median[(label_1, label_2)]
+                        epidermis_proj_matrix[label_2] = projection_matrix(dict_wall_voxels[(label_1, label_2)].T, 2)
                     else:
                         edge_wall_median[(label_1, label_2)] = wall_median[(label_1, label_2)]
+                        proj_matrix[(label_1, label_2)] = projection_matrix(dict_wall_voxels[(label_1, label_2)].T, 2)
 
                 extend_edge_property_from_dictionary(graph, 'wall_median', edge_wall_median, time_point=tp)
+                extend_edge_property_from_dictionary(graph, 'wall_rank-2_projection_matrix', proj_matrix, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'epidermis_wall_median', vertex_wall_median, time_point=tp)
+                extend_vertex_property_from_dictionary(graph, 'epidermis_rank-2_projection_matrix', epidermis_proj_matrix, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_median', unlabelled_wall_median, time_point=tp)
                 graph._graph_property["units"].update( {"wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
                 graph._graph_property["units"].update( {"epidermis_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
                 graph._graph_property["units"].update( {"unlabelled_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
+
+
+            if 'rank-2_projection_matrix' in spatio_temporal_properties:
+                print 'Computing projection_matrix property...'
+                try: dict_wall_voxels
+                except:
+                    print "Extracting walls voxels..."
+                    # -- We start by creating all pairs of cells defining a wall we want to extract:
+                    cell_pairs = np.unique([(background[tp], nei) for nei in background_neighbors] + [(0, nei) for nei in undefined_neighbors] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in neighborhood.keys() for label_2 in neighborhood[label_1]])
+                    from openalea.image.algo.analysis import wall_voxels_between_two_cells
+                    dict_wall_voxels = {}; nb_pairs = len(cell_pairs); percent = 0
+                    for n,(label_1, label_2) in enumerate(cell_pairs):
+                        if n*100/nb_pairs>=percent: print "{}%...".format(percent),; percent += 10
+                        if n+1==nb_pairs: print "100%"
+                        label_1, label_2 = sort_boundingbox(boundingboxes, label_1, label_2)
+                        dict_wall_voxels[min([label_1, label_2]), max([label_1, label_2])] = wall_voxels_between_two_cells(SpI_Analysis[tp].image, label_1, label_2, boundingboxes, verbose=False)
+
+                print "Computing the rank-2 projection matrix of the wall voxels set..." 
+                epidermis_proj_matrix, proj_matrix = {},{}
+                for label_1, label_2 in dict_wall_voxels.keys():
+                    if (label_1 == 0): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
+                        continue
+                    elif (label_1 == 1): # no need to check `label_2` because labels are sorted in keys when creating `dict_wall_voxels`
+                        epidermis_proj_matrix[label_2] = projection_matrix(dict_wall_voxels[(label_1, label_2)].T, 2)
+                    else:
+                        proj_matrix[(label_1, label_2)] = projection_matrix(dict_wall_voxels[(label_1, label_2)].T, 2)
+
+                extend_edge_property_from_dictionary(graph, 'wall_rank-2_projection_matrix', proj_matrix, time_point=tp)
+                extend_vertex_property_from_dictionary(graph, 'epidermis_rank-2_projection_matrix', epidermis_proj_matrix, time_point=tp)
 
 
             if 'all_walls_orientation' in spatio_temporal_properties:
