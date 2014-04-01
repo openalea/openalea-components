@@ -25,7 +25,9 @@ import matplotlib.pyplot as plt
 import math
 
 #from scipy.sparse import csr_matrix
-from numpy.linalg import svd, lstsq
+from numpy.linalg import svd
+from sklearn import linear_model
+
 
 def add_graph_vertex_property_from_dictionary(graph, name, dictionary, unit=None):
     """
@@ -157,7 +159,7 @@ def translate_keys_Graph2Image(graph, dictionary, time_point=None):
 
         return translated_dict
     else:
-        return dict( (graph.vertex_property('old_label')[k], dictionary[k]) for k in dictionary if graph.vertex_property('index')[k] == time_point )
+        return dict( (graph.vertex_property('old_label')[k], v) for k, v in dictionary.iteritems() if graph.vertex_property('index')[k] == time_point )
 
 def translate_keys_Image2Graph(graph, dictionary, time_point):
     """
@@ -316,8 +318,6 @@ def mean_neigh(graph, vertex_property, vid, rank, edge_type):
             return (ivalue + result) / float(k+1)
 
 
-
-
 @__normalized_parameters
 def change(graph, vertex_property, vid, rank, edge_type):
     """
@@ -433,13 +433,13 @@ def __normalized_temporal_parameters(func):
 @__normalized_temporal_parameters
 def temporal_rate(graph, vertex_property, vid, rank, time_interval):
     """
-    Sub-function computing the temporal change between ONE vertex ('vid') and its descendants at rank 'rank'.
+    Sub-function computing the temporal rate of change between ONE vertex ('vid') and its descendants at rank 'rank'.
 
     :Parameters:
     - 'graph' : a TPG.
-    - 'vertex_property' : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
-    - 'vid' : a vertex id.
-    - 'rank' : neighborhood at distance 'rank' will be used.
+    - 'vertex_property' (str) : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
+    - 'vid' (int|list) : a vertex id.
+    - 'rank' (int) : neighborhood at distance 'rank' will be used.
 
     :Return:
     - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
@@ -521,6 +521,7 @@ def fractional_anisotropy(eigenvalues):
     Compute fractional anisotropy of a tensor considered to represent a diffusion ellipsoid.
     $$    \text{FA} = \sqrt{\frac{3}{2}} \frac{\sqrt{(\lambda_1 - \hat{\lambda})^2 + (\lambda_2 - \hat{\lambda})^2 + (\lambda_3 - \hat{\lambda})^2}}{\sqrt{\lambda_1^2 + \lambda_2^2 + \lambda_3^2}}$$
     with the trace $\hat{\lambda} = (\lambda_1 + \lambda_2 + \lambda_3)/3$
+    :!Can not be negative!:
     """
     assert len(eigenvalues)==3
     l1, l2, l3 = eigenvalues
@@ -594,9 +595,9 @@ def division_rate(graph, rank=1, labels_at_t_n = False):
 
         descendants=graph.descendants(vid,rank)-set([vid])
         if descendants == set([]):
-            div_rate[vid] = 0
+            div_rate[vid] = 1 / float(time_interval)
         else:
-            div_rate[vid] = (len(descendants) - 1) / float(time_interval)
+            div_rate[vid] = len(descendants) / float(time_interval)
 
     if labels_at_t_n:
         return div_rate
@@ -991,7 +992,7 @@ def __strain_parameters2(func):
         """
         # Check if cells landmarks have been recovered ans stored in the graph structure:
         if use_projected_anticlinal_wall:
-            assert 'epidermis_2D_landmarks' in graph.edge_property_names()
+            assert 'surfacic_3D_landmarks' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
             assert 'daughters_fused_epidermis_wall_median' in graph.vertex_property_names()
             assert 'L1' in graph.vertex_property_names()
@@ -1014,9 +1015,11 @@ def __strain_parameters2(func):
             vids = [vids]
 
         N = len(vids); percent=0
-        stretch_mat = {}; missing_epidermis_wall_median = []
+        missing_rank2_proj_mat, missing_daughters_fused_rank2_proj_mat, missing_epidermis_wall_median = [], [], []
+        stretch_mat, score = {}, {}
         for n,vid in enumerate(vids):
             if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
+            if verbose and n+1==N: print "100%"
             spatial_edges = list(graph.edges( vid, 's' ))
             # -- We recover the landmarks associated to each vertex:
             landmarks_t1, landmarks_t2 = [], []
@@ -1030,7 +1033,7 @@ def __strain_parameters2(func):
                 else:
                     missing_epidermis_wall_median.append(vid)
             if use_projected_anticlinal_wall:
-                ppt = 'epidermis_2D_landmarks'
+                ppt = 'surfacic_3D_landmarks'
             else:
                 ppt = '3D_landmarks'
                 unlab_wm = graph.vertex_property('unlabelled_wall_median')
@@ -1045,7 +1048,7 @@ def __strain_parameters2(func):
                 # - If the spatial edge we are looking at is pointing to a target outside the L1, we do not want to use it for surfacic 3D:
                 target = graph.edge_vertices(eid)[0] if graph.edge_vertices(eid)[0] != vid else graph.edge_vertices(eid)[1]
                 if use_projected_anticlinal_wall and target not in graph.vertex_property('L1'):
-                    continue # no need to worry, theese are not the droids you're looking for !
+                    continue # no need to worry, these are not the droids you're looking for !
                 # - Now we add medians between used vertex as landmarks:
                 if graph.edge_property(ppt).has_key(eid):
                     landmarks_t1.append(graph.edge_property(ppt)[eid][0])
@@ -1053,28 +1056,42 @@ def __strain_parameters2(func):
                 else:
                     nb_missing_data+=1
 
-            if nb_missing_data != 0:
-                warnings.warn("Missing {} landmark{} for the t_n vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
-            if nb_missing_data == 0:
+            # - Make a projection into the rank-2 subspace:
+            if use_projected_anticlinal_wall and graph._vertex_property.has_key('epidermis_rank-2_projection_matrix'):
+                try:
+                    H2_t1 = graph.vertex_property('epidermis_rank-2_projection_matrix')[vid]
+                    landmarks_t1 = np.array([np.dot(H2_t1,pts) for pts in landmarks_t1])
+                except:
+                    missing_rank2_proj_mat.append(vid)
+                try:
+                    H2_t2 = graph.vertex_property('daughters_fused_epidermis_rank-2_projection_matrix')[vid]
+                    landmarks_t2 = np.array([np.dot(H2_t2,pts) for pts in landmarks_t2])
+                except:
+                    missing_daughters_fused_rank2_proj_mat.append(vid)
+
+            #~ if nb_missing_data != 0:
+                #~ warnings.warn("Missing {} landmark{} for the t_n vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
+            if nb_missing_data == 0 and len(landmarks_t1)>=4: 
                 assert len(landmarks_t1) == len(landmarks_t2)
-                Nb_ldmk = len(landmarks_t1)
-                if Nb_ldmk != 0:
-                    stretch_mat[vid] = func(graph, landmarks_t1, landmarks_t2)
+                # - Convert voxel based metric into real-worlds units:
+                vid_index = graph.vertex_property('index')[vid]
+                res_1, res_2 = np.array(graph.graph_property("images_resolution")[vid_index]), np.array(graph.graph_property("images_resolution")[vid_index+1])
+                landmarks_t1 = landmarks_t1*res_1
+                landmarks_t2 = landmarks_t2*res_2
+                stretch_mat[vid], score[vid] = func(graph, landmarks_t1, landmarks_t2)
 
         if missing_epidermis_wall_median != []:
             print 'Could not use the epidermis wall median as an extra landmark for vids: {}'.format(missing_epidermis_wall_median)
+        if missing_rank2_proj_mat != []:
+            print "Missing epidermis_rank-2_projection_matrix for vid: {}".format(vid)
+        if missing_daughters_fused_rank2_proj_mat != []:
+            print "Missing daughters_fused_epidermis_rank-2_projection_matrix for vid: {}".format(vid)
 
         # -- Now we return the results of temporal differentiation function:
         if labels_at_t_n:
-            return stretch_mat
+            return stretch_mat, score
         else:
-            stretch_mat_daughters={}
-            print "You have asked for labels @ t_n+1"
-            for vid in stretch_mat:
-                vid_descendants = graph.descendants(vid,1) - graph.descendants(vid,0)
-                for id_descendant in vid_descendants:
-                    stretch_mat_daughters[id_descendant] = stretch_mat[vid]
-            return stretch_mat_daughters
+            return translate_keys2daughters_ids(graph, stretch_mat), translate_keys2daughters_ids(graph, score)
 
     return  wrapped_function
 
@@ -1084,46 +1101,63 @@ def stretch_matrix(graph, xyz_t1, xyz_t2):
     """
     Compute the stretch / deformation matrix.
     """
-    ## Compute the centroids:
+    # - Compute the centroids:
     c_t1 = np.mean(xyz_t1,0)
     c_t2 = np.mean(xyz_t2,0)
-    ## Compute the centered matrix:
+    # - Compute the centered matrix:
     centered_coord_t1=np.array(xyz_t1-c_t1)
     centered_coord_t2=np.array(xyz_t2-c_t2)
-    ## Least-square estimation of A.
-    #A is the transformation matrix in the regression equation between the centered vertices position of two time points:
-    lsq=lstsq(centered_coord_t1,centered_coord_t2)
-    A=lsq[0]
+    # - A is the affine transformation matrix between the centered vertices position of two time points:
+    regr = linear_model.Ridge (alpha = .01, fit_intercept=False)
+    regr.fit(centered_coord_t1,centered_coord_t2)
 
-    return A
+    return regr.coef_, r2_scoring(centered_coord_t2, np.dot(regr.coef_,centered_coord_t1.T).T)
 
-def strain_orientations(stretch_mat, return_values=True, nb_directions=None, after_deformation=True):
+def stretch_main_orientations(graph, stretch_mat=None, **kwargs):
     """
-    Return the strain main directions after deformation (default) or before.
+    Return the stretch main directions and the associated values before deformation (default) or after.
     """
-    if nb_directions is None:
-        nb_directions = 3
+    try: vids = kwargs['vids']
+    except: vids = None
+    try: labels_at_t_n = kwargs['labels_at_t_n']
+    except: labels_at_t_n = True
+    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
+    except: use_projected_anticlinal_wall = False
+    if stretch_mat is None:
+        print 'Computing the strecht matrix...'
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
 
     directions = {}; values={}
     for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
         R,D_A,Q=svd(stretch_mat[vid])
         # Compute Strain Rates :
-        if after_deformation:
-            directions[vid] = Q[:nb_directions,:]
+        if not labels_at_t_n:
+            directions[vid] = Q
         else:
-            directions[vid] = R[:,:nb_directions]
-        values[vid] = D_A[:nb_directions]
-    if return_values:
+            directions[vid] = R
+        values[vid] = D_A
+
+    if labels_at_t_n:
         return directions, values
     else:
-        return directions
+        return translate_keys2daughters_ids(graph,directions), translate_keys2daughters_ids(graph,values)
 
-def strain_rates(graph, stretch_mat):
+def strain_rates(graph, stretch_mat=None, **kwargs):
     """
     Return the strain rate: sr[c][i] = np.log(D_A[i])/deltaT, for i = [0,1] if 2D, i = [0,1,2] if 3D.
     Dimensionnality is imposed by the one of the strain matrix.
     """
+    try: vids = kwargs['vids']
+    except: vids = None
+    try: labels_at_t_n = kwargs['labels_at_t_n']
+    except: labels_at_t_n = True
+    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
+    except: use_projected_anticlinal_wall = False
+    if stretch_mat is None:
+        print 'Computing the strecht matrix...'
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+
     sr = {}
     for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
@@ -1131,12 +1165,51 @@ def strain_rates(graph, stretch_mat):
         # Compute Strain Rates :
         sr[vid] = np.log(D_A)/float(time_interval(graph, vid, rank =1))
 
-    return sr
+    if labels_at_t_n:
+        return sr
+    else:
+        return translate_keys2daughters_ids(graph,sr)
 
-def areal_strain_rates(graph, stretch_mat):
+def expansion_anisotropy(graph, stretch_mat=None, **kwargs):
+    """
+    Compute the expansion anisotropy in 2D: ea[c] = np.log(D_A[0]/D_A[1])/np.log(D_A[0]*D_A[1]).
+    """
+    try: vids = kwargs['vids']
+    except: vids = None
+    try: labels_at_t_n = kwargs['labels_at_t_n']
+    except: labels_at_t_n = True
+    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
+    except: use_projected_anticlinal_wall = False
+    if stretch_mat is None:
+        print 'Computing the strecht matrix...'
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+
+    ea = {}
+    for vid in stretch_mat:
+        ##  Singular Value Decomposition (SVD) of A.
+        R,D_A,Q=svd(stretch_mat[vid])
+        # Compute Strain Rates and Areal Strain Rate:
+        ea[vid] = np.log(D_A[0]/D_A[1])/np.log(D_A[0]*D_A[1])
+
+    if labels_at_t_n:
+        return ea
+    else:
+        return translate_keys2daughters_ids(graph,ea)
+
+def areal_strain_rates(graph, stretch_mat=None, **kwargs):
     """
     Compute the areal strain rate: asr[c] = sum_i(np.log(D_A[i])/deltaT), for i = [0,1].
     """
+    try: vids = kwargs['vids']
+    except: vids = None
+    try: labels_at_t_n = kwargs['labels_at_t_n']
+    except: labels_at_t_n = True
+    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
+    except: use_projected_anticlinal_wall = False
+    if stretch_mat is None:
+        print 'Computing the strecht matrix...'
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+
     asr = {}
     for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
@@ -1144,12 +1217,25 @@ def areal_strain_rates(graph, stretch_mat):
         # Compute Strain Rates and Areal Strain Rate:
         asr[vid] = sum(np.log(D_A[0:2])/float(time_interval(graph, vid, rank =1)))
 
-    return asr
+    if labels_at_t_n:
+        return asr
+    else:
+        return translate_keys2daughters_ids(graph,asr)
 
-def volumetric_strain_rates(graph, stretch_mat):
+def volumetric_strain_rates(graph, stretch_mat=None, **kwargs):
     """
     Compute the volumetric strain rate: asr[c] = sum_i(np.log(D_A[i])/deltaT), for i = [0,1,2].
     """
+    try: vids = kwargs['vids']
+    except: vids = None
+    try: labels_at_t_n = kwargs['labels_at_t_n']
+    except: labels_at_t_n = True
+    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
+    except: use_projected_anticlinal_wall = False
+    if stretch_mat is None:
+        print 'Computing the strecht matrix...'
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+
     vsr = {}
     for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
@@ -1157,24 +1243,12 @@ def volumetric_strain_rates(graph, stretch_mat):
         # Compute Strain Rates and Areal Strain Rate:
         vsr[vid] = sum(np.log(D_A)/float(time_interval(graph, vid, rank =1)))
 
-    return vsr
+    if labels_at_t_n:
+        return vsr
+    else:
+        return translate_keys2daughters_ids(graph,vsr)
 
-def strain_anisotropy(graph, stretch_mat):
-    """
-    Compute the "Growth" Anisotropy = (sr1-sr2)/(sr1+sr2)
-    Dimensionnality is imposed by the one of the strain matrix.
-    """
-    anisotropy = {}
-    for vid in stretch_mat:
-        ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q = svd(stretch_mat[vid])
-        # Compute Strain Rates :
-        strain_rate = D_A/float(time_interval(graph, vid, rank =1))
-        anisotropy[vid] = (strain_rate[0]-strain_rate[1])/(strain_rate[0]+strain_rate[1])
-
-    return anisotropy
-
-def anisotropy_ratios(stretch_mat):
+def anisotropy_ratios(graph, stretch_mat=None, **kwargs):
     """
     Anisotropy ratio :
      R, strain_values, Q = svd( stretch_mat ), then
@@ -1185,6 +1259,16 @@ def anisotropy_ratios(stretch_mat):
 
     Dimensionnality is imposed by the one of the strain matrix `stretch_mat`.
     """
+    try: vids = kwargs['vids']
+    except: vids = None
+    try: labels_at_t_n = kwargs['labels_at_t_n']
+    except: labels_at_t_n = True
+    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
+    except: use_projected_anticlinal_wall = False
+    if stretch_mat is None:
+        print 'Computing the strecht matrix...'
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+
     anisotropy_ratio = {}
     for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
@@ -1194,7 +1278,10 @@ def anisotropy_ratios(stretch_mat):
         else:
             anisotropy_ratio[vid] = D_A[0]/D_A[1]
 
-    return anisotropy_ratio
+    if labels_at_t_n:
+        return anisotropy_ratio
+    else:
+        return translate_keys2daughters_ids(graph,anisotropy_ratio)
 
 
 def time_interval(graph,vid,rank=1):
@@ -1221,6 +1308,57 @@ def sibling_volume_ratio(graph):
             else:
                 svr[vtx,sibling]=ratio
     return svr
+
+
+def subspace_projection(point_set, subspace_rank = 2, centering=True, verbose=True):
+    """
+    Project a point set o coordinate into a subspace.
+    
+    :Parameters:
+     - point_set (np.array): list of coordinates of shape (n_point, init_dim).
+     - dimension_reduction (int) : the dimension reduction to apply
+    """
+    point_set = np.array(point_set)
+    nb_coord = point_set.shape[0]
+    init_dim = point_set.shape[1]
+    assert init_dim > subspace_rank
+
+    if centering:
+        # - Compute the centered matrix:
+        centered_point_set=point_set-point_set.mean(axis=0)
+    else:
+        centered_point_set = point_set
+        if point_set.mean(axis=0) != np.zeros([init_dim, init_dim]):
+            warnings.warn("The provided point set is not centered!")
+    
+    # -- Compute the Singular Value Decomposition (SVD) of centered coordinates:
+    U,D,V = svd(centered_point_set, full_matrices=False)
+    V = V.T
+
+    # -- Compute the projection matrix:
+    H = np.dot(V[:,0:subspace_rank], V[:,0:subspace_rank].T)
+    # -- Projection of the coordinate into the defined subspace by the previously computed eigenvector:
+    reduced_point_set = np.array([np.dot(H, centered_point_set[k]) for k in range(nb_coord)])
+    assert reduced_point_set.shape[1] == init_dim
+
+    return reduced_point_set
+
+
+def r2_scoring( Y, Y_pred ):
+    """
+    Function computing an r^2-like scoring in 3D.
+    """
+    Y = np.array(Y); Y_pred = np.array(Y_pred)
+    assert Y.shape == Y_pred.shape
+    if Y.shape[0]==3 and Y.shape[0]>3:
+        Y = Y.T; Y_pred = Y_pred.T
+    n_coord = Y.shape[0]
+
+    from openalea.image.algo.analysis import distance
+    SCR = sum( [distance( Y[n], Y_pred[n] )**2 for n in range(n_coord)] )
+    SCT = sum( [distance( Y[n], np.mean(Y,0) )**2 for n in range(n_coord)] )
+    return 1-SCR/SCT
+
 
 def triplot(graphs_list, values2plot, labels_list=None, values_name="", normed=False):
     """
