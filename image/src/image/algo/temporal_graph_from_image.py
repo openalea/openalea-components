@@ -1096,7 +1096,10 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 undefined_cells_in_image = True
 
             # -- Saving images resolutions (useful for converting voxel units in real-world units)
-            graph.add_graph_property("images_resolution",dict())
+            try:
+                graph.add_graph_property("images_resolution",dict())
+            except:
+                pass
             graph._graph_property["images_resolution"].update({tp:SpI_Analysis[tp].image.resolution})
 
             # -- We want to keep the unit system of each variable
