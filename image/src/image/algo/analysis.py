@@ -1392,7 +1392,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             return volume
 
 
-    def inertia_axis(self, labels = None, center_of_mass = None, real = True):
+    def inertia_axis(self, labels = None, center_of_mass = None, real = True, verbose=False):
         """
         Return the inertia axis of cells, also called the shape main axis.
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.
@@ -1406,8 +1406,11 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         # results
         inertia_eig_vec = []
         inertia_eig_val = []
+        N = len(labels)
         for i,label in enumerate(labels):
-            slices = copy.copy(self.boundingbox(label, real=False))
+            if verbose and i*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+            if verbose and i+1==N: print "100%"
+            slices = self.boundingbox(label, real=False)
             center = copy.copy(self.center_of_mass(label, real=False))
             # project center into the slices sub_image coordinate
             if slices is not None:
@@ -1415,6 +1418,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
                     center[i] = center[i] - slice.start
                 label_image = (self.image[slices] == label)
             else:
+                print 'No boundingbox found for label {}'.format(label)
                 label_image = (self.image == label)
 
             # compute the indices of voxel with adequate label
