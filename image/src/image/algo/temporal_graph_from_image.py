@@ -564,8 +564,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
                 print "Creating daughters fused SpatialImageAnalysis #{}...".format(tp_2fuse)
                 ref_tp = tp_2fuse-1
-                ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in vids]
-                ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
+                ref_SpI_ids = fused_image_analysis[tp_2fuse].labels()
                 print "Computing fused_daughters_inertia_axis property #{}...".format(tp_2fuse)
                 fused_bary_vox = fused_image_analysis[tp_2fuse].center_of_mass(ref_SpI_ids, real = False)
                 inertia_axis, inertia_values = fused_image_analysis[tp_2fuse].inertia_axis(ref_SpI_ids, fused_bary_vox, verbose = True)
@@ -959,7 +958,6 @@ def extend_edge_property_from_dictionary(graph, name, dictionary, time_point = N
     if mlabelpair2edge is None:
         mlabelpair2edge = labelpair2edge_map(graph, time_point)
     if name not in graph.edge_properties():
-        warnings.warn("Edge property '{}' does not exist".format(name))
         graph.add_edge_property(name)
 
     missing_edges = list(set(dictionary.keys())-set(mlabelpair2edge.keys()))
@@ -978,7 +976,6 @@ def extend_vertex_property_from_dictionary(graph, name, dictionary, mlabel2verte
     if mlabel2vertex is None:
         mlabel2vertex = label2vertex_map(graph, time_point)
     if name not in graph.vertex_properties():
-        warnings.warn("Vertex property '{}' does not exist".format(name))
         graph.add_vertex_property(name)
 
     missing_vertex = list(set(dictionary.keys())-set(mlabel2vertex.keys()))
