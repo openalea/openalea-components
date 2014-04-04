@@ -557,14 +557,18 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
         if 'fused_daughters_inertia_axis' in spatio_temporal_properties:
             # Try to use 'fused_image_analysis' dict else compute it:
             if fused_image_analysis == {} or len(fused_image_analysis) != graph.nb_time_points:
+                print 'Computing fused_daughters images...'
                 fused_image_analysis = create_fused_image_analysis(graph, SpI_Analysis)
 
             print 'Computing fused_daughters_inertia_axis property...'
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
+                print "Daughters fused SpatialImageAnalysis #{}...".format(tp_2fuse)
                 ref_tp = tp_2fuse-1
                 ref_vids = [k for k in graph.vertex_at_time(ref_tp,lineaged=True) if k in vids]
                 ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
                 inertia_axis, inertia_values = fused_image_analysis[tp_2fuse].inertia_axis(ref_SpI_ids,fused_image_analysis[tp_2fuse].center_of_mass(ref_SpI_ids))
+                fused_bary_vox = fused_image_analysis[tp_2fuse].center_of_mass(ref_SpI_ids, real = False)
+                extend_vertex_property_from_dictionary(graph, 'fused_daughters_barycenter_voxel', fused_bary_vox, time_point=ref_tp)
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_axis', inertia_axis, time_point=ref_tp)
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_values', inertia_values, time_point=ref_tp)
 
