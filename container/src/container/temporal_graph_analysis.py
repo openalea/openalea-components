@@ -459,7 +459,7 @@ def temporal_rate(graph, vertex_property, vid, rank, time_interval):
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        raise raise KeyError("temporal_rate "+"error 2 ")
+        raise KeyError("temporal_rate "+"error 2 ")
 
     return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
 
@@ -493,7 +493,7 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        raise raise KeyError("temporal_change "+"error 2 ")
+        raise KeyError("temporal_change "+"error 2 ")
 
     return (descendants_value - parent_value) / float(time_interval)
 
