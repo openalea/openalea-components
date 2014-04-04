@@ -1078,7 +1078,6 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
         for tp in xrange(graph.nb_time_points+1):
             print "\n\n# - Analysing image #{}".format(tp)
             # - Define SpatialImage type `labels` to compute for:
-            print "Define SpatialImage type `labels` to compute properties for..."
             labels = translate_ids_Graph2Image(graph, [k for k in graph.vertex_at_time(tp) if k in vids])
             labelset = set(labels)
             # - Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use:

@@ -1406,7 +1406,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         # results
         inertia_eig_vec = []
         inertia_eig_val = []
-        N = len(labels)
+        N = len(labels); percent=0
         for i,label in enumerate(labels):
             if verbose and i*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
             if verbose and i+1==N: print "100%"
