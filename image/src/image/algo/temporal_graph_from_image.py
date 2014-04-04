@@ -1120,18 +1120,13 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 graph._graph_property["units"].update( {"volume":(u'\xb5m\xb3'if property_as_real else 'voxels')} )
 
 
-            barycenters_voxel = None
+            barycenters_voxel = SpI_Analysis[tp].center_of_mass(labels, real=False)
             if 'barycenter' in spatio_temporal_properties :
                 print 'Computing barycenter property...'
-                barycenters = SpI_Analysis[tp].center_of_mass(labels, real=property_as_real)
+                barycenters = dict([(l,np.multiply(barycenters_voxel[l], SpI_Analysis[tp].image.resolution)) for l in labels])
                 extend_vertex_property_from_dictionary(graph, 'barycenter', barycenters, time_point=tp)
-                if property_as_real:
-                    barycenters_voxel = SpI_Analysis[tp].center_of_mass(labels, real=False)
-                    extend_vertex_property_from_dictionary(graph, 'barycenter_voxel', barycenters, time_point=tp)
-                else:
-                    barycenters_voxel = barycenters
-                    graph.add_vertex_property('barycenter_voxel', graph.vertex_property('barycenter'))
-                graph._graph_property["units"].update( {"barycenter":(u'\xb5m'if property_as_real else 'voxels')} )
+                extend_vertex_property_from_dictionary(graph, 'barycenter_voxel', barycenters_voxel, time_point=tp)
+                graph._graph_property["units"].update( {"barycenter":u'\xb5m'} )
                 graph._graph_property["units"].update( {"barycenter_voxel":'voxels'} )
 
 
@@ -1151,7 +1146,6 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
 
             if 'inertia_axis' in spatio_temporal_properties :
                 print 'Computing inertia_axis property...'
-                if barycenters_voxel is None: barycenters_voxel = SpI_Analysis[tp].center_of_mass(labels, real=False)
                 inertia_axis, inertia_values = SpI_Analysis[tp].inertia_axis(labels, barycenters_voxel)
                 extend_vertex_property_from_dictionary(graph, 'inertia_axis', inertia_axis, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'inertia_values', inertia_values, time_point=tp)

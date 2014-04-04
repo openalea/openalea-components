@@ -1267,7 +1267,7 @@ class SpatialImageAnalysis2D (AbstractSpatialImageAnalysis):
 
         # if center of mass is not specified
         if center_of_mass is None:
-            center_of_mass = self.center_of_mass(labels)
+            center_of_mass = self.center_of_mass(labels, real=False)
         for i,label in enumerate(labels):
             slices = self.boundingbox(label)
             print slices
@@ -1395,7 +1395,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
     def inertia_axis(self, labels = None, center_of_mass = None, real = True):
         """
         Return the inertia axis of cells, also called the shape main axis.
-        Return 3 (3D-oriented) vectors and 3 (length) values.
+        Return 3 (3D-oriented) vectors by rows and 3 (length) values.
         """
         unique_label = False
         if labels is None : labels = self.labels()
@@ -1406,18 +1406,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         # results
         inertia_eig_vec = []
         inertia_eig_val = []
-
-        # if center of mass is not specified
-        if center_of_mass is None:
-            center_of_mass = self.center_of_mass(labels, real=False)
         for i,label in enumerate(labels):
-            slices = self.boundingbox(label, real=False)
-            if len(labels) == 1:
-                center = center_of_mass
-            elif isinstance(center_of_mass, dict):
-                center = center_of_mass[label]
-            else:
-                center = center_of_mass[i]
+            slices = copy.copy(self.boundingbox(label, real=False))
+            center = copy.copy(self.center_of_mass(label, real=False))
             # project center into the slices sub_image coordinate
             if slices is not None:
                 for i,slice in enumerate(slices):
@@ -1438,16 +1429,15 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
             # compute 1/N*P.P^T
             cov = 1./len(x)*np.dot(coord,coord.T)
-
             # Find the eigen values and vectors.
             eig_val, eig_vec = np.linalg.eig(cov)
-
-            inertia_eig_vec.append(eig_vec)
+            eig_vec = np.array(eig_vec).T
 
             if real:
                 for i in xrange(3):
                     eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self.image.resolution) )
 
+            inertia_eig_vec.append(eig_vec)
             inertia_eig_val.append(eig_val)
 
         if unique_label :
