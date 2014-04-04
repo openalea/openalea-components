@@ -196,7 +196,7 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
             tmp_img[analysis.boundingbox(id_child)] = tmp_img[analysis.boundingbox(id_child)] + np.multiply(mask, SpI_ids[n])
 
     t_stop = time.time()
-    if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(t_stop-t_start)
+    if verbose: print "Time to 'fuse' daughters with parent ids: {}s".format(round(t_stop-t_start,3))
     if not_found != []:
         warnings.warn("You have asked to fuse these labels' daughters, but they have no known daughters: {}".format(not_found))
     tmp_img = SpatialImage(tmp_img)
@@ -568,7 +568,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 ref_SpI_ids = translate_ids_Graph2Image(graph, ref_vids)
                 print "Computing fused_daughters_inertia_axis property #{}...".format(tp_2fuse)
                 fused_bary_vox = fused_image_analysis[tp_2fuse].center_of_mass(ref_SpI_ids, real = False)
-                inertia_axis, inertia_values = fused_image_analysis[tp_2fuse].inertia_axis(ref_SpI_ids, fused_bary_vox)
+                inertia_axis, inertia_values = fused_image_analysis[tp_2fuse].inertia_axis(ref_SpI_ids, fused_bary_vox, verbose = True)
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_barycenter_voxel', fused_bary_vox, time_point=ref_tp)
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_axis', inertia_axis, time_point=ref_tp)
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_values', inertia_values, time_point=ref_tp)
@@ -1082,7 +1082,6 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             labels = translate_ids_Graph2Image(graph, [k for k in graph.vertex_at_time(tp) if k in vids])
             labelset = set(labels)
             # - Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use:
-            print "Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use..."
             neighborhood = translate_keys_Graph2Image(graph, dict([(vid, translate_ids_Graph2Image(graph, graph.neighbors(vid,'s'))) for vid in vids if graph.vertex_property('index')[vid]==tp]), tp)
             # - Retrieve `min_contact_surface`
             try:
@@ -1103,7 +1102,6 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
             except: pass
-            print "Done !"
 
             boundingboxes = SpI_Analysis[tp].boundingbox(labels, real=False)
             if 'boundingbox' in spatio_temporal_properties :
