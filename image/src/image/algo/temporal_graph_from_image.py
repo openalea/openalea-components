@@ -1362,10 +1362,9 @@ def retrieve_label_neighbors(SpI_Analysis, label, labelset, min_contact_surface,
     """
     """
     neighbors = SpI_Analysis.neighbors(label, min_contact_surface, real_surface)
-    if isinstance(neighbors, dict): neighbors = set(neighbors[background[tp]])
-    else: neighbors = set(neighbors)
+    if isinstance(neighbors, dict):
+        neighbors = set(neighbors[label])
+    else:
+        neighbors = set(neighbors)
+
     return neighbors.intersection_update(labelset)
-
-
-
-
