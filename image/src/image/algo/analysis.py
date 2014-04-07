@@ -337,6 +337,14 @@ def closest_from_A(A, pts2search):
 
     return pts_min_dist
 
+def return_list_of_vectors(tensor, by_row):
+    """
+    Return a standard list of Vector3 from an array, if sorted 'by_row' or not.
+    """
+    if by_row:
+        return [Vector3(tensor[v]) for v in xrange(len(tensor))]
+    else:
+        return [Vector3(tensor[:,v]) for v in xrange(len(tensor))]
 
 
 NPLIST, LIST, DICT = range(3)
@@ -555,10 +563,12 @@ class AbstractSpatialImageAnalysis(object):
          [1.0, 1.0, 0.0],
          [0.75, 2.75, 0.0]]
         """
-        if labels is None:
-            labels = self.labels()
         if isinstance(labels, int):
             labels = [labels]
+        elif isinstance(labels, list):
+            labels = list(set(labels)&set(self.labels()))
+        else:
+            labels = self.labels()
 
         center = {}
         for l in labels:
@@ -1255,62 +1265,54 @@ class SpatialImageAnalysis2D (AbstractSpatialImageAnalysis):
         Return the inertia axis of cells, also called the shape main axis.
         Returns 2 (2D-oriented) vectors and 2 (length) values.
         """
-        unique_label = False
-        if labels is None : labels = self.labels()
-        elif not isinstance(labels,list) :
-            labels = [labels]
-            unique_label = True
+        if labels is None: labels = self.labels()
+        else: labels = [labels]
 
         # results
         inertia_eig_vec = []
         inertia_eig_val = []
-
-        # if center of mass is not specified
-        if center_of_mass is None:
-            center_of_mass = self.center_of_mass(labels, real=False)
         for i,label in enumerate(labels):
-            slices = self.boundingbox(label)
-            print slices
-            if len(labels) == 1:
-                # Fred note: It seems that now, an array is always returned. Even with one value.
-                center = center_of_mass[0]
-            elif isinstance(center_of_mass, dict):
-                center = center_of_mass[label]
-            else:
-                center = center_of_mass[i]
-            print center
+            if verbose and i*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+            if verbose and i+1==N: print "100%"
+            slices = self.boundingbox(label, real=False)
+            center = copy.copy(self.center_of_mass(label, real=False))
             # project center into the slices sub_image coordinate
-            for i,slice in enumerate(slices):
-                print center[i], slice.start
-                center[i] = center[i] - slice.start
-            label_image = (self.image[slices] == label)
+            if slices is not None:
+                for i,slice in enumerate(slices):
+                    center[i] = center[i] - slice.start
+                label_image = (self.image[slices] == label)
+            else:
+                print 'No boundingbox found for label {}'.format(label)
+                label_image = (self.image == label)
 
             # compute the indices of voxel with adequate label
-            x,y = label_image.nonzero()
-
+            x,y,z = label_image.nonzero()
+            if len(x)==0:
+                continue # obviously no reasons to go further !
             # difference with the center
             x = x - center[0]
             y = y - center[1]
-            coord = np.array([x,y])
+            z = z - center[2]
+            coord = np.array([x,y,z])
 
             # compute 1/N*P.P^T
             cov = 1./len(x)*np.dot(coord,coord.T)
 
             # Find the eigen values and vectors.
             eig_val, eig_vec = np.linalg.eig(cov)
-
-            inertia_eig_vec.append(eig_vec)
+            eig_vec = np.array(eig_vec).T
 
             if real:
                 for i in xrange(2):
                     eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self.image.resolution) )
 
+            inertia_eig_vec.append(eig_vec)
             inertia_eig_val.append(eig_val)
         
-        if unique_label :
-            return inertia_eig_vec[0], inertia_eig_val[0]
+        if len(labels)==1 :
+            return return_list_of_vectors(inertia_eig_vec[0],by_row=1), inertia_eig_val[0]
         else:
-            return self.convert_return(inertia_eig_vec,labels), self.convert_return(inertia_eig_val,labels)
+            return self.convert_return(return_list_of_vectors(inertia_eig_vec,by_row=1),labels), self.convert_return(inertia_eig_val,labels)
 
 
 
@@ -1397,11 +1399,12 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         Return the inertia axis of cells, also called the shape main axis.
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.
         """
-        unique_label = False
-        if labels is None : labels = self.labels()
-        elif not isinstance(labels,list) :
+        if isinstance(labels, int):
             labels = [labels]
-            unique_label = True
+        elif isinstance(labels, list):
+            labels = list(set(labels)&set(self.labels()))
+        else:
+            labels = self.labels()
 
         # results
         inertia_eig_vec = []
@@ -1444,10 +1447,10 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             inertia_eig_vec.append(eig_vec)
             inertia_eig_val.append(eig_val)
 
-        if unique_label :
-            return inertia_eig_vec[0], inertia_eig_val[0]
+        if len(labels)==1 :
+            return return_list_of_vectors(inertia_eig_vec[0],by_row=1), inertia_eig_val[0]
         else:
-            return self.convert_return(inertia_eig_vec,labels), self.convert_return(inertia_eig_val,labels)
+            return self.convert_return(return_list_of_vectors(inertia_eig_vec,by_row=1),labels), self.convert_return(inertia_eig_val,labels)
 
 
     def cells_in_image_margins(self):
@@ -1588,8 +1591,8 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         neigborids = r_neighborhood(id_min_dist, pts, adjacencies, self.used_radius_for_curvature)
         # - Principal curvature computation:
         pc = principal_curvatures(pts, id_min_dist, neigborids, fitting_degree, monge_degree)
-        self.principal_curvatures[vid] = [pc[1][1], pc[2][1]]
-        self.principal_curvatures_normal[vid] = pc[3]
+        self.principal_curvatures[vid] = return_list_of_vectors(np.array([pc[1][1], pc[2][1], pc[3][1]]),by_row=1)
+        self.principal_curvatures_normal[vid] = self.principal_curvatures[vid][3]
         self.principal_curvatures_directions[vid] = [pc[1][0], pc[2][0]]
         self.principal_curvatures_origin[vid] = pc[0]
         #~ k1 = pc[1][1]; k2 = pc[2][1]
