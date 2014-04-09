@@ -110,10 +110,15 @@ def sort_boundingbox(boundingbox, label_1, label_2):
     if boundingbox.has_key(label_1) and not boundingbox.has_key(label_2):
         return (label_1, label_2)
 
-    bbox_1 = boundingbox[label_1]
-    bbox_2 = boundingbox[label_2]
-    vol_bbox_1 = (bbox_1[0].stop - bbox_1[0].start)*(bbox_1[1].stop - bbox_1[1].start)*(bbox_1[2].stop - bbox_1[2].start)
-    vol_bbox_2 = (bbox_2[0].stop - bbox_2[0].start)*(bbox_2[1].stop - bbox_2[1].start)*(bbox_2[2].stop - bbox_2[2].start)
+    if boundingbox.has_key(label_1) and not boundingbox.has_key(label_2):
+        (label_1, label_2)
+    elif boundingbox.has_key(label_2) and not boundingbox.has_key(label_1):
+        (label_2, label_1)
+    else:
+        bbox_1 = boundingbox[label_1]
+        bbox_2 = boundingbox[label_2]
+        vol_bbox_1 = (bbox_1[0].stop - bbox_1[0].start)*(bbox_1[1].stop - bbox_1[1].start)*(bbox_1[2].stop - bbox_1[2].start)
+        vol_bbox_2 = (bbox_2[0].stop - bbox_2[0].start)*(bbox_2[1].stop - bbox_2[1].start)*(bbox_2[2].stop - bbox_2[2].start)
     
     return (label_1, label_2) if vol_bbox_1<vol_bbox_2 else (label_2, label_1)
 
