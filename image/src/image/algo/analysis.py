@@ -340,10 +340,15 @@ def return_list_of_vectors(tensor, by_row):
     """
     Return a standard list of Vector3 from an array, if sorted 'by_row' or not.
     """
-    if by_row:
-        return [Vector3(tensor[v]) for v in xrange(len(tensor))]
+    if isinstance(tensor, dict):
+        return dict([(k,return_list_of_vectors(t,by_row)) for k,t in tensor.iteritems()])
+    elif isinstance(tensor, list) and tensor[0].shape == (3,3):
+        return [return_list_of_vectors(t,by_row) for t in tensor]
     else:
-        return [Vector3(tensor[:,v]) for v in xrange(len(tensor))]
+        if by_row:
+            return [Vector3(tensor[v]) for v in xrange(len(tensor))]
+        else:
+            return [Vector3(tensor[:,v]) for v in xrange(len(tensor))]
 
 
 NPLIST, LIST, DICT = range(3)
@@ -1591,7 +1596,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         # - Principal curvature computation:
         pc = principal_curvatures(pts, id_min_dist, neigborids, fitting_degree, monge_degree)
         self.principal_curvatures[vid] = return_list_of_vectors(np.array([pc[1][1], pc[2][1], pc[3][1]]),by_row=1)
-        self.principal_curvatures_normal[vid] = self.principal_curvatures[vid][3]
+        self.principal_curvatures_normal[vid] = self.principal_curvatures[vid][2]
         self.principal_curvatures_directions[vid] = [pc[1][0], pc[2][0]]
         self.principal_curvatures_origin[vid] = pc[0]
         #~ k1 = pc[1][1]; k2 = pc[2][1]

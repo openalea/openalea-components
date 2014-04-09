@@ -17,8 +17,9 @@
 """This module helps to create PropertyGraph from SpatialImages."""
 
 import numpy as np
-import time, warnings, math
+import time, warnings, math, gzip
 import copy as cp
+import pickle as pkl
 from IPython import embed
 
 from openalea.image.serial.basics import SpatialImage, imread
@@ -423,7 +424,10 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             if 'L1' in spatio_temporal_properties :
                 print 'Generating the list of cells belonging to the first layer...'
                 try: background_neighbors
-                except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
+                except: 
+                    background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface, real_surface)
+                    background_neighbors = set(background_neighbors)
+                    background_neighbors.intersection_update(labelset)
                 extend_vertex_property_from_dictionary(graph, 'L1', dict([(l, (l in background_neighbors)) for l in labels]), time_point=tp)
 
 
@@ -447,7 +451,10 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
 
             if 'wall_surface' in spatio_temporal_properties :
                 try: undefined_neighbors
-                except: undefined_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], 0, labelset, min_contact_surface, real_surface) 
+                except: 
+                    undefined_neighbors = SpI_Analysis[tp].neighbors(0, min_contact_surface, real_surface)
+                    undefined_neighbors = set(undefined_neighbors)
+                    undefined_neighbors.intersection_update(labelset)
                 print 'Computing wall_surface property...'
                 filtered_edges, unlabelled_target, unlabelled_wall_surfaces = {}, {}, {}
                 for source,targets in neighborhood.iteritems():
@@ -459,7 +466,8 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
 
                 if undefined_neighbors != []:
                     unlabelled_target.update( dict([ (k,0)  if not unlabelled_target.has_key(k) else (k,unlabelled_target[k]+[0]) for k in undefined_neighbors ]) )
-                unlabelled_wall_surface = dict( [(source, sum(SpI_Analysis[tp].wall_surfaces({source:unlabelled_target[source]},real=property_as_real).values())) for source in unlabelled_target] )
+                
+                unlabelled_wall_surface = dict( [(source, sum(SpI_Analysis[tp].wall_surfaces({source:(unlabelled_target[source] if isinstance(unlabelled_target[source],list) else [unlabelled_target[source]])},real=property_as_real).values())) for source in unlabelled_target] )
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_surface', unlabelled_wall_surface, time_point=tp)
                 graph._graph_property["units"].update( {"wall_surface":(u'\xb5m\xb2' if property_as_real else 'voxels')} )
                 graph._graph_property["units"].update( {"unlabelled_wall_surface":(u'\xb5m\xb2'if property_as_real else 'voxels')} )
@@ -467,7 +475,10 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
 
             if 'epidermis_surface' in spatio_temporal_properties :
                 try: background_neighbors
-                except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
+                except: 
+                    background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface, real_surface)
+                    background_neighbors = set(background_neighbors)
+                    background_neighbors.intersection_update(labelset)
                 print 'Computing epidermis_surface property...'
                 def not_background(indices):
                     a,b = indices
@@ -493,9 +504,15 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             if 'wall_median' in spatio_temporal_properties:
                 print 'Computing wall_median property...'
                 try: background_neighbors
-                except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
+                except: 
+                    background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface, real_surface)
+                    background_neighbors = set(background_neighbors)
+                    background_neighbors.intersection_update(labelset)
                 try: undefined_neighbors
-                except: undefined_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], 0, labelset, min_contact_surface, real_surface) 
+                except: 
+                    undefined_neighbors = SpI_Analysis[tp].neighbors(0, min_contact_surface, real_surface)
+                    undefined_neighbors = set(undefined_neighbors)
+                    undefined_neighbors.intersection_update(labelset)
                 try: dict_wall_voxels
                 except:
                     print "Extracting walls voxels..."
@@ -949,6 +966,51 @@ def graph_from_image3D(image, labels, background, spatio_temporal_properties,
                             property_as_real, ignore_cells_at_stack_margins, min_contact_surface)
 
 
+def tpgfi_tracker_check(obj, images):
+    """
+    Check if the tpgfi process running could be related to the one temporarily saved on the disk.
+    Do so by checking filenames of the images
+    """
+    print "Verifying tpgfi_tracker data...",
+    analysis, labels, background, neighborhood, graphs, label2vertex, edges = obj
+    assert (len(images) == len(analysis) == len(labels) == len(background) == len(neighborhood)  == len(graphs) == len(label2vertex) == len(edges))
+
+    img_names = []
+    for n,image in enumerate(images):
+        if isinstance(image, str):
+            img_names.append(image)
+        if isinstance(image, SpatialImage):
+            img_names.append(image.info["filename"])
+        if isinstance(image, AbstractSpatialImageAnalysis):
+            img_names.append(image.filename)
+
+    assert sum([name == analysis[n].filename for n,name in enumerate(img_names)])==len(images)
+
+    print "Done! Status: USABLE."
+
+def tpgfi_tracker_save(obj, filename):
+    """
+    Keep tracks of the shit goin' on during 'temporal_graph_from_image' function process.
+    :Parameters:
+     - `obj` (list) : list of objects
+    """
+    t_start = time.time()
+    f = gzip.open(filename,'w')
+    pkl.dump(obj, f)
+    f.close()
+    print "Time to save this step: {}".format(round(time.time()-t_start,3))
+
+def tpgfi_tracker_remove(tmp_filename):
+    """
+    Remove temporary files if not adequate !
+    """
+    import os, re
+    for f in os.listdir('.'):
+        if re.search(tmp_filename, f):
+            os.remove(f)
+
+    print "Temporary files removed !"
+
 def temporal_graph_from_image(images, lineages, time_steps = [], background = 1, spatio_temporal_properties = None,
      properties4lineaged_vertex = False, property_as_real = True, **kwargs):
     """
@@ -973,6 +1035,14 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     elif isinstance(background, list):
         assert len(background) == nb_images
 
+    # - Recovering **kwargs:
+    try: min_contact_surface = kwargs['min_contact_surface']
+    except: min_contact_surface = None
+    try: real_surface = kwargs['real_min_contact_surface']
+    except: real_surface = property_as_real
+    try: tmp_filename = kwargs['filename']
+    except: tmp_filename = "tmp_tpgfi_process"
+
     if isinstance(images[0], AbstractSpatialImageAnalysis):
         assert [isinstance(image, AbstractSpatialImageAnalysis) for image in images]
     if isinstance(images[0], SpatialImage):
@@ -980,92 +1050,127 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     if isinstance(images[0], str):
         assert [isinstance(image, str) for image in images]
 
-    try: min_contact_surface = kwargs['min_contact_surface']
-    except: min_contact_surface = None
-    try: real_surface = kwargs['real_min_contact_surface']
-    except: real_surface = property_as_real
-
-    print "# -- Creating Spatial Graphs..."
-    analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
-    for n,image in enumerate(images):
-        print "Initialising SpatialImageAnalysis #{}...".format(n)
-        # - First we contruct an object `analysis` from class `AbstractSpatialImageAnalysis`
-        if isinstance(image, str):
-            analysis[n] = SpatialImageAnalysis(imread(image), ignoredlabels = 0, return_type = DICT, background = background[n])
-        if isinstance(image, SpatialImage):
-            analysis[n] = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background[n])
-        if isinstance(image, AbstractSpatialImageAnalysis):
-            analysis[n] = image
-        labels[n] = analysis[n].labels()
-        if background[n] in labels[n]: labels[n].remove(background[n])
-        # -- Now we construct the Spatial Graph (topology):
-        neighborhood[n] = analysis[n].neighbors(labels[n], min_contact_surface, real_surface)
-        graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
-    print "Done\n"
-
-    print "# -- Creating Spatio-Temporal Graph..."
-    # -- Now we construct the Temporal Property Graph (with no properties attached to vertex):
-    tpg = TemporalPropertyGraph()
-    tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
-    tpg.add_graph_property('min_contact_surface', min_contact_surface)
-    tpg.add_graph_property('real_min_contact_surface', real_surface)
-    print "Done\n"
-
-    # -- Registration step:
-    if 'register_images' in kwargs and kwargs['register_images']:
-        print "# -- Images registration..."
-        if 'reference_image' in kwargs:
-            if isinstance(kwarg['reference_image'],int):
-                ref_image =  kwarg['reference_image']
-                unreg_images_ids_list = list( set(np.arange(tpg.nb_time_points+1)) - set([ref_image]) )
-                ref_images_ids_list = np.repeat(ref_images, tpg.nb_time_points)
-            if isinstance(kwarg['reference_image'],list):
-                ref_images_ids_list =  kwarg['reference_image']
-                assert len(ref_images_ids_list) == tpg.nb_time_points
-                if 'unregistered_images' in kwargs and isinstance(kwarg['unregistered_images'],list):
-                    unreg_images_ids_list = kwarg['unregistered_images']
-                    assert len(unreg_images_ids_list)==tpg.nb_time_points
-                else:
-                    warnings.warn("You gave a 'reference_image' list but no 'unregistered_images' list as 'kwargs'.")
-                    return None
-        else:
-            # -- By default we register every images onto the next one, starting with the last one.
-            ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
-            unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
-
-        reg_neighborhood, excluded_labels, wall_surfaces = {}, {}, {}
-        for ref_img_id, unreg_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
-            # - we save previously 'ignored_labels':
-            excluded_labels[unreg_img_id] = analysis[unreg_img_id].ignoredlabels()
-            print "Registering image #{} over {}image #{} ...".format(unreg_img_id, "" if ref_img_id==tpg.nb_time_points else "registered ", ref_img_id)
-            # we use only cells that are fully lineaged for stability reasons!
-            unreg_img_vids = tpg.vertex_at_time(unreg_img_id, fully_lineaged = True)
-            # translation into SpatialImage ids:
-            unreg_SpI_ids = translate_ids_Graph2Image(tpg, unreg_img_vids)
-            # we now need the barycenters of the 'fused' daughters:
-            fused_daughters_bary = find_daugthers_barycenters(tpg, analysis[ref_img_id], ref_img_id, unreg_img_id, unreg_img_vids)
-            # registration and resampling step:
-            ref_points = [fused_daughters_bary[k] for k in fused_daughters_bary]
-            reg_points = [analysis[unreg_img_id].center_of_mass(unreg_SpI_ids)[k] for k in fused_daughters_bary]
-            registered_img = image_registration(analysis[unreg_img_id].image, ref_points, reg_points, output_shape=analysis[ref_img_id].image.shape)
-            # redoing the `SpatialImageAnalysis`
-            analysis[unreg_img_id] = SpatialImageAnalysis(registered_img, ignoredlabels = 0, return_type = DICT, background = background[n])
-            analysis[unreg_img_id].add2ignoredlabels(excluded_labels[unreg_img_id])
-            # -- Now we RE-construct the Spatial Graph (topology):
+    ### ----- STEP #1: AbstractSpatialImageAnalysis & Spatial Graphs creation ----- ###
+    try:
+        print "Trying to: Open the file {}, ".format(tmp_filename+"_step1.pkl"),
+        f = gzip.open(tmp_filename+"_step1.pkl",'r')
+        print "Load the objects",
+        obj_list = pkl.load(f)
+        f.close()
+        tpgfi_tracker_check(obj_list, images)
+        analysis, labels, background, neighborhood, graphs, label2vertex, edges = obj_list
+        print "# -- Retreived the previous AbstractSpatialImageAnalysis..."
+    except:
+        print "Done! Status: UNusable."
+        tpgfi_tracker_remove(tmp_filename)
+        print "# -- Creating Spatial Graphs..."
+        analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
+        for n,image in enumerate(images):
+            print "Initialising SpatialImageAnalysis #{}...".format(n)
+            # - First we contruct an object `analysis` from class `AbstractSpatialImageAnalysis`
+            if isinstance(image, str):
+                analysis[n] = SpatialImageAnalysis(imread(image), ignoredlabels = 0, return_type = DICT, background = background[n])
+            if isinstance(image, SpatialImage):
+                analysis[n] = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background[n])
+            if isinstance(image, AbstractSpatialImageAnalysis):
+                analysis[n] = image
             labels[n] = analysis[n].labels()
-            neighborhood[unreg_img_id] = analysis[n].neighbors(labels[n], min_contact_surface, real_surface)
+            if background[n] in labels[n]: labels[n].remove(background[n])
+            # -- Now we construct the Spatial Graph (topology):
+            neighborhood[n] = analysis[n].neighbors(labels[n], min_contact_surface, real_surface)
             graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
-        print "Done\n"
 
-        # -- Re-creating Spatio-Temporal Graph after registration...
-        print "# -- Re-creating the Spatio-Temporal Graph after registration..."
+        # - End of step 1, updating tpgfi_tracker:
+        var_list = [analysis, labels, background, neighborhood, graphs, label2vertex, edges]
+        tpgfi_tracker_save(var_list, tmp_filename+"_step1.pkl")
+    print "Done\n"
+
+
+    ### ----- STEP #2: Temporal_Property_Graph creation ----- ###
+    try:
+        f = gzip.open(tmp_filename+"_step2.pkl",'r')
+        tpg = pickle.load(f)
+        f.close()
+        print "# -- Retreived the previous Spatio-Temporal Graph..."
+    except:
+        print "# -- Creating Spatio-Temporal Graph..."
+        # -- Now we construct the Temporal Property Graph (with no properties attached to vertex):
         tpg = TemporalPropertyGraph()
         tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
         tpg.add_graph_property('min_contact_surface', min_contact_surface)
         tpg.add_graph_property('real_min_contact_surface', real_surface)
-        print "Done\n"
+        tpgfi_tracker_save(tpg, tmp_filename+"_step2.pkl")
+    print "Done\n"
 
 
+    ### ----- STEP #3: Image registration ----- ###
+    try:
+        f = open(tmp_filename+"_step3.pkl",'r')
+        analysis, labels, background, neighborhood, graphs, label2vertex, edges, tpg = pickle.load(f)
+        f.close()
+        print "# -- Retreived the previous AbstractSpatialImageAnalysis and Spatio-Temporal Graph..."
+    except:
+        # -- Registration step:
+        if 'register_images' in kwargs and kwargs['register_images']:
+            print "# -- Images registration..."
+            if 'reference_image' in kwargs:
+                if isinstance(kwarg['reference_image'],int):
+                    ref_image =  kwarg['reference_image']
+                    unreg_images_ids_list = list( set(np.arange(tpg.nb_time_points+1)) - set([ref_image]) )
+                    ref_images_ids_list = np.repeat(ref_images, tpg.nb_time_points)
+                if isinstance(kwarg['reference_image'],list):
+                    ref_images_ids_list =  kwarg['reference_image']
+                    assert len(ref_images_ids_list) == tpg.nb_time_points
+                    if 'unregistered_images' in kwargs and isinstance(kwarg['unregistered_images'],list):
+                        unreg_images_ids_list = kwarg['unregistered_images']
+                        assert len(unreg_images_ids_list)==tpg.nb_time_points
+                    else:
+                        warnings.warn("You gave a 'reference_image' list but no 'unregistered_images' list as 'kwargs'.")
+                        return None
+            else:
+                # -- By default we register every images onto the next one, starting with the last one.
+                ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
+                unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
+
+            reg_neighborhood, excluded_labels, wall_surfaces = {}, {}, {}
+            for ref_img_id, unreg_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
+                # - we save previously 'ignored_labels':
+                excluded_labels[unreg_img_id] = analysis[unreg_img_id].ignoredlabels()
+                print "Registering image #{} over {}image #{} ...".format(unreg_img_id, "" if ref_img_id==tpg.nb_time_points else "registered ", ref_img_id)
+                # we use only cells that are fully lineaged for stability reasons!
+                unreg_img_vids = tpg.vertex_at_time(unreg_img_id, fully_lineaged = True)
+                # translation into SpatialImage ids:
+                unreg_SpI_ids = translate_ids_Graph2Image(tpg, unreg_img_vids)
+                # we now need the barycenters of the 'fused' daughters:
+                fused_daughters_bary = find_daugthers_barycenters(tpg, analysis[ref_img_id], ref_img_id, unreg_img_id, unreg_img_vids)
+                # registration and resampling step:
+                ref_points = [fused_daughters_bary[k] for k in fused_daughters_bary]
+                reg_points = [analysis[unreg_img_id].center_of_mass(unreg_SpI_ids)[k] for k in fused_daughters_bary]
+                registered_img = image_registration(analysis[unreg_img_id].image, ref_points, reg_points, output_shape=analysis[ref_img_id].image.shape)
+                # redoing the `SpatialImageAnalysis`
+                analysis[unreg_img_id] = SpatialImageAnalysis(registered_img, ignoredlabels = 0, return_type = DICT, background = background[n])
+                analysis[unreg_img_id].add2ignoredlabels(excluded_labels[unreg_img_id])
+                # -- Now we RE-construct the Spatial Graph (topology):
+                labels[n] = analysis[n].labels()
+                neighborhood[unreg_img_id] = analysis[n].neighbors(labels[n], min_contact_surface, real_surface)
+                graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
+            print "Done\n"
+
+            # -- Re-creating Spatio-Temporal Graph after registration...
+            print "# -- Re-creating the Spatio-Temporal Graph after registration..."
+            tpg = TemporalPropertyGraph()
+            tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
+            tpg.add_graph_property('min_contact_surface', min_contact_surface)
+            tpg.add_graph_property('real_min_contact_surface', real_surface)
+            print "Done\n"
+
+            # - End of step 3, updating tpgfi_tracker:
+            var_list = [analysis, labels, background, neighborhood, graphs, label2vertex, edges, tpg]
+            tpgfi_tracker_save(var_list, tmp_filename+"_step3.pkl")
+    print "Done\n"
+
+
+    ### ----- STEP #4: Cell features Extraction ----- ###
     # -- Adding spatio-temporal features to the Spatio-Temporal Graph...
     print "# -- Adding spatio-temporal features to the Spatio-Temporal Graph..."
     spatio_temporal_properties = check_properties(tpg, spatio_temporal_properties)
@@ -1362,9 +1467,5 @@ def retrieve_label_neighbors(SpI_Analysis, label, labelset, min_contact_surface,
     """
     """
     neighbors = SpI_Analysis.neighbors(label, min_contact_surface, real_surface)
-    if isinstance(neighbors, dict):
-        neighbors = set(neighbors[label])
-    else:
-        neighbors = set(neighbors)
-
+    neighbors = set(neighbors)
     return neighbors.intersection_update(labelset)
