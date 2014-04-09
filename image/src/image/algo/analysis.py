@@ -43,7 +43,6 @@ except :
     pass
 
 from openalea.plantgl.math import Vector3
-from openalea.plantgl.algo import approx_pointset_median, pointset_median
 
 
 def dilation(slices):
@@ -1858,6 +1857,8 @@ def vector_correlation(vect1,vect2):
 def find_wall_median_voxel(dict_wall_voxels, labels2exclude = [], verbose = True):
     """
     """
+    from openalea.plantgl.algo import approx_pointset_median, pointset_median
+
     if isinstance(labels2exclude,int):
         labels2exclude = [labels2exclude]
 
