@@ -109,6 +109,8 @@ def sort_boundingbox(boundingbox, label_1, label_2):
         return (label_2, label_1)
     if boundingbox.has_key(label_1) and (not boundingbox.has_key(label_2)):
         return (label_1, label_2)
+    if (not boundingbox.has_key(label_1)) and (not boundingbox.has_key(label_2)):
+        return (None, None)
 
     bbox_1 = boundingbox[label_1]
     bbox_2 = boundingbox[label_2]

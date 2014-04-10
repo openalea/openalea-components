@@ -524,7 +524,10 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                         if n*100/nb_pairs>=percent: print "{}%...".format(percent),; percent += 10
                         if n+1==nb_pairs: print "100%"
                         label_1, label_2 = sort_boundingbox(boundingboxes, label_1, label_2)
-                        dict_wall_voxels[min([label_1, label_2]), max([label_1, label_2])] = wall_voxels_between_two_cells(SpI_Analysis[tp].image, label_1, label_2, boundingboxes, verbose=False)
+                        if (label_1 is None) and (label_2 is None):
+                            continue
+                        else:
+                            dict_wall_voxels[min([label_1, label_2]), max([label_1, label_2])] = wall_voxels_between_two_cells(SpI_Analysis[tp].image, label_1, label_2, boundingboxes, verbose=False)
 
                 print "Searching for the median voxel of the walls and their rank-2 projection matrix..." 
                 wall_median = find_wall_median_voxel(dict_wall_voxels, labels2exclude = [])
@@ -973,7 +976,9 @@ def tpgfi_tracker_check(obj, images):
     """
     print "Verifying tpgfi_tracker data...",
     analysis, labels, background, neighborhood, graphs, label2vertex, edges = obj
-    assert (len(images) == len(analysis) == len(labels) == len(background) == len(neighborhood)  == len(graphs) == len(label2vertex) == len(edges))
+    if not (len(images) == len(analysis) == len(labels) == len(background) == len(neighborhood)  == len(graphs) == len(label2vertex) == len(edges)):
+        print "Done! Status: UNusable."
+        return False
 
     img_names = []
     for n,image in enumerate(images):
@@ -984,9 +989,12 @@ def tpgfi_tracker_check(obj, images):
         if isinstance(image, AbstractSpatialImageAnalysis):
             img_names.append(image.filename)
 
-    assert sum([name == analysis[n].filename for n,name in enumerate(img_names)])==len(images)
-
-    print "Done! Status: USABLE."
+    if not sum([name == analysis[n].filename for n,name in enumerate(img_names)])==len(images):
+        print "Done! Status: UNusable."
+        return False
+    else:
+        print "Done! Status: USABLE."
+        return True
 
 def tpgfi_tracker_save(obj, filename):
     """
@@ -1013,7 +1021,7 @@ def tpgfi_tracker_loader(filename):
     obj_list = pkl.load(f)
     f.close()
     print "Time to load this step: {}".format(round(time.time()-t_start,3))
-    return 
+    return obj_list
 
 def tpgfi_tracker_remove(tmp_filename):
     """
@@ -1067,13 +1075,13 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
 
     ### ----- STEP #1: AbstractSpatialImageAnalysis & Spatial Graphs creation ----- ###
     try:
-        obj_list = tpgfi_tracker_loader(tmp_filename+"_step1.pkl",'r')
-        tpgfi_tracker_check(obj_list, images)
-        analysis, labels, background, neighborhood, graphs, label2vertex, edges = obj_list
-        print "# -- Retreived the previous AbstractSpatialImageAnalysis..."
+        obj_list = tpgfi_tracker_loader(tmp_filename+"_step1.pkl")
+        if tpgfi_tracker_check(obj_list, images):
+            analysis, labels, background, neighborhood, graphs, label2vertex, edges = obj_list
+            print "# -- Retreived the previous AbstractSpatialImageAnalysis..."
+        else:
+            tpgfi_tracker_remove(tmp_filename)
     except:
-        print "Done! Status: UNusable."
-        tpgfi_tracker_remove(tmp_filename)
         print "# -- Creating Spatial Graphs..."
         analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
         for n,image in enumerate(images):
