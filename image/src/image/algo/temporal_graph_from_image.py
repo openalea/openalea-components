@@ -594,13 +594,8 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
                 try: dict_wall_voxels
                 except: dict_wall_voxels = SpI_Analysis[tp].wall_voxels_per_cells_pairs(labels+[background[tp]], neighborhood.update({background[tp]:list(background_neighbors)}), ignore_background=False )
-                if 'wall_median' in graph.edge_properties():
-                    medians_coords = dict( (graph.edge_vertices(eid), coord) for eid,coord in graph.edge_property('wall_median').iteritems() )
-                    medians_coords.update(dict( (0,vid) for vid in graph.vertex_property('unlabelled_wall_median') ))
-                    medians_coords.update(dict( (1,vid) for vid in graph.vertex_property('epidermis_wall_median') ))
-                    pc_values, pc_normal, pc_directions, pc_origin = SpI_Analysis[tp].wall_orientation( dict_wall_voxels, fitting_degree = 2, plane_projection = False, dict_coord_points_ori = medians_coords )
-                else:
-                    pc_values, pc_normal, pc_directions, pc_origin = SpI_Analysis[tp].wall_orientation( dict_wall_voxels, fitting_degree = 2, plane_projection = False )
+
+                pc_values, pc_normal, pc_directions, pc_origin = SpI_Analysis[tp].wall_orientation( dict_wall_voxels, fitting_degree = 2, plane_projection = False )
                 # -- Now we can compute the orientation of the frontier between two objects:
                 edge_pc_values, edge_pc_normal, edge_pc_directions, edge_pc_origin = {},{},{},{}
                 vertex_pc_values, vertex_pc_normal, vertex_pc_directions, vertex_pc_origin = {},{},{},{}
@@ -1015,12 +1010,12 @@ def tpgfi_tracker_loader(filename):
      - `obj` (list) : list of objects
     """
     t_start = time.time()
-    print "Trying to: Open the file {}, ".format(filename),
+    print "Trying to: Open the temporary file {}... ".format(filename),
     f = gzip.open(filename,'r')
-    print "Load the objects",
+    print "now loading the objects..."
     obj_list = pkl.load(f)
     f.close()
-    print "Time to load this step: {}".format(round(time.time()-t_start,3))
+    print "Time to load: {}".format(round(time.time()-t_start,3))
     return obj_list
 
 def tpgfi_tracker_remove(tmp_filename):

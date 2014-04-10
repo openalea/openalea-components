@@ -36,7 +36,7 @@ except:
 from openalea.image.spatial_image import SpatialImage
 
 try:
-    from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median)
+    from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median, approx_pointset_median)
 except :
     warnings.warn("'import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median)' failed, 'plantgl' seems to be missing!")
     warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
@@ -1086,13 +1086,13 @@ class AbstractSpatialImageAnalysis(object):
             x, y, z = dict_wall_voxels[(label_1, label_2)] # the points set
             if plane_projection:
                 fitting_degree = 0 #there will be no curvature since the wall will be flatenned !
-                x_bar, y_bar, z_bar = np.mean(x), np.mean(y), np.mean(z)
+                x_bar, y_bar, z_bar = np.mean(dict_wall_voxels[(label_1, label_2)],axis=1)
                 centered_point_set_3D = np.array( [x-x_bar,y-y_bar,z-z_bar] )
                 U, S, V = np.linalg.svd(centered_point_set_3D.T, full_matrices=False)
                 proj_points = np.dot(centered_point_set_3D.T, np.dot(V[:2,:].T,V[:2,:]))
-                x,y,z = proj_points[:,0]+x_bar,proj_points[:,1]+y_bar,proj_points[:,2]+z_bar
+                x,y,z = proj_points[:,0]+x_bar, proj_points[:,1]+y_bar, proj_points[:,2]+z_bar
             ## We need to find an origin: the closest point in set set from the geometric median
-            if dict_coord_points_ori is not None and dict_coord_points_ori.has_key((label_1, label_2)):
+            if (dict_coord_points_ori is not None) and dict_coord_points_ori.has_key((label_1, label_2)):
                 closest_voxel_coords = dict_coord_points_ori[(label_1, label_2)]
             else:
                 closest_voxel_coords = find_wall_median_voxel( {(label_1, label_2):dict_wall_voxels[(label_1, label_2)]}, verbose=False)
