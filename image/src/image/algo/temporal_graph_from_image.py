@@ -392,7 +392,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 graph.add_graph_property("images_resolution",dict())
             except:
                 pass
-            graph._graph_property["images_resolution"].update({tp:SpI_Analysis[tp].image.resolution})
+            graph._graph_property["images_resolution"].update({tp:SpI_Analysis[tp]._voxelsize})
 
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
@@ -1000,6 +1000,21 @@ def tpgfi_tracker_save(obj, filename):
     f.close()
     print "Time to save this step: {}".format(round(time.time()-t_start,3))
 
+def tpgfi_tracker_loader(filename):
+    """
+    Keep tracks of the shit goin' on during 'temporal_graph_from_image' function process.
+    :Parameters:
+     - `obj` (list) : list of objects
+    """
+    t_start = time.time()
+    print "Trying to: Open the file {}, ".format(filename),
+    f = gzip.open(filename,'r')
+    print "Load the objects",
+    obj_list = pkl.load(f)
+    f.close()
+    print "Time to load this step: {}".format(round(time.time()-t_start,3))
+    return 
+
 def tpgfi_tracker_remove(tmp_filename):
     """
     Remove temporary files if not adequate !
@@ -1052,11 +1067,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
 
     ### ----- STEP #1: AbstractSpatialImageAnalysis & Spatial Graphs creation ----- ###
     try:
-        print "Trying to: Open the file {}, ".format(tmp_filename+"_step1.pkl"),
-        f = gzip.open(tmp_filename+"_step1.pkl",'r')
-        print "Load the objects",
-        obj_list = pkl.load(f)
-        f.close()
+        obj_list = tpgfi_tracker_loader(tmp_filename+"_step1.pkl",'r')
         tpgfi_tracker_check(obj_list, images)
         analysis, labels, background, neighborhood, graphs, label2vertex, edges = obj_list
         print "# -- Retreived the previous AbstractSpatialImageAnalysis..."
@@ -1088,9 +1099,8 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
 
     ### ----- STEP #2: Temporal_Property_Graph creation ----- ###
     try:
-        f = gzip.open(tmp_filename+"_step2.pkl",'r')
-        tpg = pickle.load(f)
-        f.close()
+        obj_list = tpgfi_tracker_loader(tmp_filename+"_step2.pkl",'r')
+        analysis, labels, background, neighborhood, graphs, label2vertex, edges, tpg = obj_list
         print "# -- Retreived the previous Spatio-Temporal Graph..."
     except:
         print "# -- Creating Spatio-Temporal Graph..."
@@ -1105,10 +1115,9 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
 
     ### ----- STEP #3: Image registration ----- ###
     try:
-        f = open(tmp_filename+"_step3.pkl",'r')
-        analysis, labels, background, neighborhood, graphs, label2vertex, edges, tpg = pickle.load(f)
-        f.close()
-        print "# -- Retreived the previous AbstractSpatialImageAnalysis and Spatio-Temporal Graph..."
+        obj_list = tpgfi_tracker_loader(tmp_filename+"_step3.pkl",'r')
+        analysis, labels, background, neighborhood, graphs, label2vertex, edges, tpg = obj_list
+        print "# -- Retreived the previous REGISTERED AbstractSpatialImageAnalysis and Spatio-Temporal Graph..."
     except:
         # -- Registration step:
         if 'register_images' in kwargs and kwargs['register_images']:
