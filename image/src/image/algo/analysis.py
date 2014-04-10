@@ -367,10 +367,10 @@ class AbstractSpatialImageAnalysis(object):
         
         By default, we create cache of a property only if it can be used by several functions.
         """
-        if not isinstance(image, SpatialImage):
-            self.image = SpatialImage(image)
-        else:
+        if isinstance(image, SpatialImage):
             self.image = image
+        else:
+            self.image = SpatialImage(image)
 
         # -- We use this to avoid (when possible) computation of properties on background and other cells (ex: cell in image margins)
         if isinstance(ignoredlabels, int):
@@ -594,7 +594,7 @@ class AbstractSpatialImageAnalysis(object):
                 center[l] = c_o_m
 
         if real:
-            center = dict([(l,np.multiply(center[l],self.image.resolution)) for l in labels])
+            center = dict([(l,np.multiply(center[l],self._voxelsize)) for l in labels])
 
         if len(labels)==1:
             return center[labels[0]]
@@ -646,12 +646,12 @@ class AbstractSpatialImageAnalysis(object):
         # bbox of object labelled 1 to n are stored into self._bbox. To access i-th element, we have to use i-1 index
         if isinstance (labels, list):
             bboxes = [self._bbox[i-1] for i in labels]
-            if real : return self.convert_return([real_indices(bbox,self.image.resolution) for bbox in bboxes],labels)
+            if real : return self.convert_return([real_indices(bbox,self._voxelsize) for bbox in bboxes],labels)
             else : return self.convert_return(bboxes,labels)
 
         else :
             try:
-                if real:  return real_indices(self._bbox[labels-1], self.image.resolution)
+                if real:  return real_indices(self._bbox[labels-1], self._voxelsize)
                 else : return self._bbox[labels-1]
             except:
                 return None
@@ -854,7 +854,7 @@ class AbstractSpatialImageAnalysis(object):
 
 
     def get_voxel_face_surface(self):
-        a = self.image.resolution
+        a = self._voxelsize
         if len(a)==3:
             return np.array([a[1] * a[2],a[2] * a[0],a[0] * a[1] ])
         if len(a)==2:
@@ -1311,7 +1311,7 @@ class SpatialImageAnalysis2D (AbstractSpatialImageAnalysis):
 
             if real:
                 for i in xrange(2):
-                    eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self.image.resolution) )
+                    eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self._voxelsize) )
 
             inertia_eig_vec.append(eig_vec)
             inertia_eig_val.append(eig_val)
@@ -1390,9 +1390,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
         if real is True:
             if self.image.ndim == 2:
-                volume = np.multiply(volume,(self.image.resolution[0]*self.image.resolution[1]))
+                volume = np.multiply(volume,(self._voxelsize[0]*self._voxelsize[1]))
             elif self.image.ndim == 3:
-                volume = np.multiply(volume,(self.image.resolution[0]*self.image.resolution[1]*self.image.resolution[2]))
+                volume = np.multiply(volume,(self._voxelsize[0]*self._voxelsize[1]*self._voxelsize[2]))
             volume.tolist()
         
         if not isinstance(labels, int):
@@ -1449,7 +1449,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
             if real:
                 for i in xrange(3):
-                    eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self.image.resolution) )
+                    eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self._voxelsize) )
 
             inertia_eig_vec.append(eig_vec)
             inertia_eig_val.append(eig_val)
@@ -1709,7 +1709,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             u, eig_val, eig_vec = np.linalg.svd(cov) # sorted eigenvalues
             if real:
                 for i in xrange(3):
-                    eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self.image.resolution) )
+                    eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self._voxelsize) )
             anisotropy.append( (eig_val[0]-eig_val[1]) / (eig_val[0]+eig_val[1]) )
 
         return self.convert_return(anisotropy, vids)
@@ -1748,7 +1748,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             if verbose and n+1==N: print "100%"
             x,y,z = np.where( (self.image[self.boundingbox(vid)]) == vid )
             x_mean,y_mean,z_mean = self.center_of_mass(vid,False)
-            x_res, y_res, z_res = self.image.resolution
+            x_res, y_res, z_res = self._voxelsize
 
             x_bar = x+self.boundingbox(vid)[0].start-x_mean
             y_bar = y+self.boundingbox(vid)[1].start-y_mean

@@ -82,7 +82,7 @@ def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2registe
             z.extend(xyz[2]+analysis.boundingbox(id_child)[2].start)
 
         if real_world_units:
-            new_barycenters[vid] = np.mean(np.asarray([analysis.image.resolution]).T*np.asarray([x,y,z]),1)
+            new_barycenters[vid] = np.mean(np.asarray([analysis._voxelsize]).T*np.asarray([x,y,z]),1)
         else:
             new_barycenters[vid] = np.mean(np.asarray([x,y,z]),1)
 
@@ -102,7 +102,7 @@ def image_registration(image_2register, ref_points, reg_points, output_shape, **
         interpolation_method = kwargs['interpolation_method']
     else:
         interpolation_method = "nearest"
-    im_reech = reech3d.reech3d(image_2register, mat=registration, interpolation=interpolation_method, vin=image_2register.resolution, vout=image_2register.resolution, output_shape=output_shape)
+    im_reech = reech3d.reech3d(image_2register, mat=registration, interpolation=interpolation_method, vin=image_2register.voxelsize, vout=image_2register.voxelsize, output_shape=output_shape)
 
     if ('t_2def' in kwargs) and ('t_ref' in kwargs):
         t_2def = kwargs['t_2def']
@@ -201,7 +201,7 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     if not_found != []:
         warnings.warn("You have asked to fuse these labels' daughters, but they have no known daughters: {}".format(not_found))
     tmp_img = SpatialImage(tmp_img)
-    tmp_img.resolution = analysis.image.resolution
+    tmp_img.voxelsize = analysis._voxelsize
     tmp_img.info = analysis.image.info
     return tmp_img
 
@@ -387,12 +387,12 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 min_contact_surface = None
                 real_surface = property_as_real
 
-            # -- Saving images resolutions (useful for converting voxel units in real-world units)
+            # -- Saving images voxelsizes (useful for converting voxel units in real-world units)
             try:
-                graph.add_graph_property("images_resolution",dict())
+                graph.add_graph_property("images_voxelsize",dict())
             except:
                 pass
-            graph._graph_property["images_resolution"].update({tp:SpI_Analysis[tp]._voxelsize})
+            graph._graph_property["images_voxelsize"].update({tp:SpI_Analysis[tp]._voxelsize})
 
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
@@ -414,7 +414,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             barycenters_voxel = SpI_Analysis[tp].center_of_mass(labels, real=False)
             if 'barycenter' in spatio_temporal_properties :
                 print 'Computing barycenter property...'
-                barycenters = dict([(l,np.multiply(barycenters_voxel[l], SpI_Analysis[tp].image.resolution)) for l in labels])
+                barycenters = dict([(l,np.multiply(barycenters_voxel[l], SpI_Analysis[tp]._voxelsize)) for l in labels])
                 extend_vertex_property_from_dictionary(graph, 'barycenter', barycenters, time_point=tp)
                 extend_vertex_property_from_dictionary(graph, 'barycenter_voxel', barycenters_voxel, time_point=tp)
                 graph._graph_property["units"].update( {"barycenter":u'\xb5m'} )
@@ -644,7 +644,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
                 for radius in graph.graph_property('radius_2_compute'):
                     print 'Computing local_principal_curvature property with radius = {}voxels...'.format(radius)
-                    print u"This represent a local curvature estimation area of {}\xb5m\xb2".format(round(math.pi*(radius*SpI_Analysis[tp].image.resolution[0])*(radius*SpI_Analysis[tp].image.resolution[1])))
+                    print u"This represent a local curvature estimation area of {}\xb5m\xb2".format(round(math.pi*(radius*SpI_Analysis[tp]._voxelsize[0])*(radius*SpI_Analysis[tp]._voxelsize[1])))
                     SpI_Analysis[tp].principal_curvatures, SpI_Analysis[tp].principal_curvatures_normal, SpI_Analysis[tp].principal_curvatures_directions = {}, {}, {}
                     SpI_Analysis[tp].compute_principal_curvatures(vids=labels, radius=radius, verbose=True)
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_values_r'+str(radius), SpI_Analysis[tp].principal_curvatures, time_point=tp)
