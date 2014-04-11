@@ -202,7 +202,7 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
         warnings.warn("You have asked to fuse these labels' daughters, but they have no known daughters: {}".format(not_found))
     tmp_img = SpatialImage(tmp_img)
     tmp_img.voxelsize = analysis._voxelsize
-    tmp_img.info = analysis.image.info
+    tmp_img.info = analysis.info
     return tmp_img
 
 
@@ -972,7 +972,7 @@ def tpgfi_tracker_check(obj, images):
     print "Verifying tpgfi_tracker data...",
     analysis, labels, background, neighborhood, graphs, label2vertex, edges = obj
     if not (len(images) == len(analysis) == len(labels) == len(background) == len(neighborhood)  == len(graphs) == len(label2vertex) == len(edges)):
-        print "Done! Status: UNusable."
+        print "Done! Status: UN-USABLE."
         return False
 
     img_names = []
@@ -985,7 +985,7 @@ def tpgfi_tracker_check(obj, images):
             img_names.append(image.filename)
 
     if not sum([name == analysis[n].filename for n,name in enumerate(img_names)])==len(images):
-        print "Done! Status: UNusable."
+        print "Done! Status: UN-USABLE."
         return False
     else:
         print "Done! Status: USABLE."
@@ -1010,7 +1010,7 @@ def tpgfi_tracker_loader(filename):
      - `obj` (list) : list of objects
     """
     t_start = time.time()
-    print "Trying to: Open the temporary file {}... ".format(filename),
+    print "Trying to: Open the temporary file {}...".format(filename),
     f = gzip.open(filename,'r')
     print "now loading the objects..."
     obj_list = pkl.load(f)

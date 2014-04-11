@@ -402,6 +402,7 @@ class AbstractSpatialImageAnalysis(object):
             self.filename = image.info["filename"] # Jonathan : 14.05.2012
         except:
             self.filename = None
+        self.info = dict([k,v for k,v in image.info.iteritems() if k != "filename"])
 
         self.return_type = return_type
 
