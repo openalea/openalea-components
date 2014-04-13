@@ -293,8 +293,8 @@ def availables_temporal_properties():
     """
     Return available properties to be computed by 'temporal_graph_from_image'.
     """
-    #~ return ['surfacic_3D_landmarks', '3D_landmarks', 'division_wall', 'division_wall_orientation', 'projected_division_wall_orientation', 'fused_daughters_inertia_axis']
-    return ['surfacic_3D_landmarks', 'division_wall', 'division_wall_orientation', 'projected_division_wall_orientation', 'fused_daughters_inertia_axis']
+    #~ return ['surfacic_3D_landmarks', '3D_landmarks', 'division_wall', 'division_wall_orientation', 'fused_daughters_inertia_axis']
+    return ['surfacic_3D_landmarks', 'division_wall', 'division_wall_orientation', 'fused_daughters_inertia_axis']
 
 def availables_properties():
     """
@@ -366,6 +366,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
     """
     assert isinstance(graph, TemporalPropertyGraph)
+    tmp_filename = "tmp_tpgfi_process"
     available_properties = availables_spatial_properties()
     #~ properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
     properties = [ppt for ppt in spatio_temporal_properties] # we want to compare str types, no extra args passed
@@ -449,6 +450,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 #~ surface_normal_axis = SpI_Analysis[tp].inertia_axis_normal_to_surface(labels, real=property_as_real, verbose=True)
                 #~ extend_vertex_property_from_dictionary(graph, 'normal_inertia_axis_to_surface', surface_normal_axis, time_point=tp)
 
+            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
             if 'wall_surface' in spatio_temporal_properties :
                 try: undefined_neighbors
                 except: 
@@ -552,7 +554,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 graph._graph_property["units"].update( {"epidermis_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
                 graph._graph_property["units"].update( {"unlabelled_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
 
-
+            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
             if 'rank-2_projection_matrix' in spatio_temporal_properties:
                 print 'Computing projection_matrix property...'
                 try: background_neighbors
@@ -636,6 +638,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                         extend_vertex_property_from_dictionary(graph, 'epidermis_wall_principal_curvature_origin', epidermis_pc_origin, time_point=tp)
 
 
+            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
             if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
                 for radius in graph.graph_property('radius_2_compute'):
                     print 'Computing local_principal_curvature property with radius = {}voxels...'.format(radius)
@@ -656,7 +659,8 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
         # - We want to compute the 'epidermis_local_principal_curvature' for all time points:
         try: graph.remove_graph_property('radius_2_compute')
         except: pass
-
+    
+    tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
     return graph
 
 
@@ -682,6 +686,8 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
     except:
         min_contact_surface = None
         real_surface = property_as_real
+    
+    tmp_filename = "tmp_tpgfi_process"
     # - Declare available properties and start computation if asked:
     available_properties = availables_temporal_properties()
     properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
@@ -745,6 +751,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
 
             print "Done\n"
 
+        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
         if '3D_landmarks' in spatio_temporal_properties:
             """
             NOT WORKING YET !!!!!!!
@@ -859,6 +866,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             add_edge_property_from_eid_dictionary(graph, 'division_wall', div_walls)
 
 
+        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
         if 'division_wall_orientation' in spatio_temporal_properties:
             from openalea.image.algo.analysis import wall_voxels_between_two_cells
             pc_values, pc_normal, pc_directions, pc_origin = {}, {}, {}, {}
@@ -895,37 +903,11 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 add_edge_property_from_eid_dictionary(graph, 'division_wall_principal_curvature_origin', pc_origin)
 
 
+        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
         if 'projected_division_wall_orientation' in spatio_temporal_properties:
-            """
-            NOT WORKING YET !!!!!!!
-            """
+            # NOT WORKING YET !!!!!!!
+            # Could do a rank-1 subspace projection of anticlinal wall voxels ?
             pass
-            from openalea.image.algo.analysis import wall_voxels_between_two_cells
-            print 'Computing division_wall_orientation property...'
-            pc_values, pc_normal, pc_directions, pc_origin = {}, {}, {}, {}
-            projected_div_wall_voxels = {}
-            for eid in graph.edge_property('division_wall'):
-                vid_1, vid_2 = graph.edge_vertices(eid)
-                vid_1, vid_2 = min([vid_1, vid_2]), max([vid_1, vid_2])
-                if (vid_1, vid_2) in projected_div_wall_voxels.keys():
-                    continue # skip the rest of the loop
-                tp = graph.vertex_property('index')[vid_1]
-                label_1, label_2 = translate_ids_Graph2Image(graph, [vid_1, vid_2])
-                label_1, label_2 = sort_boundingbox(SpI_Analysis[tp].boundingbox([label_1, label_2]), label_1, label_2)
-                projected_div_wall_voxels[(vid_1, vid_2)] = wall_voxels_between_two_cells(SpI_Analysis[tp].layer1(), label_1, label_2, SpI_Analysis[tp].boundingbox([label_1, label_2]))
-
-            if 'projected_anticlinal_wall_median' in graph.edge_properties() and graph.edge_property('projected_anticlinal_wall_median').has_key(eid):
-                projected_anticlinal_median = {(label_1, label_2):graph.edge_property('projected_anticlinal_wall_median')[eid]}
-                pc_values[eid], pc_normal[eid], pc_directions[eid], pc_origin[eid] = SpI_Analysis[tp].wall_orientation( {(label_1, label_2):projected_div_wall_voxels[(vid_1, vid_2)]}, fitting_degree = 2, plane_projection = True, dict_coord_points_ori = projected_anticlinal_median )
-            else:
-                pc_values[eid], pc_normal[eid], pc_directions[eid], pc_origin[eid] = SpI_Analysis[tp].wall_orientation( {(label_1, label_2):projected_div_wall_voxels[(vid_1, vid_2)]}, fitting_degree = 2, plane_projection = True )
-
-            add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_values', pc_values)
-            add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_normal', pc_normal)
-            add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_directions', pc_directions)
-            if not 'projected_anticlinal_wall_median' in graph.edge_properties():
-                add_edge_property_from_eid_dictionary(graph, 'projected_division_wall_principal_curvature_origin', pc_origin)
-
 
         if 'fused_daughters_inertia_axis' in spatio_temporal_properties:
             # Try to use 'fused_image_analysis' dict else compute it:
@@ -947,8 +929,32 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 extend_vertex_property_from_dictionary(graph, 'fused_daughters_inertia_values', inertia_values, time_point=ref_tp)
 
 
+    tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
     return graph
 
+def resume_tpgfi_feature_extraxtion(tmp_filename, spatio_temporal_properties = None,
+     properties4lineaged_vertex = False, property_as_real = True ):
+    """
+    """
+    tpg = tpgfi_tracker_loader(filename)
+    ppty_already_computed = list(tgp.vertex_properties())+list(tgp.edge_properties())+list(tgp.graph_properties())
+    spatio_temporal_properties = list(set(spatio_temporal_properties)-set(ppty_already_computed))
+    print "# -- Adding spatio-temporal features to the Spatio-Temporal Graph..."
+    spatio_temporal_properties = check_properties(tpg, spatio_temporal_properties)
+
+    if isinstance(properties4lineaged_vertex,str) and properties4lineaged_vertex == 'strict':
+        vids = tpg.lineaged_vertex(fully_lineaged=True)
+    else:
+        vids = tpg.lineaged_vertex(fully_lineaged=False)
+
+    tpg = _spatial_properties_from_images(tpg, analysis, vids, background,
+         spatio_temporal_properties, property_as_real, tmp_filename)
+
+    tpg = _temporal_properties_from_images(tpg, analysis, vids, background,
+         spatio_temporal_properties, property_as_real, tmp_filename)
+    print "Done\n"
+
+    return graph
 
 spatio_temporal_properties2D = ['barycenter','boundingbox','border','L1','epidermis_surface','inertia_axis']
 def graph_from_image2D(image, labels, background, spatio_temporal_properties,
@@ -1076,6 +1082,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             print "# -- Retreived the previous AbstractSpatialImageAnalysis..."
         else:
             tpgfi_tracker_remove(tmp_filename)
+            assert False
     except:
         print "# -- Creating Spatial Graphs..."
         analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
