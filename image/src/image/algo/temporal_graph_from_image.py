@@ -932,12 +932,12 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
     tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
     return graph
 
-def resume_tpgfi_feature_extraxtion(tmp_filename, spatio_temporal_properties = None,
+def resume_tpgfi_feature_extraxtion(spatio_temporal_properties = None,
      properties4lineaged_vertex = False, property_as_real = True ):
     """
     """
     tpg = tpgfi_tracker_loader(filename)
-    ppty_already_computed = list(tgp.vertex_properties())+list(tgp.edge_properties())+list(tgp.graph_properties())
+    ppty_already_computed = list(tpg.vertex_properties())+list(tpg.edge_properties())+list(tpg.graph_properties())
     spatio_temporal_properties = list(set(spatio_temporal_properties)-set(ppty_already_computed))
     print "# -- Adding spatio-temporal features to the Spatio-Temporal Graph..."
     spatio_temporal_properties = check_properties(tpg, spatio_temporal_properties)
@@ -948,10 +948,10 @@ def resume_tpgfi_feature_extraxtion(tmp_filename, spatio_temporal_properties = N
         vids = tpg.lineaged_vertex(fully_lineaged=False)
 
     tpg = _spatial_properties_from_images(tpg, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, tmp_filename)
+         spatio_temporal_properties, property_as_real)
 
     tpg = _temporal_properties_from_images(tpg, analysis, vids, background,
-         spatio_temporal_properties, property_as_real, tmp_filename)
+         spatio_temporal_properties, property_as_real)
     print "Done\n"
 
     return graph
@@ -1007,7 +1007,7 @@ def tpgfi_tracker_save(obj, filename):
     f = gzip.open(filename,'w')
     pkl.dump(obj, f)
     f.close()
-    print "Time to save this step: {}".format(round(time.time()-t_start,3))
+    print "Time to save this step: {}s".format(round(time.time()-t_start,3))
 
 def tpgfi_tracker_loader(filename):
     """
@@ -1021,7 +1021,7 @@ def tpgfi_tracker_loader(filename):
     print "now loading the objects..."
     obj_list = pkl.load(f)
     f.close()
-    print "Time to load: {}".format(round(time.time()-t_start,3))
+    print "Time to load: {}s".format(round(time.time()-t_start,3))
     return obj_list
 
 def tpgfi_tracker_remove(tmp_filename):
