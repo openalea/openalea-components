@@ -1402,7 +1402,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             return volume
 
 
-    def inertia_axis(self, labels = None, center_of_mass = None, real = True, verbose=False):
+    def inertia_axis(self, labels = None, real = True, verbose=False):
         """
         Return the inertia axis of cells, also called the shape main axis.
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.

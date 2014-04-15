@@ -920,7 +920,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 print "Creating daughters fused SpatialImageAnalysis #{}...".format(tp_2fuse)
                 ref_tp = tp_2fuse-1
                 #~ ref_SpI_ids = fused_image_analysis[tp_2fuse].labels()
-                ref_SpI_ids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True)]
+                ref_SpI_ids = translate_ids_Graph2Image(graph, [k for k in graph.vertex_at_time(ref_tp, as_parent=True)])
                 print "Computing fused_daughters_inertia_axis property #{}...".format(tp_2fuse)
                 fused_bary_vox = fused_image_analysis[tp_2fuse].center_of_mass(ref_SpI_ids, real = False)
                 inertia_axis, inertia_values = fused_image_analysis[tp_2fuse].inertia_axis(ref_SpI_ids, fused_bary_vox, verbose = True)
