@@ -867,8 +867,7 @@ class ClustererChecker:
 
         # - Check for undesirable situtations:
         if min(self._nb_ids_by_clusters.values()) <=1:
-            warnings.warn("One cluster has one or less element in it, {} is not a Clustering!".format(self.clustering_name))
-            return None
+            raise ValueError("One cluster has one or less element in it, {} is not a Clustering!".format(self.clustering_name))
 
         # - Construct the clustered graph :
         if construct_clustered_graph:
