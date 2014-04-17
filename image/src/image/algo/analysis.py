@@ -1599,9 +1599,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         neigborids = r_neighborhood(id_min_dist, pts, adjacencies, self.used_radius_for_curvature)
         # - Principal curvature computation:
         pc = principal_curvatures(pts, id_min_dist, neigborids, fitting_degree, monge_degree)
-        self.principal_curvatures[vid] = return_list_of_vectors(np.array([pc[1][1], pc[2][1], pc[3][1]]),by_row=1)
-        self.principal_curvatures_normal[vid] = self.principal_curvatures[vid][2]
-        self.principal_curvatures_directions[vid] = [pc[1][0], pc[2][0]]
+        self.principal_curvatures[vid] = pc[1][1], pc[2][1]
+        self.principal_curvatures_directions[vid] = return_list_of_vectors(np.array([[pc[1][0], pc[2][0]], pc[3][0]]),by_row=1)
+        self.principal_curvatures_normal[vid] = self.principal_curvatures_directions[vid][2]
         self.principal_curvatures_origin[vid] = pc[0]
         #~ k1 = pc[1][1]; k2 = pc[2][1]
         #~ R = np.array( [pc[1][0], pc[2][0], pc[0]] ).T

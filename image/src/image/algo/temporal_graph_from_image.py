@@ -389,11 +389,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 real_surface = property_as_real
 
             # -- Saving images voxelsizes (useful for converting voxel units in real-world units)
-            try:
-                graph.add_graph_property("images_voxelsize",dict())
-            except:
-                pass
-            graph._graph_property["images_voxelsize"].update({tp:SpI_Analysis[tp]._voxelsize})
+            extend_graph_property_from_dictionary(graph, "images_voxelsize", {tp:SpI_Analysis[tp]._voxelsize})
 
             # -- We want to keep the unit system of each variable
             try: graph.add_graph_property("units",dict())
@@ -1413,6 +1409,16 @@ def extend_vertex_property_from_dictionary(graph, name, dictionary, mlabel2verte
         warnings.warn("Error found while saving vertex property '{}'".format(name))
         warnings.warn("The provided TemporalPropertyGraph did not contain the vollowing vert{}: {}".format("ices" if len(missing_vertex)>=2 else "ex", missing_vertex))
     graph.vertex_property(name).update( dict([(mlabel2vertex[k], dictionary[k]) for k in dictionary if k in mlabel2vertex.keys()]) )
+
+
+def extend_graph_property_from_dictionary(graph, name, dictionary):
+    """
+    """
+    if name not in graph.graph_properties():
+        print "Adding graph_property '{}'".format(name)
+        graph.add_graph_property(name)
+
+    graph.graph_property(name).update(dictionary)
 
 
 def add_property2graph(graph, images, spatio_temporal_properties, vids, background, property_as_real=True, bbox_as_real=False):
