@@ -863,7 +863,7 @@ class ClustererChecker:
         self.info_clustering = {'method': clusterer._method,
                                 'variables': clusterer._global_distance_variables,
                                 'weigths': clusterer._global_distance_weigths}
-        self.clustering_name = self.info_clustering['method']+"_"+str(self._nb_clusters)+"_"+str([str(self.info_clustering['weigths'][n])+"*"+str(self.info_clustering['variables'][n]) for n in xrange(len(self.info_clustering['weigths']))])
+        self.clustering_name = self.info_clustering['method'] + "_" + str(self._nb_clusters) + "clusters, Dij = " + " + ".join([str(self.info_clustering['weigths'][n])+"*"+str(self.info_clustering['variables'][n]) for n in xrange(len(self.info_clustering['weigths'])) if self.info_clustering['weigths'][n]!=0])
         # - Construct the clustered graph :
         if construct_clustered_graph:
             print 'Creating the clustered version of the inherited graph...'
@@ -903,12 +903,12 @@ class ClustererChecker:
             return np.round(D,int(round_digits))
 
 
-    def plot_cluster_distances(self):
+    def plot_cluster_distances(self, print_clustering_name=True, savefig=None):
         """
         Display a heat-map of cluster distances with matplotlib.
         """
         cluster_distances = self.cluster_distance_matrix()
-        fig = plt.figure()
+        fig = plt.figure(figsize=(6,5))
         plt.imshow(cluster_distances, cmap=cm.jet, interpolation='nearest')
 
         numrows, numcols = cluster_distances.shape
@@ -923,8 +923,15 @@ class ClustererChecker:
 
         plt.format_coord = format_coord
         plt.title("Cluster distances heat-map")
-        plt.suptitle('Clusters of {}'.format(self.clustering_name))
+        if print_clustering_name:
+            plt.suptitle(self.clustering_name)
+            fig.subplots_adjust(left=0.02, right=0.98, bottom=0.05)
+        else:
+            fig.subplots_adjust(left=0.02, right=0.98, bottom=0.05, top=0.95)
         plt.colorbar()
+        if isinstance(savefig,str):
+            plt.savefig(savefig, dpi=300)
+            plt.close()
         plt.show()
 
 
@@ -1239,7 +1246,7 @@ class ClustererChecker:
         return vertex_distance2center
 
 
-    def plot_vertex_distance2cluster_center(self, cluster_names=None):
+    def plot_vertex_distance2cluster_center(self, cluster_names=None, print_clustering_name=True, savefig=None):
         """
         Plot the distance between a vertex and the center of its group.
 
@@ -1251,7 +1258,7 @@ class ClustererChecker:
         """
         vtx2center = self.vertex_distance2cluster_center()
         index_q = {}
-        fig = plt.figure()
+        fig = plt.figure(figsize=(10,5))
         for n,q in enumerate(self._clusters_ids):
             index_q[q] = [i for i,j in enumerate(self._clustering) if j==q]
             vector = [vtx2center[i] for i in index_q[q]]
@@ -1260,12 +1267,21 @@ class ClustererChecker:
                 plt.plot( vector, 'o-', label = "Cluster "+str(self._clusters_ids[n]), figure=fig)
             else:
                 plt.plot( vector, 'o-', label = str(cluster_names[n]), figure=fig)
-            plt.suptitle('Clusters of {}'.format(self.clustering_name))
+            if print_clustering_name:
+                plt.suptitle(self.clustering_name)
+                fig.subplots_adjust(left=0.07, right=0.98, bottom=0.1)
+            else:
+                fig.subplots_adjust(left=0.07, right=0.98, bottom=0.05, top=0.95)
             plt.xlabel("Ranked elements")
             plt.ylabel("Distance to cluster center")
+            plt.title("Vertex distance to their cluster center")
             plt.axis([0,max(self._nb_ids_by_clusters.values()), min(vtx2center.values()), max(vtx2center.values())])
 
         plt.legend(ncol=3)
+        if isinstance(savefig,str):
+            plt.savefig(savefig, dpi=300)
+            plt.close()
+
         plt.show()
 
 
@@ -1474,17 +1490,17 @@ class ClustererChecker:
         print "Clustering labels have been udpated !"
 
 
-    def properties_boxplot_by_cluster(self, cluster_names=None):
+    def properties_boxplot_by_cluster(self, cluster_names=None, print_clustering_name=True, savefig=None):
         """
         Display boxplots of properties (used for clustering) by clusters.
         """
-        ppts = [d for d in self.info_clustering['variables']]
+        ppts = [d for n,d in enumerate(self.info_clustering['variables']) if self.info_clustering['weigths'][n]!=0]
         if 'topological' in ppts:
             ppts.remove('topological')
         
         N_ppts = len(ppts)
         
-        fig = plt.figure()
+        fig = plt.figure(figsize=(5*N_ppts,5))
         for n,ppt in enumerate(ppts):
             ax = plt.subplot(1,N_ppts,n+1)
             data = [[v for k, v in self.clusterer.graph.vertex_property(ppt).iteritems() if k in self._ids_by_clusters[c]] for c in self._clusters_ids]
@@ -1492,10 +1508,16 @@ class ClustererChecker:
             plt.title(ppt)
             if cluster_names is not None:
                 xtickNames = plt.setp(ax, xticklabels=cluster_names)
+                plt.setp(xtickNames, rotation=90, fontsize=10)
             else:
-                xtickNames = plt.setp(ax, xticklabels=["cluster_{}".format(n) for n in xrange(5)])
-            plt.setp(xtickNames, rotation=45, fontsize=10)
+                xtickNames = plt.setp(ax, xticklabels=["{}".format(n) for n in xrange(self._nb_clusters)])
+            plt.yticks(fontsize=9)
 
+        if isinstance(savefig,str):
+            plt.savefig(savefig, dpi=300)
+            plt.close()
+
+        plt.show()
 
 def cluster2labels(clusters_dict):
     """
