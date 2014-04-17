@@ -20,6 +20,7 @@ import warnings
 import types
 import numpy as np
 import copy
+from openalea.image.algo.analysis import return_list_of_vectors
 #from interface.property_graph import IPropertyGraph, PropertyError
 import matplotlib.pyplot as plt
 import math
@@ -339,7 +340,6 @@ def change(graph, vertex_property, vid, rank, edge_type):
         vid_neighborhood = graph.neighborhood(vid,rank, edge_type)-graph.neighborhood(vid,rank-1, edge_type)
 
     nb_neighborhood = len(vid_neighborhood)
-
     result = 0
     ivalue = vertex_property[vid]
     k=0
@@ -1145,9 +1145,9 @@ def stretch_main_orientations(graph, stretch_mat=None, **kwargs):
         R,D_A,Q=svd(stretch_mat[vid])
         # Compute Strain Rates :
         if not labels_at_t_n:
-            directions[vid] = Q
+            directions[vid] = return_list_of_vectors(Q, by_row=1)
         else:
-            directions[vid] = R
+            directions[vid] = return_list_of_vectors(R, by_row=0)
         values[vid] = D_A
 
     if labels_at_t_n:
