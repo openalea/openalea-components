@@ -864,6 +864,12 @@ class ClustererChecker:
                                 'variables': clusterer._global_distance_variables,
                                 'weigths': clusterer._global_distance_weigths}
         self.clustering_name = self.info_clustering['method'] + "_" + str(self._nb_clusters) + "clusters, Dij = " + " + ".join([str(self.info_clustering['weigths'][n])+"*"+str(self.info_clustering['variables'][n]) for n in xrange(len(self.info_clustering['weigths'])) if self.info_clustering['weigths'][n]!=0])
+
+        # - Check for undesirable situtations:
+        if min(self._nb_ids_by_clusters.values()) <=1:
+            warnings.warn("One cluster has one or less element in it, {} is not a Clustering!".format(self.clustering_name))
+            return None
+
         # - Construct the clustered graph :
         if construct_clustered_graph:
             print 'Creating the clustered version of the inherited graph...'

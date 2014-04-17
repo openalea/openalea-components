@@ -708,7 +708,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         """
         if not region_name in self._graph_property:
             #~ raise PropertyError("property %s is not defined on graph" % region_name)
-            warnings.warn("Property %s is not defined on graph. Adding it!" % region_name)
+            warnings.warn("Property %s is not defined for vertices on the graph, adding it..." % region_name)
             self._graph_property[region_name] = vids
         
         self._add_vertex_to_region(self.__to_set(vids), region_name)

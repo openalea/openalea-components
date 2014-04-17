@@ -163,7 +163,7 @@ class TemporalPropertyGraph(PropertyGraph):
                 else:
                     unused_lineage.update({k:l})
             if unused_lineage != {}:
-                print "Un-used lineage info between t{} and t{}: {}".format(current_index-1,current_index,unused_lineage)
+                print "Un-used lineage info to avoid partial lineage, t{} to t{}: {}".format(current_index-1,current_index,unused_lineage)
 
         return relabel_ids
 
