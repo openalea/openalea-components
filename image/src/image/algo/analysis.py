@@ -1511,7 +1511,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         return [x_start,y_start,z_start,x_stop,y_stop,z_stop]
 
     def __principal_curvature_parameters_CGAL(func):
-        def wrapped_function(self, vids = None, radius = 60, fitting_degree = 2, monge_degree = 2, verbose = False):
+        def wrapped_function(self, vids = None, radius = 70, fitting_degree = 2, monge_degree = 2, verbose = False):
             """
             Decorator wrapping function `compute_principal_curvatures` allowing use of various input for `vids` and preparing the necessary variables for the wrapped function.
             """
@@ -1599,7 +1599,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         neigborids = r_neighborhood(id_min_dist, pts, adjacencies, self.used_radius_for_curvature)
         # - Principal curvature computation:
         pc = principal_curvatures(pts, id_min_dist, neigborids, fitting_degree, monge_degree)
-        self.principal_curvatures[vid] = pc[1][1], pc[2][1]
+        self.principal_curvatures[vid] = pc[1][1], pc[2][1], 1.
         self.principal_curvatures_directions[vid] = return_list_of_vectors(np.array([pc[1][0], pc[2][0], pc[3][0]]),by_row=1)
         self.principal_curvatures_normal[vid] = self.principal_curvatures_directions[vid][2]
         self.principal_curvatures_origin[vid] = pc[0]
