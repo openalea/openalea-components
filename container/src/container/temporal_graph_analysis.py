@@ -1087,7 +1087,7 @@ def __strain_parameters2(func):
                 assert len(landmarks_t1) == len(landmarks_t2)
                 # - Convert voxel based metric into real-worlds units:
                 vid_index = graph.vertex_property('index')[vid]
-                res_1, res_2 = np.array(graph.graph_property("images_resolution")[vid_index]), np.array(graph.graph_property("images_resolution")[vid_index+1])
+                res_1, res_2 = np.array(graph.graph_property("images_voxelsize")[vid_index]), np.array(graph.graph_property("images_voxelsize")[vid_index+1])
                 landmarks_t1 = landmarks_t1*res_1
                 landmarks_t2 = landmarks_t2*res_2
                 stretch_mat[vid], score[vid] = func(graph, landmarks_t1, landmarks_t2)

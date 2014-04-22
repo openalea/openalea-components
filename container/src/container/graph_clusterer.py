@@ -279,7 +279,7 @@ class Clusterer:
         # -- Variables for caching information:
         self._global_distance_matrix = None
         self._global_distance_ids = None
-        self._global_distance_weigths = None
+        self._global_distance_weights = None
         self._global_distance_variables = None
         self._method = None
         self._nb_clusters = None
@@ -486,7 +486,7 @@ class Clusterer:
                 #~ vtx_list = vids
 #~ 
         #~ # -- Shortcut when asking for the same result:
-        #~ if variable_weights == self._global_distance_weigths and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
+        #~ if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
             #~ return self._global_distance_ids, self._global_distance_matrix
 #~ 
         #~ # -- Standardization step:
@@ -554,7 +554,7 @@ class Clusterer:
         #~ # -- We update caching variables only if there is more than ONE pairwise distance matrix :
         #~ self._global_distance_matrix = global_matrix
         #~ self._global_distance_ids = vtx_list
-        #~ self._global_distance_weigths = variable_weights
+        #~ self._global_distance_weights = variable_weights
         #~ self._global_distance_variables = variable_names
 #~ 
         #~ return vtx_list, global_matrix
@@ -621,7 +621,7 @@ class Clusterer:
                 vtx_list = vids
 
         # -- Shortcut when asking for the same result:
-        if variable_weights == self._global_distance_weigths and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
+        if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
             return self._global_distance_ids, self._global_distance_matrix
 
         # -- Standardization step:
@@ -690,7 +690,7 @@ class Clusterer:
         # -- We update caching variables only if there is more than ONE pairwise distance matrix :
         self._global_distance_matrix = global_matrix
         self._global_distance_ids = vtx_list
-        self._global_distance_weigths = variable_weights
+        self._global_distance_weights = variable_weights
         self._global_distance_variables = variable_names
 
         if return_data:
@@ -730,10 +730,8 @@ class Clusterer:
         self._clustering = list(clustering_labels)
         self._method = method.lower()
         self._nb_clusters = n_clusters
-        if ids is not None:
-            return dict([ (label,clustering_labels[n]) for n,label in enumerate(ids) ])
-        else:
-            return clustering_labels
+
+        return dict([ (label,clustering_labels[n]) for n,label in enumerate(ids) ])
 
 
     def export_clustering2graph(self, graph, save_all = False, name=""):
@@ -744,11 +742,11 @@ class Clusterer:
             return warnings.warn('No clustering made yet !')
 
         if name == "":
-            name=self._method+"_"+str(self._nb_clusters)+"_"+str([str(self._global_distance_weigths[n])+"*"+str(self._global_distance_variables[n]) for n in xrange(len(self._global_distance_weigths))])
+            name=self._method+"_"+str(self._nb_clusters)+"_"+str([str(self._global_distance_weights[n])+"*"+str(self._global_distance_variables[n]) for n in xrange(len(self._global_distance_weights))])
             print "The clustering '{}' will be added to the `graph` ...".format(name)
 
         graph.add_vertex_property(name, dict([ (label,self._clustering[n]) for n,label in enumerate(self._global_distance_ids) ]))
-        graph.add_graph_property("dist_weigths_"+name, self._global_distance_weigths)
+        graph.add_graph_property("dist_weights_"+name, self._global_distance_weights)
         graph.add_graph_property("dist_variables_"+name, self._global_distance_variables)
         if save_all:
             print "Saving vertex id list and the global distance matrix too ..."
@@ -857,13 +855,14 @@ class ClustererChecker:
         self._N = len(self._clustering)
         self._clusters_ids = list(set(self._clustering))
         self._nb_clusters = len(self._clusters_ids)
+        assert self._nb_clusters == self.clusterer._nb_clusters
         self._nb_ids_by_clusters = dict( [ (q, self._clustering.count(q)) for q in self._clusters_ids] )
         self._ids_by_clusters = dict( [(q, [self._vtx_list[k] for k in [i for i,j in enumerate(self._clustering) if j==q]]) for q in self._clusters_ids] )
         # - Reformat inherited (usefull) info :
         self.info_clustering = {'method': clusterer._method,
                                 'variables': clusterer._global_distance_variables,
-                                'weigths': clusterer._global_distance_weigths}
-        self.clustering_name = self.info_clustering['method'] + "_" + str(self._nb_clusters) + "clusters, Dij = " + " + ".join([str(self.info_clustering['weigths'][n])+"*"+str(self.info_clustering['variables'][n]) for n in xrange(len(self.info_clustering['weigths'])) if self.info_clustering['weigths'][n]!=0])
+                                'weights': clusterer._global_distance_weights}
+        self.clustering_name = self.info_clustering['method'] + "_" + str(self._nb_clusters) + "clusters, Dij = " + " + ".join([str(self.info_clustering['weights'][n])+"*"+str(self.info_clustering['variables'][n]) for n in xrange(len(self.info_clustering['weights'])) if self.info_clustering['weights'][n]!=0])
 
         # - Check for undesirable situtations:
         if min(self._nb_ids_by_clusters.values()) <=1:
@@ -1499,7 +1498,7 @@ class ClustererChecker:
         """
         Display boxplots of properties (used for clustering) by clusters.
         """
-        ppts = [d for n,d in enumerate(self.info_clustering['variables']) if self.info_clustering['weigths'][n]!=0]
+        ppts = [d for n,d in enumerate(self.info_clustering['variables']) if self.info_clustering['weights'][n]!=0]
         if 'topological' in ppts:
             ppts.remove('topological')
         
