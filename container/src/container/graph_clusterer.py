@@ -936,7 +936,8 @@ class ClustererChecker:
         if isinstance(savefig,str):
             plt.savefig(savefig, dpi=300)
             plt.close()
-        plt.show()
+        else:
+            plt.show()
 
 
     def cluster_diameters(self, round_digits = 3):
@@ -1285,8 +1286,8 @@ class ClustererChecker:
         if isinstance(savefig,str):
             plt.savefig(savefig, dpi=300)
             plt.close()
-
-        plt.show()
+        else:
+            plt.show()
 
 
     def clustered_temporal_property_graph(self):
@@ -1527,8 +1528,8 @@ class ClustererChecker:
         if isinstance(savefig,str):
             plt.savefig(savefig, dpi=300)
             plt.close()
-
-        plt.show()
+        else:
+            plt.show()
 
 def cluster2labels(clusters_dict):
     """
