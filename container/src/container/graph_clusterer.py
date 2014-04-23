@@ -24,6 +24,10 @@ import numpy as np
 from numpy import ndarray
 import copy
 import math
+
+# Next two lines are a trick to save matplotlib figure (without display) by changing the backend:
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
