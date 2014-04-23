@@ -1504,7 +1504,7 @@ class ClustererChecker:
         
         N_ppts = len(ppts)
         
-        fig = plt.figure(figsize=(5*N_ppts,5))
+        fig = plt.figure(figsize=(3.5*N_ppts,5))
         for n,ppt in enumerate(ppts):
             ax = plt.subplot(1,N_ppts,n+1)
             data = [[v for k, v in self.clusterer.graph.vertex_property(ppt).iteritems() if k in self._ids_by_clusters[c]] for c in self._clusters_ids]
@@ -1512,10 +1512,17 @@ class ClustererChecker:
             plt.title(ppt)
             if cluster_names is not None:
                 xtickNames = plt.setp(ax, xticklabels=cluster_names)
-                plt.setp(xtickNames, rotation=90, fontsize=10)
+                plt.setp(xtickNames, rotation=90, fontsize=9)
+                fig.subplots_adjust(bottom=0.2)
             else:
                 xtickNames = plt.setp(ax, xticklabels=["{}".format(n) for n in xrange(self._nb_clusters)])
+                fig.subplots_adjust(bottom=0.05)
             plt.yticks(fontsize=9)
+            if print_clustering_name:
+                plt.suptitle(self.clustering_name)
+                fig.subplots_adjust(left=0.06, right=0.98)
+            else:
+                fig.subplots_adjust(left=0.06, right=0.98, top=0.95)
 
         if isinstance(savefig,str):
             plt.savefig(savefig, dpi=300)
