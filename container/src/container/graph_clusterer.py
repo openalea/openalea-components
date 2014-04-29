@@ -25,9 +25,6 @@ from numpy import ndarray
 import copy
 import math
 
-# Next two lines are a trick to save matplotlib figure (without display) by changing the backend:
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
@@ -288,7 +285,8 @@ class Clusterer:
         self._method = None
         self._nb_clusters = None
         self._clustering = None
-
+        self._full_tree = None
+        self._clustering_list = None
 
     def add_vertex_variable(self, var_name, var_type, var_id = None):
         """
@@ -736,6 +734,68 @@ class Clusterer:
         self._nb_clusters = n_clusters
 
         return dict([ (label,clustering_labels[n]) for n,label in enumerate(ids) ])
+
+
+    def full_tree(self, range_clusters=None, method = "ward", ids = None, global_matrix = None, connectivity = None):
+        """
+        Actually run the clustering method.
+        :Parameters:
+         - `range_clusters` (list) (optional) - if provided return a dict of clustering for each cluster number in it
+         - `method` (str) (optional) - clustering method to use, "ward", "spectral" and "DBSCAN"
+         - `ids` (list) (optional) - list of ids
+         - `global_matrix` (np.array) (optional) - distance matrix to cluster (ordered the same way than `ids`)
+         - `connectivity` (np.array) (optional) - connectivity matrix to use while clustering (if possible regarding the clustering method) (ordered the same way than `ids`)
+        """
+        if global_matrix is None:
+            if self._global_distance_matrix is not None:
+                global_matrix = self._global_distance_matrix
+            else:
+                raise ValueError("No distance matrix saved, please give one!")
+        if ids is None:
+            ids = self._global_distance_ids
+
+        if self._full_tree is None:
+            if method.lower() == "ward":
+                full_tree = Ward(compute_full_tree=True, connectivity=connectivity).fit(global_matrix)
+            if method.lower() == "spectral":
+                print('Not ready yet!')
+                return None
+            self._full_tree = full_tree
+        else:
+            full_tree = self._full_tree
+        # Stop HERE if no `range_clusters` provided.
+        if range_clusters is None:
+            return full_tree
+
+        n_clusters = None
+        if isinstance(range_clusters,int) or len(range_clusters)==1:
+            n_clusters = int(list(range_clusters)[0])
+            assert n_clusters < self.n_leaves_
+            if n_clusters < 6 :
+                m = 5
+                while m*n_clusters > self.n_leaves_:
+                    m-=1
+                range_clusters = range(3, m*n_clusters)
+            elif n_clusters+5 < self.n_leaves_:
+                range_clusters = range(3, n_clusters+5)
+            else:
+                range_clusters = range(3, n_clusters)
+        # Check: if we already computed that and if yes if it contain what we need (the clustering associated to each `n_clusters` in `range_clusters`) otherwise we compute it:
+        elif (self._clustering_list is None) or sum([self._clustering_list.has_key(k) for k in range_clusters]!=len(range_clusters)):
+            from sklearn.cluster.hierarchical import _hc_cut
+            clustering_list = {}
+            for n, c in enumerate(range_clusters):
+                clust_labels = _hc_cut(c, full_tree.children_, full_tree.n_leaves_)
+                clustering_list[c] = dict(zip(self._global_distance_ids, clust_labels))
+                if n > 0 and clustering_list.has_key(range_clusters[n-1]):
+                    clust_comp = ClustererComparison(clustering_list[range_clusters[n-1]], clustering_list[range_clusters[n]])
+                    clustering_list[c] = clust_comp.relabel_clustering_2()
+
+            self._clustering_list = clustering_list
+        if n_clusters is not None:
+            return self._clustering_list[n_clusters]
+        else:
+            return self._clustering_list
 
 
     def export_clustering2graph(self, graph, save_all = False, name=""):
@@ -1649,27 +1709,40 @@ class ClustererComparison:
             print "All clusters from `clustering_2` have been matched !"
 
 
-    def relabelling_dictionary_1(self):
+    def relabelling_dictionary(self, t):
         """
+        Compute a rellabeling dictionary, to be further used to renumerote clusters ids.
         """
-        relabelling_dict = dict( (id1,id2) for id1,id2 in self.matched_clusters )
-        if not self.all_matched_1:
-            max_1 = max(self.clustering_1.values())
-            for n,k in enumerate(self.unmatched_clusters_1):
-                relabelling_dict.update({k:max_1+n+1})
+        if t == 1:
+            relabelling_dict = dict( (id1,id2) for id1,id2 in self.matched_clusters )
+            all_matched = self.all_matched_1
+            maxi = max(self.clustering_1.values())
+            unmatched_clusters = self.unmatched_clusters_1
+        else:
+            relabelling_dict = dict( (id2,id1) for id1,id2 in self.matched_clusters )
+            all_matched = self.all_matched_2
+            maxi = max(self.clustering_2.values())
+            unmatched_clusters = self.unmatched_clusters_2
+
+        if not all_matched:
+            for n,k in enumerate(unmatched_clusters):
+                relabelling_dict.update({k:maxi+n+1})
 
         return relabelling_dict
 
-    def relabelling_dictionary_2(self):
+    def relabel_clustering_1(self):
         """
+        Return a relabelled version of the 1st clustering dictionary (self.clustering_1).
         """
-        relabelling_dict = dict( (id2,id1) for id1,id2 in self.matched_clusters )
-        if not self.all_matched_2:
-            max_1 = max(self.clustering_2.values())
-            for n,k in enumerate(self.unmatched_clusters_2):
-                relabelling_dict.update({k:max_1+n+1})
+        relabelling_dict = self.relabelling_dictionary(1)
+        return dict([(k,relabelling_dict[v]) for k,v in self.clustering_1.iteritems()])
 
-        return relabelling_dict
+    def relabel_clustering_2(self):
+        """
+        Return a relabelled version of the 2nd clustering dictionary (self.clustering_2).
+        """
+        relabelling_dict = self.relabelling_dictionary(2)
+        return dict([(k,relabelling_dict[v]) for k,v in self.clustering_2.iteritems()])
 
 
 
