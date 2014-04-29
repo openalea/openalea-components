@@ -781,7 +781,7 @@ class Clusterer:
             else:
                 range_clusters = range(3, n_clusters)
         # Check: if we already computed that and if yes if it contain what we need (the clustering associated to each `n_clusters` in `range_clusters`) otherwise we compute it:
-        elif (self._clustering_list is None) or sum([self._clustering_list.has_key(k) for k in range_clusters]!=len(range_clusters)):
+        elif (self._clustering_list is None) or (sum([self._clustering_list.has_key(k) for k in range_clusters])!=len(range_clusters)):
             from sklearn.cluster.hierarchical import _hc_cut
             clustering_list = {}
             for n, c in enumerate(range_clusters):
