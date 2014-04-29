@@ -1716,17 +1716,19 @@ class ClustererComparison:
         if t == 1:
             relabelling_dict = dict( (id1,id2) for id1,id2 in self.matched_clusters )
             all_matched = self.all_matched_1
-            maxi = max(self.clustering_1.values())
-            unmatched_clusters = self.unmatched_clusters_1
+            if not all_matched:
+                left_id = set(range(len(self.clustering_1.values()))) - set(self.clustering_2.values())
+                unmatched_clusters = self.unmatched_clusters_1
         else:
             relabelling_dict = dict( (id2,id1) for id1,id2 in self.matched_clusters )
             all_matched = self.all_matched_2
-            maxi = max(self.clustering_2.values())
-            unmatched_clusters = self.unmatched_clusters_2
+            if not all_matched:
+                left_id = set(range(len(self.clustering_2.values()))) - set(self.clustering_1.values())
+                unmatched_clusters = self.unmatched_clusters_2
 
         if not all_matched:
-            for n,k in enumerate(unmatched_clusters):
-                relabelling_dict.update({k:maxi+n+1})
+            for k,n in zip(unmatched_clusters, left_id):
+                relabelling_dict.update({k:n})
 
         return relabelling_dict
 
@@ -1735,14 +1737,14 @@ class ClustererComparison:
         Return a relabelled version of the 1st clustering dictionary (self.clustering_1).
         """
         relabelling_dict = self.relabelling_dictionary(1)
-        return dict([(k,relabelling_dict[v]) for k,v in self.clustering_1.iteritems()])
+        return dict([(vid,relabelling_dict[cid]) for vid, cid in self.clustering_1.iteritems()])
 
     def relabel_clustering_2(self):
         """
         Return a relabelled version of the 2nd clustering dictionary (self.clustering_2).
         """
         relabelling_dict = self.relabelling_dictionary(2)
-        return dict([(k,relabelling_dict[v]) for k,v in self.clustering_2.iteritems()])
+        return dict([(vid,relabelling_dict[cid]) for vid, cid in self.clustering_2.iteritems()])
 
 
 
