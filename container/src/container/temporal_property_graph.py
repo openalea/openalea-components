@@ -424,6 +424,19 @@ class TemporalPropertyGraph(PropertyGraph):
             return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in translate_ids_Image2Graph(self,image_labels2keep,time_point))) 
 
 
+    def region_vids(self, region_name):
+        """
+        Return a list of vids (TPG vertex id type) that belong to the region `region_name` according to graph.
+        :Parameters:
+         - `region_name` (str) : the nama of a previously defined region via `self.add_vertex_to_region()`
+        """
+        if 'regions' in list(self.vertex_properties()):
+            return sorted(list(set([k for k,v in self.vertex_property('regions').iteritems() for r in v if r==region_name])))
+        else:
+            print "No property 'regions' added to the graph yet!"
+            return None
+
+
 def iterable(obj):
     try :
         iter(obj)
