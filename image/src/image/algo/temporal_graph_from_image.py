@@ -340,7 +340,7 @@ def check_properties(graph, spatio_temporal_properties):
             radius = spatio_temporal_properties[index_radius]
             spatio_temporal_properties.pop(index_radius)
         else:
-            radius = [60]
+            radius = [70]
 
         try:
             graph.add_graph_property('radius_local_principal_curvature_estimation',radius)
@@ -1012,7 +1012,7 @@ def tpgfi_tracker_loader(filename):
      - `obj` (list) : list of objects
     """
     t_start = time.time()
-    print "Trying to: Open the temporary file {}...".format(filename),
+    print "Trying to open the tpg_temporary file {}...".format(filename),
     f = gzip.open(filename,'r')
     print "now loading the objects..."
     obj_list = pkl.load(f)
@@ -1080,6 +1080,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
             tpgfi_tracker_remove(tmp_filename)
             assert False
     except:
+        print "failed!"
         print "# -- Creating Spatial Graphs..."
         analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
         for n,image in enumerate(images):
