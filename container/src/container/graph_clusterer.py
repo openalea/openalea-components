@@ -580,7 +580,7 @@ class Clusterer:
         assert math.fsum(variable_weights)==1.
         #assert math.fsum(variable_weights)==1. or math.fsum(variable_weights)-1.<1e-5
 
-        # -- Checking all requested information (i.e. variables names) is present in the dictionary `self._distance_matrix_dict`:
+        # -- Checking the presence of all requested information (i.e. variables names) in the dictionary `self._distance_matrix_dict`:
         for k in variable_names:
             if not self._distance_matrix_dict.has_key(k):
                 if k.lower() == 'topological':
@@ -601,6 +601,14 @@ class Clusterer:
                 spatial_data = True
 
         # -- Creating the list of vertices:
+        if vids is None:
+            vids = self.labels
+        elif ids == 'lineaged':
+            vids = [k for k in self.labels if k in self.graph.lineaged_vertex(False)]
+        elif ids == 'fully lineaged':
+            vids = [k for k in self.labels if k in self.graph.lineaged_vertex(True)]
+        else:
+            assert isinstance(vids, list)
         # - Checking for unwanted ids:
         if vids is not None:
             id_not_in_labels = list(set(vids)-set(self.labels))
@@ -617,14 +625,14 @@ class Clusterer:
                 vtx_list = [vid for vid in vids if exist_relative_at_rank(self.graph, vid, self.rank) or exist_relative_at_rank(self.graph, vid, -self.rank)]
         else:
             # - No need to check for temporal link !
-            if vids is None:
-                vtx_list = self.labels
-            else:
-                vtx_list = vids
+            vtx_list = vids
 
         # -- Shortcut when asking for the same result:
         if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
-            return self._global_distance_ids, self._global_distance_matrix
+            if return_data:
+                return self._global_distance_ids, self._global_distance_matrix
+            else:
+                print "The global pairwise distance matrix was already computed!"
 
         # -- Standardization step:
         # - Need to check if there is any changes (length or order) in the ids list compared to the initial list used to create the pairwise distance matrix:
@@ -651,15 +659,18 @@ class Clusterer:
         # - Only 'topological' or 'euclidean' distance asked:
         if spatial_relation_data and (nb_spa_var+nb_temp_var)==0:
             print "No topological/euclidean distance between each time point !!"
-            return vtx_list, mat_topo_dist_standard
+            if return_data:
+                return vtx_list, mat_topo_dist_standard
         # - Only ONE spatial pairwise distance asked:
         if not spatial_relation_data and nb_temp_var == 0 and nb_spa_var == 1:
-            return vtx_list, spatial_standard_distance_matrix[0]
+            if return_data:
+                return vtx_list, spatial_standard_distance_matrix[0]
         # - Only ONE temporal pairwise distance asked:
         if not spatial_relation_data and nb_spa_var == 0 and nb_temp_var == 1:
             print "Paiwise distance matrix based on temporally differentiated variables affected @t_n+1."
             print "There will be no distance for the ids of the first time-point!"
-            return vtx_list, temporal_standard_distance_matrix[0]
+            if return_data:
+                return vtx_list, temporal_standard_distance_matrix[0]
 
         # - Creating weight matrix and replacing nan by zeros for computation in standardized matrix.
         N = len(vtx_list)
@@ -712,11 +723,29 @@ class Clusterer:
         """
         if global_matrix is None:
             if self._global_distance_matrix is not None:
-                global_matrix = self._global_distance_matrix
+                global_matrix = copy.copy(self._global_distance_matrix)
             else:
                 raise ValueError("No distance matrix saved, please give one!")
+        # -- Creating the list of vertices:
         if ids is None:
             ids = self._global_distance_ids
+        elif ids == 'lineaged':
+            ids = [k for k in self._global_distance_ids if k in self.graph.lineaged_vertex(False)]
+        elif ids == 'fully lineaged':
+            ids = [k for k in self._global_distance_ids if k in self.graph.lineaged_vertex(True)]
+        else:
+            assert isinstance(ids, list)
+        # - Checking for unwanted ids:
+        if ids is not None:
+            id_not_in_labels = list(set(ids)-set(self.labels))
+            if len(id_not_in_labels) != 0:
+                warnings.warn("Some of the ids you provided has not been found in the graph : {}".format(id_not_in_labels))
+                print ("Removing them...")
+                ids = list(set(ids)-set(id_not_in_labels))
+        # - Need to check if there is any changes in the `ids` list compared to the initial list used to create the pairwise distance matrix:
+        if (set(self._global_distance_ids)-set(ids)) != set([]):
+            ids_index = [self._global_distance_ids.index(v) for v in ids]
+            global_matrix = global_matrix[ids_index,:][:,ids_index]
 
         if n_clusters is None:
             raise ValueError("You have to provide the number of clusters you want for the Ward method.")
@@ -748,11 +777,29 @@ class Clusterer:
         """
         if global_matrix is None:
             if self._global_distance_matrix is not None:
-                global_matrix = self._global_distance_matrix
+                global_matrix = copy.copy(self._global_distance_matrix)
             else:
                 raise ValueError("No distance matrix saved, please give one!")
+        # -- Creating the list of vertices:
         if ids is None:
             ids = self._global_distance_ids
+        elif ids == 'lineaged':
+            ids = [k for k in self._global_distance_ids if k in self.graph.lineaged_vertex(False)]
+        elif ids == 'fully lineaged':
+            ids = [k for k in self._global_distance_ids if k in self.graph.lineaged_vertex(True)]
+        else:
+            assert isinstance(ids, list)
+        # - Checking for unwanted ids:
+        if ids is not None:
+            id_not_in_labels = list(set(ids)-set(self.labels))
+            if len(id_not_in_labels) != 0:
+                warnings.warn("Some of the ids you provided has not been found in the graph : {}".format(id_not_in_labels))
+                print ("Removing them...")
+                ids = list(set(ids)-set(id_not_in_labels))
+        # - Need to check if there is any changes in the `ids` list compared to the initial list used to create the pairwise distance matrix:
+        if (set(self._global_distance_ids)-set(ids)) != set([]):
+            ids_index = [self._global_distance_ids.index(v) for v in ids]
+            global_matrix = global_matrix[ids_index,:][:,ids_index]
 
         if self._full_tree is None:
             if method.lower() == "ward":
@@ -761,6 +808,7 @@ class Clusterer:
                 print('Not ready yet!')
                 return None
             self._full_tree = full_tree
+            self._method = method.lower()
         else:
             full_tree = self._full_tree
         # Stop HERE if no `range_clusters` provided.
@@ -768,25 +816,27 @@ class Clusterer:
             return full_tree
 
         n_clusters = None
-        if isinstance(range_clusters,int) or len(range_clusters)==1:
-            n_clusters = int(list(range_clusters)[0])
-            assert n_clusters < self.n_leaves_
+        if isinstance(range_clusters,int):
+            n_clusters = copy.copy(range_clusters)
+            assert n_clusters < full_tree.n_leaves_
+            self._nb_clusters = n_clusters
             if n_clusters < 6 :
                 m = 5
-                while m*n_clusters > self.n_leaves_:
+                while m*n_clusters > full_tree.n_leaves_:
                     m-=1
                 range_clusters = range(3, m*n_clusters)
-            elif n_clusters+5 < self.n_leaves_:
+            elif n_clusters+5 < full_tree.n_leaves_:
                 range_clusters = range(3, n_clusters+5)
             else:
                 range_clusters = range(3, n_clusters)
+
         # Check: if we already computed that and if yes if it contain what we need (the clustering associated to each `n_clusters` in `range_clusters`) otherwise we compute it:
-        elif (self._clustering_list is None) or (sum([self._clustering_list.has_key(k) for k in range_clusters])!=len(range_clusters)):
+        if (self._clustering_list is None) or (sum([self._clustering_list.has_key(k) for k in range_clusters])!=len(range_clusters)):
             from sklearn.cluster.hierarchical import _hc_cut
             clustering_list = {}
             for n, c in enumerate(range_clusters):
                 clust_labels = _hc_cut(c, full_tree.children_, full_tree.n_leaves_)
-                clustering_list[c] = dict(zip(self._global_distance_ids, clust_labels))
+                clustering_list[c] = dict(zip(ids, clust_labels))
                 if n > 0 and clustering_list.has_key(range_clusters[n-1]):
                     clust_comp = ClustererComparison(clustering_list[range_clusters[n-1]], clustering_list[range_clusters[n]])
                     clustering_list[c] = clust_comp.relabel_clustering_2()
@@ -1314,8 +1364,31 @@ class ClustererChecker:
 
         return vertex_distance2center
 
+def cmap_discretize(cmap, N):
+    """Return a discrete colormap from the continuous colormap cmap.
 
-    def plot_vertex_distance2cluster_center(self, cluster_names=None, print_clustering_name=True, savefig=None):
+        cmap: colormap instance, eg. cm.jet. 
+        N: number of colors.
+
+    Example
+        x = resize(arange(100), (5,100))
+        djet = cmap_discretize(cm.jet, 5)
+        imshow(x, cmap=djet)
+    """
+
+    if type(cmap) == str:
+        cmap = plt.get_cmap(cmap)
+    colors_i = np.concatenate((np.linspace(0, 1., N), (0.,0.,0.,0.)))
+    colors_rgba = cmap(colors_i)
+    indices = np.linspace(0, 1., N+1)
+    cdict = {}
+    for ki,key in enumerate(('red','green','blue')):
+        cdict[key] = [ (indices[i], colors_rgba[i-1,ki], colors_rgba[i,ki])
+                       for i in xrange(N+1) ]
+    # Return colormap object.
+    return mcolors.LinearSegmentedColormap(cmap.name + "_%d"%N, cdict, 1024)
+
+    def plot_vertex_distance2cluster_center(self, cluster_names=None, print_clustering_name=True, n_colors=None, savefig=None):
         """
         Plot the distance between a vertex and the center of its group.
 
@@ -1327,15 +1400,22 @@ class ClustererChecker:
         """
         vtx2center = self.vertex_distance2cluster_center()
         index_q = {}
+        # - Tricks to extend the colormapr manually:
+        if n_colors is None:
+            n_colors = len(self._clusters_ids)
+        cmap = plt.get_cmap('jet')
+        colors_i = np.concatenate((np.linspace(0, 1., n_colors), (0.,0.,0.,0.)))
+        colors_rgba = cmap(colors_i)
+
         fig = plt.figure(figsize=(10,5))
         for n,q in enumerate(self._clusters_ids):
             index_q[q] = [i for i,j in enumerate(self._clustering) if j==q]
             vector = [vtx2center[i] for i in index_q[q]]
             vector.sort()
             if cluster_names is None:
-                plt.plot( vector, 'o-', label = "Cluster "+str(self._clusters_ids[n]), figure=fig)
+                plt.plot( vector, '.-', label = "Cluster "+str(self._clusters_ids[n]), figure=fig, color=tuple(colors_rgba[n]))
             else:
-                plt.plot( vector, 'o-', label = str(cluster_names[n]), figure=fig)
+                plt.plot( vector, '.-', label = str(cluster_names[n]), figure=fig, color=tuple(colors_rgba[n]))
             if print_clustering_name:
                 plt.suptitle(self.clustering_name)
                 fig.subplots_adjust(left=0.07, right=0.98, bottom=0.1)
