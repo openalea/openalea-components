@@ -19,8 +19,7 @@
 import numpy as np
 import time, warnings, math, gzip
 import copy as cp
-import pickle as pkl
-from IPython import embed
+import cPickle as pickle
 
 from openalea.image.serial.basics import SpatialImage, imread
 from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT, find_wall_median_voxel, sort_boundingbox, projection_matrix
@@ -1001,7 +1000,7 @@ def tpgfi_tracker_save(obj, filename):
     """
     t_start = time.time()
     f = gzip.open(filename,'w')
-    pkl.dump(obj, f)
+    pickle.dump(obj, f,  pickle.HIGHEST_PROTOCOL)
     f.close()
     print "Time to save this step: {}s".format(round(time.time()-t_start,3))
 
