@@ -647,8 +647,10 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_origin', SpI_Analysis[tp].principal_curvatures_origin, time_point=tp)
                 #embed()
 
-            # - We want the `dict_wall_voxels` to be computed again at each `time_point`:
+            # - We want `dict_wall_voxels` and `background_neighbors` to be computed again at each `time_point`:
             try: del dict_wall_voxels
+            except: pass
+            try: del background_neighbors
             except: pass
 
         # - We want to compute the 'epidermis_local_principal_curvature' for all time points:
