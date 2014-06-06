@@ -633,6 +633,12 @@ class Clusterer:
                 return self._global_distance_ids, self._global_distance_matrix
             else:
                 print "The global pairwise distance matrix was already computed!"
+        else: # Otherwise, clean any possible clustering:
+            self._method = None
+            self._nb_clusters = None
+            self._clustering = None
+            self._full_tree = None
+            self._clustering_list = None
 
         # -- Standardization step:
         # - Need to check if there is any changes (length or order) in the ids list compared to the initial list used to create the pairwise distance matrix:
@@ -820,15 +826,23 @@ class Clusterer:
             n_clusters = copy.copy(range_clusters)
             assert n_clusters < full_tree.n_leaves_
             self._nb_clusters = n_clusters
+            # If the clustering already exist, return the desired clustering as cluster would:
+            if (self._clustering_list is not None) and self._clustering_list.has_key(n_clusters):
+                print "Clustering already computed by Cluster.full_tree(), returning it..."
+                clustering = self._clustering_list[n_clusters]
+                self._clustering = clustering.values()
+                self._labels = clustering.keys()
+                return clustering
+            # If not we define a range of clusters to compute later:
             if n_clusters < 6 :
                 m = 5
                 while m*n_clusters > full_tree.n_leaves_:
                     m-=1
-                range_clusters = range(3, m*n_clusters)
+                range_clusters = range(2, m*n_clusters)
             elif n_clusters+5 < full_tree.n_leaves_:
-                range_clusters = range(3, n_clusters+5)
+                range_clusters = range(2, n_clusters+5)
             else:
-                range_clusters = range(3, n_clusters)
+                range_clusters = range(2, n_clusters)
 
         # Check: if we already computed that and if yes if it contain what we need (the clustering associated to each `n_clusters` in `range_clusters`) otherwise we compute it:
         if (self._clustering_list is None) or (sum([self._clustering_list.has_key(k) for k in range_clusters])!=len(range_clusters)):
@@ -980,7 +994,8 @@ class ClustererChecker:
 
         # - Check for undesirable situtations:
         if min(self._nb_ids_by_clusters.values()) <=1:
-            raise ValueError("One cluster has one or less element in it, {} is not a Clustering!".format(self.clustering_name))
+            raise ValueError("A cluster has only one element, is not a Clustering!")
+            print "{}".format(self.clustering_name)
 
         # - Construct the clustered graph :
         if construct_clustered_graph:
