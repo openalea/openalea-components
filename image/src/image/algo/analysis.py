@@ -28,7 +28,7 @@ from numpy.linalg import svd
 
 try:
     from sklearn.decomposition import PCA
-except:
+except ImportError:
     warnings.warn("'import PCA' failed, 'sklearn' seems to be missing!")
     warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
     pass
@@ -37,7 +37,7 @@ from openalea.image.spatial_image import SpatialImage
 
 try:
     from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median, approx_pointset_median)
-except :
+except ImportError:
     warnings.warn("'import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median)' failed, 'plantgl' seems to be missing!")
     warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
     pass
