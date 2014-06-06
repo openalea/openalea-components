@@ -751,21 +751,19 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     if 'as_children' in kwargs: ppt_kwargs.update({'as_children':kwargs['as_children']})
     data = []; tmp_tp=time_points
     for tp in time_points:
-        tmp = time_point_property(graph, tp, vertex_property,**ppt_kwargs).values() 
-        if tmp != []:
-            data.append(tmp)
-        else:
-            tmp_tp.remove(tp)
-    time_points = tmp_tp
+        data.append(time_point_property(graph, tp, vertex_property,**ppt_kwargs).values())
 
     h_kwargs= {}
     if 'bins' in kwargs: h_kwargs.update({'bins':kwargs['bins']})
     if 'range' in kwargs: h_kwargs.update({'range':kwargs['range']})
     if 'normed' in kwargs: h_kwargs.update({'normed':kwargs['normed']})
     if 'histtype' in kwargs: h_kwargs.update({'histtype':kwargs['histtype']})
+    if 'sidebyside' in kwargs: sidebyside=kwargs['sidebyside']
+    else: sidebyside=False
 
-    fig = plt.figure(figsize=[14,8], dpi=80)
-    fig.add_subplot(211)
+    fsize = [14,4] if sidebyside else [14,8]
+    fig = plt.figure(figsize=fsize, dpi=80)
+    fig.add_subplot(121) if sidebyside else fig.add_subplot(211)
 
     n, bins, patches = plt.hist(data, label = ["time point #{}".format(tp) for tp in time_points], rwidth=1., **h_kwargs)
     if kwargs.has_key('title'):
@@ -775,14 +773,17 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     if kwargs.has_key('xlabel'):
         plt.xlabel(kwargs['xlabel'])
     elif property_name is not None:
-        plt.xlabel(property_name+" ("+graph.graph_property("units")[property_name]+")")
+        if graph.graph_property("units").has_key(property_name):
+            plt.xlabel(property_name+" ("+graph.graph_property("units")[property_name]+")")
+        else:
+            plt.xlabel(property_name)
     if h_kwargs.has_key('normed') and h_kwargs['normed']:
         plt.ylabel("Relative Frequency")
     elif h_kwargs.has_key('normed') and not h_kwargs['normed']:
         plt.ylabel("Frequency")
     plt.legend()
 
-    bp = fig.add_subplot(212)
+    bp = fig.add_subplot(122) if sidebyside else fig.add_subplot(212)
     bp.boxplot(data, vert=0, positions=time_points)
     if h_kwargs.has_key('range'):
         bp.set_xlim(h_kwargs['range'][0], h_kwargs['range'][1])
