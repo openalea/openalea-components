@@ -35,7 +35,7 @@ share_dirs = {'share':'share'}
 
 # List of top level wralea packages (directories with __wralea__.py) 
 # (to be kept only if you have visual components)
-wralea_entry_points = ['container.mesh = openalea.container.wralea.mesh']
+wralea_entry_points = ['container.mesh = container_wralea.mesh']
 
 
 
