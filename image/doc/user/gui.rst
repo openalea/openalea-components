@@ -62,8 +62,6 @@ It naturally works for 2D but also for 3D by navigating through the slices.
     from openalea.image.all import point_selection
     ps1 = point_selection(im1)
 
-.. dataflow:: openalea.image.demo point_selection
-
 .. image:: ./images/point_selection.png
     :width: 35%
 

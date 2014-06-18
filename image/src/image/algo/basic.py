@@ -33,7 +33,7 @@ __all__ = ["bounding_box","apply_mask",
            "high_level","color_select",
            "border","end_margin","stroke",
            "reverse_image","color2grey","grey2color","logicalnot",
-       "scale_shift_intensities"]
+           "scale_shift_intensities"]
 
 def bounding_box (mask) :
     """Compute the bounding box of a mask

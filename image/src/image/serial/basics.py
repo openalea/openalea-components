@@ -22,15 +22,15 @@ __license__= "Cecill-C"
 __revision__=" $Id$ "
 
 from os.path import exists, splitext, split as psplit, expanduser as expusr
-#from PIL import Image,ImageOps
-
 import os, fnmatch
-#from pylab import imread as _imread, imsave as _imsave
+
 from scipy.misc import imsave as _imsave
 from struct import pack,unpack,calcsize
 from pickle import dumps,loads
 import numpy as np
+
 from openalea.image.spatial_image import SpatialImage
+from openalea.image.pil import Image, ImageOps
 
 #~ from inrimage import *
 from openalea.image.serial.inrimage import read_inrimage, write_inrimage

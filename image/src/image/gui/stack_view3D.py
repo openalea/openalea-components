@@ -22,7 +22,6 @@ __revision__=" $Id$ "
 import sys
 import copy
 import math
-import vtk
 
 import numpy as np
 import scipy.ndimage as nd
