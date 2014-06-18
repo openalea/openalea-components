@@ -166,13 +166,17 @@ class PackageBuilder(object):
 
     def set_files(self):
         self.files = [self.pkg_dir/"src"/self.project/self.package/'__init__.py'] 
-        if self.project:
-            self.files.append(self.pkg_dir/"src"/self.project/'__init__.py')
+        self.files += self.projectinitfiles()
         self.files += self.legalfiles()
         self.files += self.wraleafiles()
         self.files += self.sconsfiles()
         self.files += self.setupfiles()
         self.files += self.docfiles()
+
+    def projectinitfiles(self):
+        if self.project:
+            return [self.pkg_dir/"src"/self.project/'__init__.py' ]
+        else: return []
 
     def legalfiles(self):
         return [
@@ -261,6 +265,26 @@ class PackageBuilder(object):
             py_file.close()
 
 
+    def template_projectinit(self):
+        ''' Build new files from a default one.
+
+        If the template file exist and the current file is empty, create a new one.
+        '''
+        files = self.projectinitfiles()
+        tpl_files = []
+        for f in files:
+            if not f.exists() or f.size == 0:
+                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_files.append((f, tpl_file))
+
+        for f, tpl in tpl_files:
+            txt = Template(open(tpl).read())
+            txt = txt.substitute(self.metainfo)
+
+            print "Creating a template version for %s ..." % ( f, )
+            py_file = open(f, "w")
+            py_file.write(txt)
+            py_file.close()
 
     def template_legal(self):
         ''' Build new files from a default one.
@@ -381,6 +405,7 @@ def main():
     pkg.template_setup()
     pkg.template_scons()
     pkg.template_wralea()
+    pkg.template_projectinit()
     pkg.template_doc()
 
 
