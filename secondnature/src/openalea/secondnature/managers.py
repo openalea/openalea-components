@@ -36,7 +36,7 @@ class AbstractSourceManager(QtCore.QObject):
     __metaclass__ = make_metaclass((ProxySingleton,),
                                    (QtCore.pyqtWrapperType,))
 
-    item_list_changed = QtCore.pyqtSignal(list)
+    item_list_changed = QtCore.Signal(list)
 
     __managers__ = []
 
@@ -122,7 +122,7 @@ class AbstractSource(QtCore.QObject):
     __key__ = "name"
 
     # -- SIGNALS --
-    item_list_changed = QtCore.pyqtSignal(object, dict)
+    item_list_changed = QtCore.Signal(object, dict)
 
     # -- PROPERTIES --
     name  = property( lambda x:x.__name )

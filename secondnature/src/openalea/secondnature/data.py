@@ -235,8 +235,8 @@ DataFactorySources = datatype_classes[2]
 
 class DataFactoryManager(AbstractDataFactoryManager):
 
-    data_created              = QtCore.pyqtSignal(object)
-    data_property_set_request = QtCore.pyqtSignal(object, str, object)
+    data_created              = QtCore.Signal(object)
+    data_property_set_request = QtCore.Signal(object, str, object)
 
     def __init__(self):
         AbstractDataFactoryManager.__init__(self)

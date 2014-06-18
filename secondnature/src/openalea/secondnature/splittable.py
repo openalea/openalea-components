@@ -26,7 +26,7 @@ from openalea.secondnature.project import ProjectManager
 
 class CustomSplittable(SplittableUI):
 
-    paneMenuRequest = QtCore.pyqtSignal(object, int, QtCore.QPoint)
+    paneMenuRequest = QtCore.Signal(object, int, QtCore.QPoint)
 
     def getPlaceHolder(self):
         proj = ProjectManager().get_active_project()

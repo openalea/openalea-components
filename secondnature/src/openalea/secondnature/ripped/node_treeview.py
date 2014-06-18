@@ -755,7 +755,7 @@ class PackageManagerView(QtGui.QWidget):
 
 class NodeFactoryTreeView(QtGui.QTreeView, NodeFactoryView):
 
-    compositeFactoryOpenRequest = QtCore.pyqtSignal(CompositeNodeFactory)
+    compositeFactoryOpenRequest = QtCore.Signal(CompositeNodeFactory)
 
     def __init__(self, siblings=[], parent=None):
         QtGui.QTreeView.__init__(self, parent)

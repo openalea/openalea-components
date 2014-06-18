@@ -426,7 +426,7 @@ applet_sources = []
 
 class AppletFactoryManager(AbstractSourceManager):
 
-    applet_created = QtCore.pyqtSignal(object)
+    applet_created = QtCore.Signal(object)
 
     def __init__(self):
         AbstractSourceManager.__init__(self)

@@ -30,12 +30,12 @@ import traceback
 class Project(QtCore.QObject):
 
     # -- SIGNALS --
-    closed                = QtCore.pyqtSignal(object)
-    saved                 = QtCore.pyqtSignal(object)
-    modified              = QtCore.pyqtSignal(object)
-    data_added        = QtCore.pyqtSignal(object, object)
-    data_name_changed = QtCore.pyqtSignal(object, object, str)
-    project_name_changed  = QtCore.pyqtSignal(object, str)
+    closed                = QtCore.Signal(object)
+    saved                 = QtCore.Signal(object)
+    modified              = QtCore.Signal(object)
+    data_added        = QtCore.Signal(object, object)
+    data_name_changed = QtCore.Signal(object, object, str)
+    project_name_changed  = QtCore.Signal(object, str)
 
     # -- PROPERTIES --
     name = property(lambda x:x.__name, lambda x,y:x.set_name(y))
@@ -225,8 +225,8 @@ class ProjectManager(QtCore.QObject):
     __metaclass__ = make_metaclass((ProxySingleton,),
                                    (QtCore.pyqtWrapperType,))
 
-    active_project_changed = QtCore.pyqtSignal(Project, Project)
-    data_added             = QtCore.pyqtSignal(object, object)
+    active_project_changed = QtCore.Signal(Project, Project)
+    data_added             = QtCore.Signal(object, object)
 
     mimeformat   = "application/secondnature-project-data-id"
 
