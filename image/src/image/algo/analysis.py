@@ -18,30 +18,13 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-import warnings, math, copy
-import gzip, pickle
-from os.path import exists
-from IPython import embed
+import warnings, math, copy, gzip, pickle
 import numpy as np
 import scipy.ndimage as nd
 from numpy.linalg import svd
-
-try:
-    from sklearn.decomposition import PCA
-except ImportError:
-    warnings.warn("'import PCA' failed, 'sklearn' seems to be missing!")
-    warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
-    pass
+from os.path import exists
 
 from openalea.image.spatial_image import SpatialImage
-
-try:
-    from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median, approx_pointset_median)
-except ImportError:
-    warnings.warn("'import (r_neighborhood, principal_curvatures, k_closest_points_from_ann, pointset_median)' failed, 'plantgl' seems to be missing!")
-    warnings.warn("You will not be able to use some functionnalities of SpatialImageAnalysis!")
-    pass
-
 from openalea.plantgl.math import Vector3
 
 
@@ -1075,6 +1058,7 @@ class AbstractSpatialImageAnalysis(object):
          - `plane_projection` (bool) - if True, the voxels coordinates will projected on a plane according to a least square regression.
          - `dict_coord_points_ori` (None|dict) - dictionary of coordinate defining the origin point where to fit the surface. If None, will be computed as the geometric median of the point set.
         """
+        from openalea.plantgl.all import principal_curvatures
         integers = np.vectorize(lambda x : int(x))
 
         pc_values, pc_normal, pc_directions, pc_origin = {},{},{},{} 
@@ -1515,6 +1499,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             """
             Decorator wrapping function `compute_principal_curvatures` allowing use of various input for `vids` and preparing the necessary variables for the wrapped function.
             """
+            from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann)
             # -- If 'vids' is an integer... 
             if isinstance(vids,int):
                 if (vids not in self.layer1()): # - ...but not in the L1 list, there is nothing to do!

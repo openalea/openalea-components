@@ -16,8 +16,8 @@
 ################################################################################
 """This module helps to create PropertyGraph from SpatialImages."""
 
-import numpy as np
 import time, warnings, math, gzip
+import numpy as np
 import copy as cp
 import cPickle as pickle
 
@@ -29,7 +29,6 @@ from openalea.container import TemporalPropertyGraph
 from openalea.container.temporal_graph_analysis import translate_ids_Graph2Image, translate_keys_Graph2Image
 
 from openalea.image.registration.registration import pts2transfo
-from vplants.asclepios.vt_exec import reech3d
 
 
 def find_daugthers_barycenters(graph, reference_image, reference_tp, tp_2register, vids, real_world_units=True, **kwargs):
@@ -95,6 +94,8 @@ def image_registration(image_2register, ref_points, reg_points, output_shape, **
     Register an image according to `ref_points` & `reg_points`.
     Interpolation methods is set to 'nearest' by default, but this can be changed by adding an 'interpolation_method' as kwargs.
     """
+    from vplants.asclepios.vt_exec import reech3d
+
     ref_points, reg_points = np.asarray(ref_points), np.asarray(reg_points)
     registration = pts2transfo(ref_points, reg_points)
     if ('interpolation_method' in kwargs) and isinstance(kwargs['interpolation_method'],str):
@@ -1130,6 +1131,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         # -- Registration step:
         if 'register_images' in kwargs and kwargs['register_images']:
             print "# -- Images registration..."
+            # - If a reference image id is given or a sequence (list) of references:
             if 'reference_image' in kwargs:
                 if isinstance(kwarg['reference_image'],int):
                     ref_image =  kwarg['reference_image']
@@ -1144,8 +1146,8 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
                     else:
                         warnings.warn("You gave a 'reference_image' list but no 'unregistered_images' list as 'kwargs'.")
                         return None
+            # - By default we register every images onto the next one, starting with the last one.
             else:
-                # -- By default we register every images onto the next one, starting with the last one.
                 ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
                 unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
 
