@@ -1499,7 +1499,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             """
             Decorator wrapping function `compute_principal_curvatures` allowing use of various input for `vids` and preparing the necessary variables for the wrapped function.
             """
-            from openalea.plantgl.all import (r_neighborhood, principal_curvatures, k_closest_points_from_ann)
+            from openalea.plantgl.algo import k_closest_points_from_ann
             # -- If 'vids' is an integer... 
             if isinstance(vids,int):
                 if (vids not in self.layer1()): # - ...but not in the L1 list, there is nothing to do!
@@ -1568,6 +1568,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         Function computing principal curvature using a CGAL c++ wrapped function: 'principal_curvatures'.
         It's only doable for cells of the first layer.
         """
+        from openalea.plantgl.algo import r_neighborhood, principal_curvatures
         # - Try to use the position of the closest voxel to the wall geometric median
         if self.epidermis_wall_median_voxel.has_key(vid):
             closest_voxel_coords = self.epidermis_wall_median_voxel[vid]
@@ -1595,7 +1596,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
 
     def __curvature_parameters_CGAL(func):
-        def wrapped_function(self, vids = None, radius=60, verbose = False):
+        def wrapped_function(self, vids = None, radius=70, verbose = False):
             """
             """
             # -- If 'vids' is `None`, we apply the function to all L1 cells:
@@ -1613,7 +1614,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             try:
                 self.principal_curvatures
             except:
-                warnings.warn('Principal curvature not defined...')
+                print('Principal curvature not pre-computed... computing it !')
                 self.compute_principal_curvatures(vids, radius=radius, verbose = True)
 
             curvature = {}; N = len(vids); percent=0
