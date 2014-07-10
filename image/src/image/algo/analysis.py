@@ -408,6 +408,23 @@ class AbstractSpatialImageAnalysis(object):
         if verbose: print 'Updating labels list...'
         self._labels = self.__labels()
 
+    def consideronlylabels(self, list2consider, verbose = False):
+        """
+        Add labels to the ignoredlabels list (set) and update the self._labels cache.
+        """
+        if isinstance(list2consider, int):
+            list2consider = [list2consider]
+
+        toignore = set(np.unique(self.image))-set(list2consider)
+        integers = np.vectorize(lambda x : int(x))
+        toignore = integers(list(toignore)).tolist()
+
+
+        if verbose: print 'Adding labels', list2add,'to the list of labels to ignore...'
+        self._ignoredlabels.update(toignore)
+        if verbose: print 'Updating labels list...'
+        self._labels = self.__labels()
+
 
     def save(self, filename = ""):
         """
@@ -494,8 +511,7 @@ class AbstractSpatialImageAnalysis(object):
         :IMPORTANT: `background` is not in the list of labels.
         """
         labels = set(np.unique(self.image))-self._ignoredlabels
-        integers = np.vectorize(lambda x : int(x))
-        return integers(list(labels)).tolist()
+        return list(map(int, labels))
 
     def nb_labels(self):
         """
@@ -933,25 +949,20 @@ class AbstractSpatialImageAnalysis(object):
         return surfaces 
 
 
-    def __layer1(self):
-        return list( set(self.neighbors(self.background()))-self._ignoredlabels )
-
 
     def layer1(self, filter_by_surface = True, minimal_external_surface=10):
         """
         Extract a list of labels corresponding to a layer of cell.
         It start from the cell in contact with the outer surface to the inner parts of the segemented tissu.
         """
-        integers = np.vectorize(lambda x : int(x))
-        if self._layer1 is None :
-            cell_list = list(integers(self.__layer1()))
+        integers = lambda l : map(int, l) 
+        if self._layer1 is None : # __layer1 contains always all the l1 cells.
+            self._layer1 = integers(self.neighbors(self.background()))
             if filter_by_surface:
-                vids_surface = (self.cell_wall_surface(1,cell_list,real=False))
-                self._layer1 = [vid for vid in cell_list if vids_surface[(1,vid)]>minimal_external_surface]
-            else:
-                self._layer1 = list(integers(self.__layer1()))
+                vids_surface = self.cell_wall_surface(self.background(),self._layer1,real=False)
+                self._layer1 = [vid for vid in self._layer1 if vids_surface[(self.background(),vid)]>minimal_external_surface]
         
-        return self._layer1
+        return list( set(self._layer1)-self._ignoredlabels )
 
 
     def __first_voxel_layer(self, keep_background = True):
