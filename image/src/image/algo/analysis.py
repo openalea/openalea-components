@@ -1220,8 +1220,8 @@ class AbstractSpatialImageAnalysis(object):
 
         # -- Then we recover the list of border cells and delete the from the image:
         cells_in_image_margins = self.cells_in_image_margins()
-        if 0 in cells_in_image_margins: cells_in_image_margins.remove(0)
-        if self.background() in cells_in_image_margins: cells_in_image_margins.remove(self.background())
+        if erase_value in cells_in_image_margins: cells_in_image_margins.remove(erase_value)
+
         N = len(cells_in_image_margins); percent= 0
         for n,c in enumerate(cells_in_image_margins):
             if verbose and n*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
@@ -1236,7 +1236,8 @@ class AbstractSpatialImageAnalysis(object):
         ignoredlabels = copy.copy(self._ignoredlabels)
         ignoredlabels.update([erase_value])
         return_type = copy.copy(self.return_type)
-        self.__init__(self.image, ignoredlabels, return_type, self.background())
+        self.__init__(self.image, ignoredlabels, return_type, self._background)
+        self._erase_value = erase_value
 
         if verbose: print 'Done !!'
 
@@ -1253,15 +1254,15 @@ class SpatialImageAnalysis2D (AbstractSpatialImageAnalysis):
     def cells_in_image_margins(self):
         """
         Return a list of cells in contact with the margins of the stack (SpatialImage).
-        
-        :Parameters:
-         - `update_ignoredlabels` (boolean) - if True it will update the list of cell labels to ignore when computing properties.
         """
-        margins = set()
-        for l in [np.unique(self.image[0,:]),np.unique(self.image[-1,:]),np.unique(self.image[:,0]),np.unique(self.image[:,-1])]:
-            margins.update(l)
+        margins = []
+        margins.extend(np.unique(self.image[0,:]))
+        margins.extend(np.unique(self.image[-1,:]))
+        margins.extend(np.unique(self.image[:,0]))
+        margins.extend(np.unique(self.image[:,-1]))
 
-        return list(margins)
+        return list(set(margins)-set([self._background]))
+
 
     def inertia_axis(self, labels = None, center_of_mass = None, real = True):
         """
@@ -1456,18 +1457,21 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             return self.convert_return(return_list_of_vectors(inertia_eig_vec,by_row=1),labels), self.convert_return(inertia_eig_val,labels)
 
 
-    def cells_in_image_margins(self):
+    def cells_in_image_margins(self, voxel_distance_from_margin=5):
         """
         Return a list of cells in contact with the margins of the stack (SpatialImage).
+        All ids within a defined (5 by default) voxel distance form the margins will be used to define cells as 'in image margins'.
         """
-        margins = set()
-        for l in [np.unique(self.image[0,:,:]),np.unique(self.image[-1,:,:]),np.unique(self.image[:,0,:]),np.unique(self.image[:,-1,:])]:
-            margins.update(l)
+        vx_dist=voxel_distance_from_margin
+        margins = []
+        margins.extend(np.unique(self.image[:vx_dist,:,:]))
+        margins.extend(np.unique(self.image[-vx_dist:,:,:]))
+        margins.extend(np.unique(self.image[:,:vx_dist,:]))
+        margins.extend(np.unique(self.image[:,-vx_dist:,:]))
+        margins.extend(np.unique(self.image[:,:,:vx_dist]))
+        margins.extend(np.unique(self.image[:,:,-vx_dist:]))
 
-        margins.update(np.unique(self.image[:,:,0]))
-        margins.update(np.unique(self.image[:,:,-1]))
-
-        return list(margins)
+        return list(set(margins)-set([self._background]))
 
     def region_boundingbox(self, labels):
         """
