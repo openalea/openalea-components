@@ -465,7 +465,7 @@ class AbstractSpatialImageAnalysis(object):
          - `filename` (str) - name of the file to create WITHOUT extension (automatically add '.inr.gz').
          - `overwrite` (bool) - (Optional) if True overwrite the file if found on the disk, otherwise abort.
         """
-        from openalea.image.serial.basics import imsave
+        from openalea.image.serial.basics import write_inrimage
         # If no filename is given, we create one based on the name of the SpatialImage (if possible).
         if ( filename == "" ) and ( self.filename != None ): # None is the default value in self.__init__
             filename = self.filename
@@ -481,11 +481,11 @@ class AbstractSpatialImageAnalysis(object):
 
         if filename.endswith(".inr"):
             filename = filename+'.gz'
-        else:
+        elif not filename.endswith(".inr.gz"):
             filename = filename+'.inr.gz'
 
         # -- We save a compresed version of the file:
-        imsave(filename, SpatialImage(self.image))
+        write_inrimage(filename, self.image)
         print "File " + filename + " succesfully created !!"
 
 
