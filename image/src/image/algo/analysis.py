@@ -426,10 +426,9 @@ class AbstractSpatialImageAnalysis(object):
         self._labels = self.__labels()
 
 
-    def save(self, filename = ""):
+    def save_analysis(self, filename = ""):
         """
         Save a 'SpatialImageAnalysis' object, under the name 'filename'.
-        
         :Parameters:
          - `filename` (str) - name of the file to create WITHOUT extension.
         """
@@ -437,22 +436,56 @@ class AbstractSpatialImageAnalysis(object):
         # If no filename is given, we create one based on the name of the SpatialImage (if possible).
         if ( filename == "" ) and ( self.filename != None ): # None is the default value in self.__init__
             filename = self.filename
-            if filename.endswith(".inr.gz"):
-                filename = filename[:-7]
-            if filename.endswith(".inr"):
-                filename = filename[:-4]
-            filename.join([filename+"_analysis.pklz"])
+        elif filename != "":
+            assert isinstance(filename, str)
         else:
             raise ValueError("The filename is missing, and there's no information about it in "+str(self)+". Saving process ABORTED.")
 
         # -- We make sure the file doesn't already exist !
         if exists(filename):
             raise ValueError("The file "+filename+" already exist. Saving process ABORTED.")
+            return None
 
-        # -- We save a binary compresed version of the file:
-        f = gzip.open( filename , 'wb')
-        pickle.dump( self, f )
+        if filename.endswith(".inr.gz"):
+            filename = filename[:-7]+"_analysis.pklz"
+        if filename.endswith(".inr"):
+            filename = filename[:-4]+"_analysis.pklz"
+
+        # -- We save a compresed version of the file:
+        f = gzip.open(filename, 'w')
+        pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
         f.close()
+        print "File " + filename + " succesfully created !!"
+
+
+    def save_image(self, filename= "", overwrite= False):
+        """
+        Save the image in 'SpatialImageAnalysis' object (self.image), under the name 'filename'.
+        :Parameters:
+         - `filename` (str) - name of the file to create WITHOUT extension (automatically add '.inr.gz').
+         - `overwrite` (bool) - (Optional) if True overwrite the file if found on the disk, otherwise abort.
+        """
+        from openalea.image.serial.basics import imsave
+        # If no filename is given, we create one based on the name of the SpatialImage (if possible).
+        if ( filename == "" ) and ( self.filename != None ): # None is the default value in self.__init__
+            filename = self.filename
+        elif filename != "":
+            assert isinstance(filename, str)
+        else:
+            raise ValueError("The filename is missing, and there's no information about it in "+str(self)+". Saving process ABORTED.")
+
+        # -- We make sure the file doesn't already exist !
+        if exists(filename) and not overwrite:
+            raise ValueError("The file "+filename+" already exist. Saving process ABORTED.")
+            return None
+
+        if filename.endswith(".inr"):
+            filename = filename+'.gz'
+        else:
+            filename = filename+'.inr.gz'
+
+        # -- We save a compresed version of the file:
+        imsave(filename, SpatialImage(self.image))
         print "File " + filename + " succesfully created !!"
 
 
