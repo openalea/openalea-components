@@ -1425,7 +1425,7 @@ def extend_graph_property_from_dictionary(graph, name, dictionary):
     graph.graph_property(name).update(dictionary)
 
 
-def add_property2graph(graph, images, spatio_temporal_properties, vids, background, property_as_real=True, bbox_as_real=False):
+def add_property2graph(graph, images, spatio_temporal_properties, vids=None, background=1, property_as_real=True, bbox_as_real=False):
     """
     Allow to add a property 'spatio_temporal_properties' to an existing `TemporalPropertyGraph` 'graph'.
     :Parameters:
@@ -1479,8 +1479,10 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids, backgrou
 
     if isinstance(vids,str) and vids == 'strict':
         vids = graph.lineaged_vertex(fully_lineaged=True)
-    elif vids is None:
+    elif vids  == 'lineaged':
         vids = graph.lineaged_vertex(fully_lineaged=False)
+    elif vids is None:
+        vids = list(graph.vertices())
     else:
         assert isinstance(vids, list)
 

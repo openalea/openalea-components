@@ -983,19 +983,20 @@ class AbstractSpatialImageAnalysis(object):
 
 
 
-    def layer1(self, filter_by_surface = True, minimal_external_surface=10):
+    def layer1(self, filter_by_surface = True, minimal_external_surface=10, real_surface=True):
         """
-        Extract a list of labels corresponding to a layer of cell.
-        It start from the cell in contact with the outer surface to the inner parts of the segemented tissu.
+        Extract a list of labels corresponding to the external layer of cell.
+
         """
         integers = lambda l : map(int, l) 
         if self._layer1 is None : # __layer1 contains always all the l1 cells.
             self._layer1 = integers(self.neighbors(self.background()))
             if filter_by_surface:
-                vids_surface = self.cell_wall_surface(self.background(),self._layer1,real=False)
-                self._layer1 = [vid for vid in self._layer1 if vids_surface[(self.background(),vid)]>minimal_external_surface]
-        
-        return list( set(self._layer1)-self._ignoredlabels )
+                vids_surface = self.cell_wall_surface(self.background(),self._layer1, real_surface)
+                self._layer1 = [vid for vid in self._layer1 if ((vids_surface.has_key(tuple([self.background(),vid])) and (vids_surface[(self.background(),vid)]>minimal_external_surface]))
+
+        self._layer1 = list( set(self._layer1)-self._ignoredlabels )
+        return self._layer1
 
 
     def __first_voxel_layer(self, keep_background = True):
