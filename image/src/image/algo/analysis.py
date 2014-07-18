@@ -993,7 +993,7 @@ class AbstractSpatialImageAnalysis(object):
             self._layer1 = integers(self.neighbors(self.background()))
             if filter_by_surface:
                 vids_surface = self.cell_wall_surface(self.background(),self._layer1, real_surface)
-                self._layer1 = [vid for vid in self._layer1 if ((vids_surface.has_key(tuple([self.background(),vid])) and (vids_surface[(self.background(),vid)]>minimal_external_surface]))
+                self._layer1 = [vid for vid in self._layer1 if ((vids_surface.has_key(tuple([self.background(),vid]))) and (vids_surface[(self.background(),vid)]>minimal_external_surface))]
 
         self._layer1 = list( set(self._layer1)-self._ignoredlabels )
         return self._layer1
