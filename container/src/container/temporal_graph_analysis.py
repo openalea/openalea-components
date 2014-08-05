@@ -16,19 +16,60 @@
 ################################################################################
 """This module helps to analyse TemporalPropertyGraph from Spatial Images."""
 
-import warnings
-import types
-import numpy as np
-import copy
-from openalea.image.algo.analysis import return_list_of_vectors
-#from interface.property_graph import IPropertyGraph, PropertyError
+import warnings, types, numpy as np, copy, math
 import matplotlib.pyplot as plt
-import math
-
-#from scipy.sparse import csr_matrix
 from numpy.linalg import svd
-from sklearn import linear_model
+from openalea.image.algo.analysis import return_list_of_vectors
 
+
+def regions_from_lineage(graph, starting_tp=0):
+    """
+    Generate a dict where vertex ids (vids) -from a starting time point- will receive the id of their ancestor at that starting point.
+    """
+    rlineage = {}
+    for vid in graph.lineaged_vertex(True):
+        tp = graph.vertex_property('index')[vid]
+        if tp >= starting_tp:
+            ancestors = list(graph.ancestors(vid,n=tp))
+            ancestor_starting_tp = [vid2 for vid2 in ancestors if graph.vertex_property('index')[vid2]==starting_tp]
+            assert len(ancestor_starting_tp)==1
+            rlineage[vid] = ancestor_starting_tp[0]
+
+    return rlineage
+
+
+def lineage_colors(graph, list_cell, alea_range=None, distance_between_colors=5):
+    """
+    Generate a dict where keys -from a given list `list_cell`- receive a random integer from the list as value.
+    """
+    import random
+    import math
+    if alea_range==None:
+        alea_range = [0,255]
+    if isinstance(alea_range,list) and (len(alea_range)==2):
+        lineage_color = {}
+        for n,k in enumerate(list_cell):
+            print n,'/',len(list_cell)
+            if n==0:
+                lineage_color[k] = random.randint(alea_range[0], alea_range[1])
+            else:
+                next_color = random.randint(alea_range[0], alea_range[1])
+                nei = graph.neighbors(k)
+                colored_nei = list(nei & set(lineage_color.keys()))
+                if colored_nei != []:
+                    seq = list(set(np.arange(alea_range[1]-alea_range[0]))-set([lineage_color[c_n] for c_n in colored_nei])-set(np.arange(next_color,next_color+distance_between_colors))-set(np.arange(next_color-distance_between_colors,next_color)))
+                    tmp_distance_between_colors = distance_between_colors
+                    while seq == []:
+                        tmp_distance_between_colors -= 1
+                        if tmp_distance_between_colors <= 1:
+                            warnings.warn('The range was not wide enought!')
+                            return None
+                        seq = list(set(np.arange(alea_range[0], alea_range[1]))-set([lineage_color[c_n] for c_n in colored_nei])-set(np.arange(next_color,next_color+tmp_distance_between_colors))-set(np.arange(next_color-tmp_distance_between_colors,next_color)))
+                    lineage_color[k] = random.choice(seq)
+                else:
+                    lineage_color[k] = next_color
+
+        return lineage_color
 
 def add_graph_vertex_property_from_dictionary(graph, name, dictionary, unit=None):
     """
@@ -36,7 +77,10 @@ def add_graph_vertex_property_from_dictionary(graph, name, dictionary, unit=None
     The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels.
     """
     if name in graph.vertex_properties():
-        raise ValueError('Existing vertex property %s' % name)
+        if (unit is not None) and (not graph._graph_property["units"].has_key(name) or graph._graph_property["units"](name) is None):
+            graph._graph_property["units"].update({name:unit})
+            print '{} unit upgraded in graph to {}.'.format(name, unit)
+        raise ValueError('Existing vertex property {}'.format(name))
 
     graph.add_vertex_property(name)
     graph.vertex_property(name).update( dictionary )
@@ -425,7 +469,7 @@ def __normalized_temporal_parameters(func):
         if labels_at_t_n:
             return temporal_func
         else:
-            return translate_keys2daughters_ids(graph, temporal_func)
+            return keys_to_daughter_id(graph, temporal_func, rank)
 
     return  wrapped_function
 
@@ -455,11 +499,13 @@ def temporal_rate(graph, vertex_property, vid, rank, time_interval):
     try:
         parent_value = vertex_property[vid_parent]
     except KeyError as e:
-        raise KeyError("temporal_rate "+"error 1 "+str(vid_parent))
+        print KeyError("temporal_rate "+"error 1 "+str(vid_parent))
+        return np.nan
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        raise KeyError("temporal_rate "+"error 2 ")
+        print KeyError("temporal_rate "+"error 2 "+str(e))
+        return np.nan
 
     return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
 
@@ -489,11 +535,13 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
     try:
         parent_value = vertex_property[vid_parent]
     except KeyError as e:
-        raise KeyError("temporal_change "+"error 1 "+str(vid_parent))
+        print KeyError("temporal_rate "+"error 1 "+str(vid_parent))
+        return np.nan
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        raise KeyError("temporal_change "+"error 2 ")
+        print KeyError("temporal_rate "+"error 2 "+str(e))
+        return np.nan
 
     return (descendants_value - parent_value) / float(time_interval)
 
@@ -730,67 +778,259 @@ def time_point_property_by_regions(graph, time_point, vertex_property, lineaged=
     return property_by_regions
 
 
-def histogram_property_by_time_points(graph, vertex_property, time_points=None, vids=None, **kwargs):
+def extend_margins(mini, maxi, percent=0.04):
+    """
+    Extend the mini and maxi value by a percentage of their difference.
+    Used for display purpose when defining axes range so mini and maxi values are well separated form the surrounding box.
+    """
+    assert mini < maxi
+    diff = maxi-mini
+    pc = diff*percent
+
+    if mini-pc<0 and mini>0:
+        mini = 0
+    else:
+        mini = mini-pc
+    if maxi+pc>0 and maxi<0:
+        maxi = 0
+    else:
+        maxi = maxi+pc
+
+    return mini, maxi
+
+
+def histogram_property_by_time_points(graph, vertex_property, time_points=None, **kwargs):
     """
     Display an histogram or barplot of the provided `vertex_property` by `time_points`.
     """
+    # Handle initial data to work with:
+    property_name = None
+    if isinstance(vertex_property,str):
+        assert vertex_property in list(graph.vertex_properties())
+        property_name = vertex_property
+        vertex_property = graph.vertex_property(vertex_property)
+    if time_points is None:
+        time_points = range(graph.nb_time_points+1)
+
+    # kwargs associated to graph properties:
+    ppt_kwargs = {}
+    if 'lineaged' in kwargs: ppt_kwargs.update({'lineaged':kwargs['lineaged']})
+    if 'as_parent' in kwargs: ppt_kwargs.update({'as_parent':kwargs['as_parent']})
+    if 'as_children' in kwargs: ppt_kwargs.update({'as_children':kwargs['as_children']})
+    vids, data = [], []
+    for tp in time_points:
+        ppty_dict = time_point_property(graph, tp, property_name, **ppt_kwargs)
+        vids.append(np.array(ppty_dict.keys()))
+        data.append(np.array(ppty_dict.values()))
+
+    # Handle kwargs passed to 'plt.hist':
+    h_kwargs= {}
+    if 'bins' in kwargs: h_kwargs.update({'bins':kwargs['bins']})
+    if 'range' in kwargs: h_kwargs.update({'range':kwargs['range']})
+    if 'normed' in kwargs: h_kwargs.update({'normed':kwargs['normed']})
+    if 'histtype' in kwargs: h_kwargs.update({'histtype':kwargs['histtype']})
+    # Other kwargs:
+    xlim = kwargs['xlim'] if 'xlim' in kwargs else None
+    outliers = kwargs['outliers'] if 'outliers' in kwargs else None# if a type 'dict', should be *key=vid:*values=True/False; if a type 'int', will serve as threshold for MAD estimator
+    thres = kwargs['threshold'] if 'threshold' in kwargs else np.nan
+    sidebyside = kwargs['sidebyside'] if 'sidebyside' in kwargs else False
+
+    # Handling "outliers" infos:
+    if isinstance(outliers, int):
+        #~ print 'Outliers threshold provided... selecting outliers by MAD estimator !'
+        from openalea.container.graph_clusterer import mad_based_outlier
+        thres = copy.copy(outliers)
+        all_outliers = mad_based_outlier(vertex_property,thres)
+        outliers = []
+        for tp in time_points:
+            tp_ids = [i for i in graph.vertex_at_time(tp) if i in all_outliers.keys()]
+            outliers.append([vertex_property[k] for k in tp_ids if all_outliers[k]])
+    elif isinstance(outliers, dict):
+        #~ print 'True/False dictionary of outliers provided !'
+        outliers_dict = copy.copy(outliers)
+        outliers = []
+        for tp in time_points:
+            outliers.append( [data[tp][n] for n,vid in enumerate(vids[tp]) if outliers_dict[vid]] )
+    else:
+        #~ print 'No outliers infos !'
+        pass
+
+    # Define margins of outliers:
+    if outliers is not None:
+        p_data, n_data = [i for k in outliers if k!=[] for i in k if i>0], [i for k in outliers if k!=[] for i in k if i<0]
+        if p_data != []:
+            min_out_p, max_out_p = min(p_data), max(p_data)
+        else:
+            min_out_p, max_out_p = None, None
+        if n_data != []:
+            min_out_n, max_out_n = min(n_data), max(n_data)
+        else:
+            min_out_n, max_out_n = None, None
+
+    # -- Initialisation of the matplotlib figure:
+    fsize = [14,4] if sidebyside else [14,8]
+    fig = plt.figure(figsize=fsize, dpi=80)
+
+    # - First make an histogram of the data:
+    # Create a subfigure and the histogram:
+    histo = fig.add_subplot(121) if sidebyside else fig.add_subplot(211)
+    n, bins, patches = histo.hist(data, label = ["time point #{}".format(tp) for tp in time_points], rwidth=1., **h_kwargs)
+    # Add x, y axis labels:
+    if kwargs.has_key('xlabel'):
+        histo.set_xlabel(kwargs['xlabel'])
+    elif property_name is not None:
+        if graph.graph_property("units").has_key(property_name):
+            histo.set_xlabel(property_name+" ("+graph.graph_property("units")[property_name]+")",family='freesans')
+        else:
+            histo.set_xlabel(property_name)
+    if h_kwargs.has_key('normed') and h_kwargs['normed']:
+        histo.set_ylabel("Relative Frequency")
+    elif h_kwargs.has_key('normed') and not h_kwargs['normed']:
+        histo.set_ylabel("Frequency")
+    # Add outliers positions if available:
+    try:
+        histo.vlines([min_out_p, max_out_p, min_out_n, max_out_n], ymin=0, ymax=np.max(n)/2.5, color='r', linestyles='dashed', label='outliers', hold=True)
+    except:
+        pass
+    if xlim is not None: histo.set_xlim(xlim[0],xlim[1])
+    # Add a legend:
+    histo.legend(loc=0, framealpha=0.7, fontsize='small')
+
+    # - Then make a boxplot of the data:
+    # Create a subfigure and the boxplot:
+    bp = fig.add_subplot(122) if sidebyside else fig.add_subplot(212)
+    bp.boxplot(data, vert=0, positions=time_points)
+    # Add x, y axis labels:
+    bp.set_ylabel('Time points')
+    if kwargs.has_key('xlabel'):
+        bp.set_xlabel(kwargs['xlabel'])
+    elif property_name is not None:
+        if graph.graph_property("units").has_key(property_name):
+            bp.set_xlabel(property_name+" ("+graph.graph_property("units")[property_name]+")",family='freesans')
+        else:
+            bp.set_xlabel(property_name)
+    # Add outliers positions if available:
+    if isinstance(outliers, list) and len(outliers)==len(time_points):
+        for tp, outs in enumerate(outliers):
+            plt.plot(outs, np.zeros_like(outs)+tp, 'ro', scalex=False, label='outliers' if tp==0 else None)
+    elif outliers is not None and min_out is not None:
+        bp.vlines([min_out_p, max_out_p, min_out_n, max_out_n], ymin=min(time_points), ymax=max(time_points), color='r', linestyles='dashed', label='outliers', hold=True)
+    else:
+        pass
+    # Add outliers detection method infos if availables:
+    if outliers is not None:
+        MAD_kwargs = dict(y=0.01, x=0.99, ha='right', va='bottom', fontsize='small')
+        bp.axes.set_title('MAD estimator threshold={}'.format(thres), **MAD_kwargs)
+    if xlim is not None: bp.set_xlim(xlim[0],xlim[1])
+    # Add a legend:
+    bp.legend(loc=1, framealpha=0.7, fontsize='small', numpoints=1)
+
+    # Add a global title to the figure:
+    if kwargs.has_key('title'):
+        plt.suptitle(kwargs['title'])
+    elif property_name is not None:
+        plt.suptitle("Histogram and Boxplot of {} property".format(property_name))
+    # Make a thight layout around the figures:
+    plt.tight_layout()
+
+    return n, bins, patches
+
+def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions, remove_outliers=None, **kwargs):
+    """
+    Display an histogram or barplot of the provided `vertex_property` by `time_points`.
+    :Parameters:
+     - `graph` (temporal_property_graph) - represent the spatio-temporal relations between clusters
+     - `vertex_property` (str|dict) - string matching a vertex_property known to the graph or a dictionary
+     - `regions` (dict) - dictionary sorting vertex_ids (vids) into groups, *keys=vids: *values=group_ids
+     - `remove_outliers` (int) - if not None, will detect outliers according to given threshold and remove them from boxplot display 
+    
+    """
+    # Handle initial data to work with:
     property_name = None
     if isinstance(vertex_property,str):
         assert vertex_property in list(graph.vertex_properties())
         property_name = vertex_property
         vertex_property = graph.vertex_property(vertex_property)
 
-    if time_points is None:
-        time_points = range(graph.nb_time_points+1)
-    if vids is None:
-        vids = [vid for vid in graph.vertices() if vid in vertex_property]
+    temporal = kwargs['temporal'] if 'temporal' in kwargs else False
+    time_points = range(graph.nb_time_points) if temporal else range(graph.nb_time_points+1) 
+    if temporal:
+        vertex_property = keys_to_mother_id(graph, vertex_property)
 
-    ppt_kwargs = {}
-    if 'lineaged' in kwargs: ppt_kwargs.update({'lineaged':kwargs['lineaged']})
-    if 'as_parent' in kwargs: ppt_kwargs.update({'as_parent':kwargs['as_parent']})
-    if 'as_children' in kwargs: ppt_kwargs.update({'as_children':kwargs['as_children']})
-    data = []; tmp_tp=time_points
+    if remove_outliers is not None:
+        from basics import mad_based_outlier
+        outliers = mad_based_outlier(vertex_property,remove_outliers)
+    else:
+        outliers = dict([(k,False) for k in vertex_property])
+
+    fully_lineaged_vtx = graph.lineaged_vertex(fully_lineaged=True)
+    tp_index_vtx = graph.vertex_property('index')
+    data = {}; mini, maxi = np.inf, -np.inf
     for tp in time_points:
-        data.append(time_point_property(graph, tp, vertex_property,**ppt_kwargs).values())
+        ppty_dict = dict([(k,v) for k,v in vertex_property.iteritems() if (tp_index_vtx[k]==tp)and(k in fully_lineaged_vtx)and(not outliers[k])])
+        mini = np.min([mini,np.min(ppty_dict.values())])
+        maxi = np.max([maxi,np.max(ppty_dict.values())])
+        data[tp] = {}
+        for vid, region in regions.iteritems():
+            if ppty_dict.has_key(vid):
+                if data[tp].has_key(region):
+                    data[tp][region].append(ppty_dict[vid])
+                else:
+                    data[tp][region]= [ppty_dict[vid]]
 
-    h_kwargs= {}
-    if 'bins' in kwargs: h_kwargs.update({'bins':kwargs['bins']})
-    if 'range' in kwargs: h_kwargs.update({'range':kwargs['range']})
-    if 'normed' in kwargs: h_kwargs.update({'normed':kwargs['normed']})
-    if 'histtype' in kwargs: h_kwargs.update({'histtype':kwargs['histtype']})
-    if 'sidebyside' in kwargs: sidebyside=kwargs['sidebyside']
-    else: sidebyside=False
+    regions_ids = np.unique(regions.values())
+    N_regions = len(regions_ids)
+    N_box = len(time_points)-1
 
-    fsize = [14,4] if sidebyside else [14,8]
+    bp_mini, bp_maxi = extend_margins(mini, maxi, 0.04)
+    # kwargs associated to graph properties:
+    bp_kwargs = {}
+    bp_kwargs['range'] = kwargs['range'] if 'range' in kwargs else [bp_mini, bp_maxi]
+
+    # -- Initialisation of the matplotlib figure:
+    fsize = [5*N_box,7]
     fig = plt.figure(figsize=fsize, dpi=80)
-    fig.add_subplot(121) if sidebyside else fig.add_subplot(211)
+    bp = {}
+    # - Then make a boxplot of the data:
+    for tp in time_points[1:]:
+        # Create a subfigure and the boxplot:
+        bp[tp] = fig.add_subplot(1,N_box,tp)
+        tp_data = [data[tp][region] for region in regions_ids]
+        bp[tp].boxplot(tp_data, vert=1, positions=range(N_regions))
+        plt.plot(range(N_regions), [data[0][r] if data[0].has_key(r) else [None] for r in regions_ids] , 'rx', scalex=False, label='Initial value')
+        if tp >=2:
+            plt.plot(range(N_regions), [np.mean(data[tp-1][r]) for r in regions_ids], 'gx', scalex=False, label='t_n-1 mean')
+        bp[tp].set_ylim(tuple(bp_kwargs['range']))
+        # Add x, y axis labels:
+        bp[tp].set_xlabel('regions')
+        if kwargs.has_key('xlabel'):
+            bp[tp].set_ylabel(kwargs['xlabel'])
+        elif property_name is not None:
+            if graph.graph_property("units").has_key(property_name):
+                bp[tp].set_ylabel(property_name+" ("+graph.graph_property("units")[property_name]+")",family='freesans')
+            else:
+                bp[tp].set_ylabel(property_name)
 
-    n, bins, patches = plt.hist(data, label = ["time point #{}".format(tp) for tp in time_points], rwidth=1., **h_kwargs)
-    if kwargs.has_key('title'):
-        plt.title(kwargs['title'])
-    elif property_name is not None:
-        plt.title("Histogram of {} property".format(property_name))
-    if kwargs.has_key('xlabel'):
-        plt.xlabel(kwargs['xlabel'])
-    elif property_name is not None:
-        if graph.graph_property("units").has_key(property_name):
-            plt.xlabel(property_name+" ("+graph.graph_property("units")[property_name]+")")
+        if temporal:
+            plt.title('t{} -> t{}'.format(tp, tp+1))
         else:
-            plt.xlabel(property_name)
-    if h_kwargs.has_key('normed') and h_kwargs['normed']:
-        plt.ylabel("Relative Frequency")
-    elif h_kwargs.has_key('normed') and not h_kwargs['normed']:
-        plt.ylabel("Frequency")
-    plt.legend()
-
-    bp = fig.add_subplot(122) if sidebyside else fig.add_subplot(212)
-    bp.boxplot(data, vert=0, positions=time_points)
-    if h_kwargs.has_key('range'):
-        bp.set_xlim(h_kwargs['range'][0], h_kwargs['range'][1])
-    bp.set_ylabel('Time points')
+            plt.title('Time point {}'.format(tp))
+    # Add a legend:
+    leg = plt.legend(loc=2, framealpha=0.7, fontsize='small')
+    # Add outliers detection method infos if availables:
+    if remove_outliers is not None:
+        MAD_kwargs = dict(y=mini, x=0.1, ha='left', va='top', fontsize='small')
+        bp[time_points[1]].text(s='MAD estimator threshold={}'.format(remove_outliers), **MAD_kwargs)
+    # Add a global title to the figure:
+    if kwargs.has_key('title'):
+        plt.suptitle(kwargs['title'])
+    elif property_name is not None:
+        plt.suptitle("Boxplot of {} property by time points and regions{}".format(property_name, ' (without outliers)' if remove_outliers is not None else ''))
+    # Make a thight layout around the figures:
     plt.tight_layout()
-    
-    return n, bins, patches
+
+    return mini,maxi,'Done!'
+
 
 
 def translate_keys2daughters_ids(graph, dictionary):
@@ -1114,6 +1354,7 @@ def stretch_matrix(graph, xyz_t1, xyz_t2):
     """
     Compute the stretch / deformation matrix.
     """
+    from sklearn import linear_model
     # - Compute the centroids:
     c_t1 = np.mean(xyz_t1,0)
     c_t2 = np.mean(xyz_t2,0)

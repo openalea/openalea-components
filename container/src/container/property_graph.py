@@ -655,7 +655,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         
         n = self.nb_vertices()
         adjacency_matrix = np.array(n*[n*[no_edge_val]])
-        for edge in self.edges(edge_type):
+        for edge in self.edges(edge_type=edge_type):
             v1, v2 = self.edge_vertices(edge)
             adjacency_matrix[v1, v2] = edge_dist(self, v1, v2)
             if not oriented:
