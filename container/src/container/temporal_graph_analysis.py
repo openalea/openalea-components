@@ -602,6 +602,18 @@ def shape_anisotropy_3D(graph):
     return dict([ (vid, fractional_anisotropy(inertia)) for vid, inertia in graph.vertex_property('inertia_values').iteritems() ])
 
 
+def reduced_shape_anisotropy_3D(graph):
+    """
+    Sub-function computing the shape anisotropy of one cell using the Fractional anisotropy scalar
+
+    :Parameters:
+     - 'graph' (TGP) - a TPG.
+    :Return:
+     - shape_anisotropy = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
+    """
+    return dict([ (vid, fractional_anisotropy(inertia)) for vid, inertia in graph.vertex_property('reduced_inertia_values').iteritems() ])
+
+
 def epidermis_wall_gaussian_curvature(graph):
     """
     Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
@@ -997,7 +1009,7 @@ def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions,
         bp[tp] = fig.add_subplot(1,N_box,tp)
         tp_data = [data[tp][region] for region in regions_ids]
         bp[tp].boxplot(tp_data, vert=1, positions=range(N_regions))
-        plt.plot(range(N_regions), [data[0][r] if data[0].has_key(r) else [None] for r in regions_ids] , 'rx', scalex=False, label='Initial value')
+        plt.plot(range(N_regions), [np.mean(data[0][r]) if data[0].has_key(r) else [None] for r in regions_ids] , 'rx', scalex=False, label='Initial value')
         if tp >=2:
             plt.plot(range(N_regions), [np.mean(data[tp-1][r]) for r in regions_ids], 'gx', scalex=False, label='t_n-1 mean')
         bp[tp].set_ylim(tuple(bp_kwargs['range']))
