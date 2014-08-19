@@ -1491,6 +1491,65 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             return self.convert_return(return_list_of_vectors(inertia_eig_vec,by_row=1),labels), self.convert_return(inertia_eig_val,labels)
 
 
+    def reduced_inertia_axis(self, labels = None, real = True, verbose=False):
+        """
+        Return the inertia axis of cells, also called the shape main axis.
+        Return 3 (3D-oriented) vectors by rows and 3 (length) values.
+        """
+        if isinstance(labels, int):
+            labels = [labels]
+        elif isinstance(labels, list):
+            labels = list(set(labels)&set(self.labels()))
+        else:
+            labels = self.labels()
+
+        # results
+        inertia_eig_vec = []
+        inertia_eig_val = []
+        N = len(labels); percent=0
+        for i,label in enumerate(labels):
+            if verbose and i*100/float(N) >= percent: print "{}%...".format(percent),; percent += 10
+            if verbose and i+1==N: print "100%"
+            slices = self.boundingbox(label, real=False)
+            center = copy.copy(self.center_of_mass(label, real=False))
+            # project center into the slices sub_image coordinate
+            if slices is not None:
+                for i,slice in enumerate(slices):
+                    center[i] = center[i] - slice.start
+                label_image = (self.image[slices] == label)
+            else:
+                print 'No boundingbox found for label {}'.format(label)
+                label_image = (self.image == label)
+
+            # compute the indices of voxel with adequate label
+            x,y,z = label_image.nonzero()
+            if len(x)==0:
+                continue # obviously no reasons to go further !
+            # difference with the center
+            x = x - center[0]
+            y = y - center[1]
+            z = z - center[2]
+            coord = np.array([x/np.std(x),y/np.std(y),z/np.std(z)])
+
+            # compute 1/N*P.P^T
+            cov = 1./len(x)*np.dot(coord,coord.T)
+            # Find the eigen values and vectors.
+            eig_val, eig_vec = np.linalg.eig(cov)
+            eig_vec = np.array(eig_vec).T
+
+            if real:
+                for i in xrange(3):
+                    eig_val[i] *= np.linalg.norm( np.multiply(eig_vec[i],self._voxelsize) )
+
+            inertia_eig_vec.append(eig_vec)
+            inertia_eig_val.append(eig_val)
+
+        if len(labels)==1 :
+            return return_list_of_vectors(inertia_eig_vec[0],by_row=1), inertia_eig_val[0]
+        else:
+            return self.convert_return(return_list_of_vectors(inertia_eig_vec,by_row=1),labels), self.convert_return(inertia_eig_val,labels)
+
+
     def cells_in_image_margins(self, voxel_distance_from_margin=5):
         """
         Return a list of cells in contact with the margins of the stack (SpatialImage).

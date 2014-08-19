@@ -287,7 +287,7 @@ def availables_spatial_properties():
     """
     Return available properties to be computed by 'temporal_graph_from_image'.
     """
-    return ['boundingbox', 'volume', 'barycenter', 'L1', 'border', 'inertia_axis', 'wall_surface', 'epidermis_surface', 'projected_anticlinal_wall_median', 'wall_median', 'all_walls_orientation', 'epidermis_local_principal_curvature', 'rank-2_projection_matrix']
+    return ['boundingbox', 'volume', 'barycenter', 'L1', 'border', 'inertia_axis', 'wall_surface', 'epidermis_surface', 'projected_anticlinal_wall_median', 'wall_median', 'all_walls_orientation', 'epidermis_local_principal_curvature', 'rank-2_projection_matrix', 'reduced_inertia_axis']
 
 def availables_temporal_properties():
     """
@@ -361,11 +361,12 @@ def check_properties(graph, spatio_temporal_properties):
 
 
 def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
-         spatio_temporal_properties, property_as_real):
+         spatio_temporal_properties, neighborhood, property_as_real):
     """
     Add properties from a `SpatialImageAnalysis` class object (representing a segmented image) to a TemporalPropertyGraph.
     """
     assert isinstance(graph, TemporalPropertyGraph)
+    neighborhood_dict = cp.copy(neighborhood)
     tmp_filename = "tmp_tpgfi_process"
     available_properties = availables_spatial_properties()
     #~ properties = [ppt for ppt in spatio_temporal_properties if isinstance(ppt,str)] # we want to compare str types, no extra args passed
@@ -377,8 +378,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             # - Define SpatialImage type `labels` to compute for:
             labels = translate_ids_Graph2Image(graph, [k for k in graph.vertex_at_time(tp) if k in vids])
             labelset = set(labels)
-            # - Translating `neighborhood` into SpatialImage type (i.e. with labels) for further use:
-            neighborhood = translate_keys_Graph2Image(graph, dict([(vid, translate_ids_Graph2Image(graph, graph.neighbors(vid,'s'))) for vid in vids if graph.vertex_property('index')[vid]==tp]), tp)
+            neighborhood = neighborhood_dict[tp]
             # - Retrieve `min_contact_surface`
             try:
                 min_contact_surface = graph.graph_property('min_contact_surface')
@@ -421,10 +421,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             if 'L1' in spatio_temporal_properties :
                 print 'Generating the list of cells belonging to the first layer...'
                 try: background_neighbors
-                except: 
-                    background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface, real_surface)
-                    background_neighbors = set(background_neighbors)
-                    background_neighbors.intersection_update(labelset)
+                except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
                 extend_vertex_property_from_dictionary(graph, 'L1', dict([(l, (l in background_neighbors)) for l in labels]), time_point=tp)
 
 
@@ -436,6 +433,12 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 border_cells = set(border_cells)
                 extend_vertex_property_from_dictionary(graph, 'border', dict([(l, (l in border_cells)) for l in labels]), time_point=tp)
 
+            # Test purpose only (for now):
+            if 'reduced_inertia_axis' in spatio_temporal_properties :
+                print 'Computing reduced_inertia_axis property...'
+                inertia_axis, inertia_values = SpI_Analysis[tp].reduced_inertia_axis(labels, barycenters_voxel)
+                extend_vertex_property_from_dictionary(graph, 'reduced_inertia_axis', inertia_axis, time_point=tp)
+                extend_vertex_property_from_dictionary(graph, 'reduced_inertia_values', inertia_values, time_point=tp)
 
             if 'inertia_axis' in spatio_temporal_properties :
                 print 'Computing inertia_axis property...'
@@ -448,22 +451,19 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
 
             tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
             if 'wall_surface' in spatio_temporal_properties :
-                try: undefined_neighbors
-                except: 
-                    undefined_neighbors = SpI_Analysis[tp].neighbors(0, min_contact_surface, real_surface)
-                    undefined_neighbors = set(undefined_neighbors)
-                    undefined_neighbors.intersection_update(labelset)
+                try: labels_w_undef_neigh
+                except: labels_w_undef_neigh = retrieve_label_neighbors(SpI_Analysis[tp], 0, labelset, min_contact_surface, real_surface) 
                 print 'Computing wall_surface property...'
                 filtered_edges, unlabelled_target, unlabelled_wall_surfaces = {}, {}, {}
                 for source,targets in neighborhood.iteritems():
                     if source in labelset :
                         filtered_edges[source] = [ target for target in targets if source < target and target in labelset ]
-                        unlabelled_target[source] = [ target for target in targets if target not in labelset and target != background[tp]] # if target == background[tp] => epidermis wall !!
+                        unlabelled_target[source] = [ target for target in targets if (source < target) and (target not in labels+[background[tp]]) ] # if target == background[tp] => epidermis wall !!
                 wall_surfaces = SpI_Analysis[tp].wall_surfaces(filtered_edges, real=property_as_real)
                 extend_edge_property_from_dictionary(graph, 'wall_surface', wall_surfaces, time_point=tp)
 
-                if undefined_neighbors != []:
-                    unlabelled_target.update( dict([ (k,0)  if not unlabelled_target.has_key(k) else (k,unlabelled_target[k]+[0]) for k in undefined_neighbors ]) )
+                if labels_w_undef_neigh != []:
+                    unlabelled_target.update( dict([ (k,[0]) if not unlabelled_target.has_key(k) else (k,unlabelled_target[k]+[0]) for k in labels_w_undef_neigh ]) )
                 
                 unlabelled_wall_surface = dict( [(source, sum(SpI_Analysis[tp].wall_surfaces({source:(unlabelled_target[source] if isinstance(unlabelled_target[source],list) else [unlabelled_target[source]])},real=property_as_real).values())) for source in unlabelled_target] )
                 extend_vertex_property_from_dictionary(graph, 'unlabelled_wall_surface', unlabelled_wall_surface, time_point=tp)
@@ -473,10 +473,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
 
             if 'epidermis_surface' in spatio_temporal_properties :
                 try: background_neighbors
-                except: 
-                    background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface, real_surface)
-                    background_neighbors = set(background_neighbors)
-                    background_neighbors.intersection_update(labelset)
+                except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
                 print 'Computing epidermis_surface property...'
                 def not_background(indices):
                     a,b = indices
@@ -502,20 +499,14 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
             if 'wall_median' in spatio_temporal_properties:
                 print 'Computing wall_median property...'
                 try: background_neighbors
-                except: 
-                    background_neighbors = SpI_Analysis[tp].neighbors(background[tp], min_contact_surface, real_surface)
-                    background_neighbors = set(background_neighbors)
-                    background_neighbors.intersection_update(labelset)
-                try: undefined_neighbors
-                except: 
-                    undefined_neighbors = SpI_Analysis[tp].neighbors(0, min_contact_surface, real_surface)
-                    undefined_neighbors = set(undefined_neighbors)
-                    undefined_neighbors.intersection_update(labelset)
+                except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
+                try: labels_w_undef_neigh
+                except: labels_w_undef_neigh = retrieve_label_neighbors(SpI_Analysis[tp], 0, labelset, min_contact_surface, real_surface) 
                 try: dict_wall_voxels
                 except:
                     print "Extracting walls voxels..."
                     # -- We start by creating all pairs of cells defining a wall we want to extract:
-                    cell_pairs = np.unique([(background[tp], nei) for nei in background_neighbors] + [(0, nei) for nei in undefined_neighbors] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in neighborhood.keys() for label_2 in neighborhood[label_1]])
+                    cell_pairs = np.unique([(background[tp], nei) for nei in background_neighbors] + [(0, nei) for nei in labels_w_undef_neigh] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in neighborhood.keys() for label_2 in neighborhood[label_1]])
                     from openalea.image.algo.analysis import wall_voxels_between_two_cells
                     dict_wall_voxels = {}; nb_pairs = len(cell_pairs); percent = 0
                     for n,(label_1, label_2) in enumerate(cell_pairs):
@@ -555,13 +546,13 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 print 'Computing projection_matrix property...'
                 try: background_neighbors
                 except: background_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], background[tp], labelset, min_contact_surface, real_surface) 
-                try: undefined_neighbors
-                except: undefined_neighbors = retrieve_label_neighbors(SpI_Analysis[tp], 0, labelset, min_contact_surface, real_surface) 
+                try: labels_w_undef_neigh
+                except: labels_w_undef_neigh = retrieve_label_neighbors(SpI_Analysis[tp], 0, labelset, min_contact_surface, real_surface) 
                 try: dict_wall_voxels
                 except:
                     print "Extracting walls voxels..."
                     # -- We start by creating all pairs of cells defining a wall we want to extract:
-                    cell_pairs = np.unique([(background[tp], nei) for nei in background_neighbors] + [(0, nei) for nei in undefined_neighbors] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in neighborhood.keys() for label_2 in neighborhood[label_1]])
+                    cell_pairs = np.unique([(background[tp], nei) for nei in background_neighbors] + [(0, nei) for nei in labels_w_undef_neigh] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in neighborhood.keys() for label_2 in neighborhood[label_1]])
                     from openalea.image.algo.analysis import wall_voxels_between_two_cells
                     dict_wall_voxels = {}; nb_pairs = len(cell_pairs); percent = 0
                     for n,(label_1, label_2) in enumerate(cell_pairs):
@@ -648,10 +639,12 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                     extend_vertex_property_from_dictionary(graph, 'epidermis_local_principal_curvature_origin', SpI_Analysis[tp].principal_curvatures_origin, time_point=tp)
                 #embed()
 
-            # - We want `dict_wall_voxels` and `background_neighbors` to be computed again at each `time_point`:
+            # - We want `dict_wall_voxels`, `background_neighbors` and `labels_w_undef_neigh` to be computed again at each `time_point`:
             try: del dict_wall_voxels
             except: pass
             try: del background_neighbors
+            except: pass
+            try: del labels_w_undef_neigh
             except: pass
 
         # - We want to compute the 'epidermis_local_principal_curvature' for all time points:
@@ -775,13 +768,13 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 if isinstance(fused_background_neighbors, dict): fused_background_neighbors = set(fused_background_neighbors[background[tp]])
                 else: fused_background_neighbors = set(fused_background_neighbors)
                 fused_background_neighbors.intersection_update(set(ref_SpI_ids))
-                fused_undefined_neighbors = fused_image_analysis[tp_2fuse].neighbors(0, min_contact_surface, real_surface)
-                if isinstance(fused_undefined_neighbors, dict): fused_undefined_neighbors = set(fused_undefined_neighbors[0])
-                else: fused_undefined_neighbors = set(fused_undefined_neighbors)
-                fused_undefined_neighbors.intersection_update(set(ref_SpI_ids))
+                fused_labels_w_undef_neigh = fused_image_analysis[tp_2fuse].neighbors(0, min_contact_surface, real_surface)
+                if isinstance(fused_labels_w_undef_neigh, dict): fused_labels_w_undef_neigh = set(fused_labels_w_undef_neigh[0])
+                else: fused_labels_w_undef_neigh = set(fused_labels_w_undef_neigh)
+                fused_labels_w_undef_neigh.intersection_update(set(ref_SpI_ids))
 
                 # - We start by creating all pairs of cells defining a wall we want to extract:
-                fused_cell_pairs = np.unique([(background[tp_2fuse], nei) for nei in fused_background_neighbors] + [(0, nei) for nei in fused_undefined_neighbors] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in fused_neighborhood.keys() for label_2 in fused_neighborhood[label_1]])
+                fused_cell_pairs = np.unique([(background[tp_2fuse], nei) for nei in fused_background_neighbors] + [(0, nei) for nei in fused_labels_w_undef_neigh] + [(min([label_1, label_2]), max([label_1, label_2])) for label_1 in fused_neighborhood.keys() for label_2 in fused_neighborhood[label_1]])
                 fused_boundingboxes = fused_image_analysis[tp_2fuse].boundingbox(ref_SpI_ids, False)
                 from openalea.image.algo.analysis import wall_voxels_between_two_cells
                 fused_dict_wall_voxels = {}; nb_pairs = len(fused_cell_pairs); percent = 0
@@ -1200,7 +1193,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         vids = tpg.lineaged_vertex(fully_lineaged=False)
 
     tpg = _spatial_properties_from_images(tpg, analysis, vids, background,
-         spatio_temporal_properties, property_as_real)
+         spatio_temporal_properties, neighborhood, property_as_real)
 
     tpg = _temporal_properties_from_images(tpg, analysis, vids, background,
          spatio_temporal_properties, property_as_real)
@@ -1411,7 +1404,7 @@ def extend_vertex_property_from_dictionary(graph, name, dictionary, mlabel2verte
     missing_vertex = list(set(dictionary.keys())-set(mlabel2vertex.keys()))
     if missing_vertex != []:
         warnings.warn("Error found while saving vertex property '{}'".format(name))
-        warnings.warn("The provided TemporalPropertyGraph did not contain the vollowing vert{}: {}".format("ices" if len(missing_vertex)>=2 else "ex", missing_vertex))
+        warnings.warn("The provided TemporalPropertyGraph did not contain the following vert{}: {}".format("ices" if len(missing_vertex)>=2 else "ex", missing_vertex))
     graph.vertex_property(name).update( dict([(mlabel2vertex[k], dictionary[k]) for k in dictionary if k in mlabel2vertex.keys()]) )
 
 
@@ -1462,7 +1455,7 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids=None, bac
         assert [isinstance(image, str) for image in images]
 
     print "# -- Creating Spatial Graphs..."
-    analysis, labels, graphs, label2vertex, edges, neighborhood = {}, {}, {}, {}, {}, {}
+    analysis, neighborhood = {}, {}
     for n,image in enumerate(images):
         print "Initialising SpatialImageAnalysis #{}...".format(n)
         # - First we contruct an object `analysis` from class `AbstractSpatialImageAnalysis`
@@ -1472,6 +1465,16 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids=None, bac
             analysis[n] = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background[n])
         if isinstance(image, AbstractSpatialImageAnalysis):
             analysis[n] = image
+        # -- Now we re-construct the neighborhood (topology):
+        labels = translate_ids_Graph2Image(graph, graph.vertex_at_time(n))
+        try:
+            min_contact_surface = graph.graph_property('min_contact_surface')
+            real_surface = graph.graph_property('real_min_contact_surface')
+            assert isinstance(min_contact_surface, int) or isinstance(min_contact_surface, float)
+        except:
+            min_contact_surface = None
+            real_surface = property_as_real
+        neighborhood[n] = analysis[n].neighbors(labels, min_contact_surface, real_surface)
 
     # -- Adding spatio-temporal features to the Spatio-Temporal Graph...
     print "# -- Adding spatio-temporal features to the Spatio-Temporal Graph..."
@@ -1487,7 +1490,7 @@ def add_property2graph(graph, images, spatio_temporal_properties, vids=None, bac
         assert isinstance(vids, list)
 
     graph = _spatial_properties_from_images(graph, analysis, vids, background,
-         spatio_temporal_properties, property_as_real)
+         spatio_temporal_properties, neighborhood, property_as_real)
     graph = _temporal_properties_from_images(graph, analysis, vids, background,
          spatio_temporal_properties, property_as_real)
     print "Done\n"
@@ -1498,5 +1501,4 @@ def retrieve_label_neighbors(SpI_Analysis, label, labelset, min_contact_surface,
     """
     """
     neighbors = SpI_Analysis.neighbors(label, min_contact_surface, real_surface)
-    neighbors = set(neighbors)
-    return neighbors.intersection_update(labelset)
+    return set(neighbors)-labelset
