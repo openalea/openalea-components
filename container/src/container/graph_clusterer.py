@@ -140,10 +140,10 @@ def standardisation(data, norm, variable_types = None, outliers = []):
     # Handle outliers :
     if outliers != []: # setting outliers to np.nan will exclude them of standardisation value computation.
         outliers_index = [n for n,i in enumerate(outliers) if i ]
-        distance_matrix[outliers_index,:] = distance_matrix[:,outliers_index] = np.nan
+        dist_mat[outliers_index,:] = dist_mat[:,outliers_index] = np.nan
 
     # -- Now we can start the standardisation:
-    nan_index = np.isnan(distance_matrix)
+    nan_index = np.isnan(dist_mat)
     if True in nan_index:
         nb_missing_values = len(np.where(nan_index is True)[0])
     else:
@@ -151,12 +151,12 @@ def standardisation(data, norm, variable_types = None, outliers = []):
 
     N = distance_matrix.shape[0]
     if norm.upper() == "L1":
-        absd = np.nansum(np.nansum(abs(distance_matrix))) / (N*(N-1)-nb_missing_values)
-        return dist_mat / absd
+        absd = np.nansum(np.nansum(abs(dist_mat))) / (N*(N-1)-nb_missing_values)
+        return distance_matrix / absd
 
     if norm.upper() == "L2":
-        sd = np.nansum(np.nansum(distance_matrix**2)) / (N*(N-1)-nb_missing_values)
-        return dist_mat / sd
+        sd = np.nansum(np.nansum(dist_mat**2)) / (N*(N-1)-nb_missing_values)
+        return distance_matrix / sd
 
 
 def csr_matrix_from_graph(graph, vids2keep):
@@ -202,10 +202,10 @@ def _within_cluster_distances(distance_matrix, clustering):
     """
     clusters_ids = list(set(clustering))
     nb_clusters = len(clusters_ids)
-    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+    nb_ids_by_clusters = [sum([i==q for i in clustering]) for q in clusters_ids]
     D_within = {}
     for n,q in enumerate(clusters_ids):
-        index_q = np.where(clustering == q)[0]
+        index_q = [j for j,i in enumerate(clustering) if i==q]
         D_within[q] = 2. * sum( [distance_matrix[i,j] for i in index_q for j in index_q if j>i] ) / ( (nb_ids_by_clusters[n]-1) * nb_ids_by_clusters[n])
 
     if nb_clusters == 1:
@@ -229,15 +229,15 @@ def _between_cluster_distances(distance_matrix, clustering):
     N = len(clustering)
     clusters_ids = list(set(clustering))
     nb_clusters = len(clusters_ids)
-    nb_ids_by_clusters = [len(np.where(clustering == q)[0]) for q in clusters_ids]
+    nb_ids_by_clusters = [sum([i==q for i in clustering]) for q in clusters_ids]
 
     if 1 in nb_ids_by_clusters:
         raise ValueError("A cluster contain only one element!")
 
     D_between = {}
     for n,q in enumerate(clusters_ids):
-        index_q = np.where(clustering == q)[0]
-        index_not_q = list(set(xrange(len(clustering)))-set(index_q))
+        index_q = [j for j,i in enumerate(clustering) if i==q]
+        index_not_q = [j for j,i in enumerate(clustering) if i!=q]
         D_between[q] = sum( [distance_matrix[i,j] for i in index_q for j in index_not_q] ) / ( (N-nb_ids_by_clusters[n]) * nb_ids_by_clusters[n])
 
     if nb_clusters == 1:
@@ -314,6 +314,18 @@ def contiguous_ids(dic, starting_id = 0):
         return dict([(k,v-diffs[uniq.index(v)]) for k,v in dic.iteritems()])
 
 
+def clustering_naming(clustering_method, nb_clusters, global_distance_weights, global_distance_variables, outliers):
+    if outliers is None:
+        out_name = ""
+    elif outliers == 'ignored':
+        out_name = '-ignored_outliers'
+    else:
+        out_name = '-deleted_outliers'
+
+    return str(clustering_method)+"_"+str(nb_clusters)+"_"+str([str(global_distance_weights[n])+"*"+str(global_distance_variables[n]) for n in xrange(len(global_distance_weights))])+out_name
+
+
+
 class Clusterer:
     """
     Class to cluster temporal_property_graph objects.
@@ -339,6 +351,7 @@ class Clusterer:
         self._clustering = None #dict
         self._full_tree = None
         self._clusterings_dict = None
+        self._outliers = None
 
     def add_vertex_variable(self, var_name, var_type, var_id = None, var_unit = None, detect_outliers_thres = None):
         """
@@ -641,7 +654,7 @@ class Clusterer:
         #~ return vtx_list, global_matrix
 
 
-    def assemble_matrix(self, variable_names, variable_weights, vids = None, ignore_outliers = None, delete_outliers = None, return_data = False):
+    def assemble_matrix(self, variable_names, variable_weights, vids = None, ignore_outliers = False, delete_outliers = False, return_data = False):
         """
         Funtion creating the global weighted distance matrix.
         Provided `variable_names` should exist in `self.vertex_matrix_dict`
@@ -706,12 +719,20 @@ class Clusterer:
             # - No need to check for temporal link !
             vtx_list = vids
 
+        if ((not ignore_outliers) and (not delete_outliers)):
+            hand_out = None
+        elif ignore_outliers:
+            hand_out = 'ignored'
+        else:
+            hand_out = 'deleted'
+
         # -- Shortcut when asking for the same result:
-        if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
+        if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids and self._outliers == hand_out:
             if return_data:
                 return self._global_distance_ids, self._global_distance_matrix
             else:
                 print "The global pairwise distance matrix was already computed!"
+                return None
         else: # Otherwise, clean any possible clustering:
             self._method = None
             self._nb_clusters = None
@@ -806,6 +827,7 @@ class Clusterer:
         self._global_distance_ids = vtx_list
         self._global_distance_weights = variable_weights
         self._global_distance_variables = variable_names
+        self._outliers = hand_out
 
         if return_data:
             return vtx_list, global_matrix
@@ -921,7 +943,7 @@ class Clusterer:
             n_clusters = copy.copy(range_clusters)
             assert n_clusters < full_tree.n_leaves_
             self._nb_clusters = n_clusters
-            # If the clustering already exist, return the desired clustering as cluster would:
+            # If the clustering already exist, return the desired clustering as 'cluster' function would:
             if (self._clusterings_dict is not None) and self._clusterings_dict.has_key(n_clusters):
                 print "Returning clustering previously computed by Cluster.full_tree()."
                 clustering = self._clusterings_dict[n_clusters]
@@ -970,7 +992,7 @@ class Clusterer:
             return warnings.warn('No clustering made yet !')
 
         if name == "":
-            name=self._method+"_"+str(self._nb_clusters)+"_"+str([str(self._global_distance_weights[n])+"*"+str(self._global_distance_variables[n]) for n in xrange(len(self._global_distance_weights))])
+            name=clustering_naming(self._method, self._nb_clusters, self._global_distance_weights, self._global_distance_variables, self._outliers)
             print "The clustering '{}' will be added to the `graph` ...".format(name)
 
         graph.add_vertex_property(name, self._clustering)
@@ -1100,7 +1122,7 @@ class Clusterer:
         self._nb_clusters = len(np.unique(self._clustering.values()))
 
 
-    def clusters_from_regions(self, region_names, vids=None):
+    def clusters_from_regions(self, region_names, vids=None, method_name='expert'):
         """
         Function creating an clusterer-like object from defined regions (in `region_names`).
         The str in `region_names` should be in tpg.graph_property().
@@ -1118,7 +1140,7 @@ class Clusterer:
         else:
             assert isinstance(vids, list)
 
-        self._method = 'expert'
+        self._method = method_name
         self._clustering = {}
         for n, r_name in enumerate(region_names):
             r_labels = self.graph.graph_property(r_name)
@@ -1148,16 +1170,19 @@ class ClustererChecker:
         assert self._nb_clusters == self.clusterer._nb_clusters
         self._nb_ids_by_clusters = dict( [ (q, self._clustering.count(q)) for q in self._clusters_ids] )
         self._ids_by_clusters = dict( [(q, [self._vtx_list[k] for k in [i for i,j in enumerate(self._clustering) if j==q]]) for q in self._clusters_ids] )
+
         # - Reformat inherited (usefull) info :
         self.info_clustering = {'method': clusterer._method,
                                 'variables': clusterer._global_distance_variables,
-                                'weights': clusterer._global_distance_weights}
-        self.clustering_name = self.info_clustering['method'] + "_" + str(self._nb_clusters) + "clusters, Dij = " + " + ".join([str(self.info_clustering['weights'][n])+"*"+str(self.info_clustering['variables'][n]) for n in xrange(len(self.info_clustering['weights'])) if self.info_clustering['weights'][n]!=0])
+                                'weights': clusterer._global_distance_weights,
+                                'outliers': clusterer._outliers}
+
+        self.clustering_name = clustering_naming(clusterer._method, clusterer._nb_clusters, clusterer._global_distance_weights, clusterer._global_distance_variables, clusterer._outliers)
 
         # - Check for undesirable situtations:
         if min(self._nb_ids_by_clusters.values()) <=1:
-            raise ValueError("A cluster has only one element, is not a Clustering!")
-            print "{}".format(self.clustering_name)
+            raise ValueError("In the provided clustering a cluster has only one element, this is wrong!")
+            print "Provided clustering: {}".format(self.clustering_name)
 
         # - Construct the clustered graph :
         if construct_clustered_graph:
@@ -1198,37 +1223,37 @@ class ClustererChecker:
             return np.round(D,int(round_digits))
 
 
-    def plot_cluster_distances(self, print_clustering_name=True, savefig=None):
+    def plot_cluster_distances(self, print_clustering_name=True, savefig=None, print_values=False, **kwargs):
         """
         Display a heat-map of cluster distances with matplotlib.
         """
         cluster_distances = self.cluster_distance_matrix()
+        numrows, numcols = cluster_distances.shape
+
         fig = plt.figure(figsize=(6,5))
         ax1 = fig.add_subplot(111)
-        plt.imshow(cluster_distances, cmap=cm.jet, interpolation='nearest')
+        plt.imshow(cluster_distances, cmap=cm.winter, interpolation='nearest')
+        plt.xticks(range(numcols), range(numcols), fontsize=14, fontweight='bold')
+        plt.yticks(range(numrows), range(numrows), fontsize=14, fontweight='bold')
 
-        numrows, numcols = cluster_distances.shape
-        def format_coord(x, y):
-            col = int(x+0.5)
-            row = int(y+0.5)
-            if col>=0 and col<numcols and row>=0 and row<numrows:
-                z = cd[row,col]
-                return 'x=%1.4f, y=%1.4f, z=%1.4f'%(x, y, z)
-            else:
-                return 'x=%1.4f, y=%1.4f'%(x, y)
+        if print_values:
+            font = {'family': 'monospace', 'color': 'white', 'weight': 'bold', 'size': 16}
+            alignment = {'horizontalalignment':'center', 'verticalalignment':'center'}
+            for nrow in range(numrows):
+                for ncol in range(numcols):
+                    plt.text(nrow, ncol, cluster_distances[nrow,ncol], fontdict=font, **alignment)
 
-        plt.format_coord = format_coord
-        plt.title("Cluster distances heat-map")
+        if kwargs.has_key('title') and kwargs['title']:
+            plt.title("Cluster distances heat-map")
         if print_clustering_name:
             plt.suptitle(self.clustering_name)
 
         cbar = plt.colorbar()
-        cbar.ax.tick_params(labelsize=14) 
-        ax1.axes.tick_params(labelsize=14) 
-        ax1.axes.tick_params(labelsize=14) 
+        cbar.ax.tick_params(labelsize=14)
+        ax1.axes.tick_params(length=0) 
         plt.tight_layout()
         if isinstance(savefig,str):
-            plt.savefig(savefig, dpi=300)
+            plt.savefig(savefig, dpi=200)
             plt.close()
         else:
             plt.show()
@@ -1947,11 +1972,13 @@ class ClustererComparison:
             print "All clusters from `clustering_2` have been matched !"
 
 
-    def relabelling_dictionary(self, t):
+    def relabelling_dictionary(self, clustering_id=2):
         """
         Compute a rellabeling dictionary, to be further used to renumerote clusters ids.
+        :Parameters:
+         - `clustering_id` (1|2) - gives the "id" of the clustering to relabel from cluster element matching to the other one.
         """
-        if t == 1:
+        if clustering_id == 1:
             relabelling_dict = dict( (id1,id2) for id1,id2 in self.matched_clusters )
             all_matched = self.all_matched_1
             if not all_matched:
