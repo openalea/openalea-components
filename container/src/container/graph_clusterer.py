@@ -329,6 +329,7 @@ def clustering_naming(clustering_method, nb_clusters, global_distance_weights, g
 class Clusterer:
     """
     Class to cluster temporal_property_graph objects.
+    !! Availables methods for clustering are the Ward and Spectral methods implemented in Scikit-Learn !!
     """
     def __init__(self, graph, standardisation_method, rank=1):
         # -- Initialisation:
@@ -1243,8 +1244,11 @@ class ClustererChecker:
                 for ncol in range(numcols):
                     plt.text(nrow, ncol, cluster_distances[nrow,ncol], fontdict=font, **alignment)
 
-        if kwargs.has_key('title') and kwargs['title']:
-            plt.title("Cluster distances heat-map")
+        if kwargs.has_key('title'):
+            if isinstance(kwargs['title'],str):
+                plt.title(kwargs['title'])
+            elif kwargs['title']:
+                plt.title("Cluster distances heat-map")
         if print_clustering_name:
             plt.suptitle(self.clustering_name)
 
@@ -1253,7 +1257,7 @@ class ClustererChecker:
         ax1.axes.tick_params(length=0) 
         plt.tight_layout()
         if isinstance(savefig,str):
-            plt.savefig(savefig, dpi=200)
+            plt.savefig(savefig)
             plt.close()
         else:
             plt.show()
@@ -1610,7 +1614,7 @@ class ClustererChecker:
         plt.legend(ncol=3, framealpha=0.7, fontsize='small')
         plt.tight_layout()
         if isinstance(savefig,str):
-            plt.savefig(savefig, dpi=300)
+            plt.savefig(savefig)
             plt.close()
         else:
             plt.show()
@@ -1825,6 +1829,7 @@ class ClustererChecker:
         """
         Display boxplots of properties (used for clustering) by clusters.
         """
+        import matplotlib.ticker as mticker
         ppts = [d for n,d in enumerate(self.info_clustering['variables']) if self.info_clustering['weights'][n]!=0]
         if 'topological' in ppts:
             ppts.remove('topological')
@@ -1836,9 +1841,13 @@ class ClustererChecker:
             data = [[v for k, v in self.clusterer.graph.vertex_property(ppt).iteritems() if k in self._ids_by_clusters[c]] for c in self._clusters_ids]
             plt.boxplot(data)
             try:
-                plt.ylabel(ppt +' ('+ self.clusterer.graph.graph_property('units')[ppt]+')',family='freesans')
+                plt.ylabel(ppt +' ('+ self.clusterer.graph.graph_property('units')[ppt]+')',family='freesans', fontsize=13)
             except:
-                plt.ylabel(ppt)
+                plt.ylabel(ppt, fontsize=13)
+            ax.set_yticklabels(ax.get_yticks(), fontsize=14)
+            y_formatter = mticker.ScalarFormatter(useOffset=False)
+            ax.yaxis.set_major_formatter(y_formatter)
+            ax.ticklabel_format(axis='y', style='sci', scilimits=(-2,3))
             if cluster_names is not None:
                 xtickNames = plt.setp(ax, xticklabels=cluster_names)
                 plt.setp(xtickNames, rotation=90, fontsize=9)
@@ -1849,11 +1858,11 @@ class ClustererChecker:
             plt.yticks(fontsize=9)
             if print_clustering_name:
                 plt.title(" ")
-                plt.suptitle(self.clustering_name)
+                plt.suptitle(self.clustering_name, fontsize=14)
 
         plt.tight_layout()
         if isinstance(savefig,str):
-            plt.savefig(savefig, dpi=300)
+            plt.savefig(savefig)
             plt.close()
         else:
             plt.show()

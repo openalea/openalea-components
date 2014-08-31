@@ -402,26 +402,16 @@ class TemporalPropertyGraph(PropertyGraph):
         
         """
         if isinstance(vertex_property,str):
-            vertex_property = self.vertex_property(vertex_property)
-
-        if (graph_labels2keep is not None) and (image_labels2keep is not None):
-            warnings.warn("You can't specify both image_labels2keep AND graph_labels2keep!")
-            return None
-
-        if (graph_labels2keep is None) and (image_labels2keep is None):
-            warnings.warn('You have asked for all labels from the TemporalPropertyGraph to be returned!')
-            warnings.warn('That is not possible due to apotential misslabelling of the returned dictionary.')
-            return None
-
-        if (image_labels2keep is None) and (time_point is None):
-            warnings.warn('You have to provide a `time_point` parameter when using `image_labels2keep`!')
-            return None
+            if (graph_labels2keep is not None):
+                return translate_keys_Graph2Image(self, self.vertex_property(vertex_property,graph_labels2keep))
+            else:
+                vertex_property = self.vertex_property(vertex_property)
 
         if (graph_labels2keep is not None):
-            return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in graph_labels2keep)) 
+            return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in graph_labels2keep] )) 
 
         if (image_labels2keep is not None):
-            return translate_keys_Graph2Image(self, dict( (k,vertex_property[k]) for k in vertex_property if k in translate_ids_Image2Graph(self,image_labels2keep,time_point))) 
+            return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in translate_ids_Image2Graph(self,image_labels2keep,time_point)] )) 
 
 
     def region_vids(self, region_name):
