@@ -256,7 +256,10 @@ def __normalized_parameters(func):
             l={}
             for k in vids:
                 if verbose and k%10==0: print k,'/',len(vids)
-                l[k] = func(graph, vertex_property, k, rank, edge_type='s')
+                try:
+                    l[k] = func(graph, vertex_property, k, rank, edge_type='s')
+                except:
+                    print 'Error computing {} value for vid {}...'.format(func, k)
             return l
 
     return  wrapped_function
@@ -505,6 +508,42 @@ def temporal_rate(graph, vertex_property, vid, rank, time_interval):
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
         print KeyError("temporal_rate "+"error 2 "+str(e))
+        return np.nan
+
+    return (descendants_value / parent_value) * 1. / float(time_interval)
+
+
+@__normalized_temporal_parameters
+def log_temporal_rate(graph, vertex_property, vid, rank, time_interval):
+    """
+    Sub-function computing the log temporal rate of change between ONE vertex ('vid') and its descendants at rank 'rank'.
+
+    :Parameters:
+    - 'graph' : a TPG.
+    - 'vertex_property' (str) : the dictionnary TPG.vertex_property('property-of-interest'), or the string 'property-of-interest'.
+    - 'vid' (int|list) : a vertex id.
+    - 'rank' (int) : neighborhood at distance 'rank' will be used.
+
+    :Return:
+    - a single value = temporal change between vertex 'vid' and its neighbors at rank 'rank'.
+    """
+    if rank == 1:
+        vid_descendants = graph.children(vid)
+        vid_parent = vid
+    # - If rank > 1, we want to compute the change only over the cell at `rank` and not for all cells between rank 1 and `rank`.
+    if rank > 1:
+        vid_descendants = graph.descendants(vid,rank)-graph.descendants(vid,rank-1)
+        vid_parent = vid
+
+    try:
+        parent_value = vertex_property[vid_parent]
+    except KeyError as e:
+        print KeyError("log_temporal_rate "+"error 1 "+str(vid_parent))
+        return np.nan
+    try:
+        descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
+    except KeyError as e:
+        print KeyError("log_temporal_rate "+"error 2 "+str(e))
         return np.nan
 
     return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
