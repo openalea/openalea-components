@@ -433,7 +433,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 border_cells = set(border_cells)
                 extend_vertex_property_from_dictionary(graph, 'border', dict([(l, (l in border_cells)) for l in labels]), time_point=tp)
 
-            # Test purpose only (for now):
+            # Testing purpose only (for now):
             if 'reduced_inertia_axis' in spatio_temporal_properties :
                 print 'Computing reduced_inertia_axis property...'
                 inertia_axis, inertia_values = SpI_Analysis[tp].reduced_inertia_axis(labels, barycenters_voxel)

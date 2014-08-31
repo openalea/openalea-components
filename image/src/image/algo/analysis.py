@@ -321,7 +321,7 @@ def closest_from_A(A, pts2search):
 
     return pts_min_dist
 
-def return_list_of_vectors(tensor, by_row):
+def return_list_of_vectors(tensor, by_row=True):
     """
     Return a standard list of Vector3 from an array, if sorted 'by_row' or not.
     """
@@ -1476,7 +1476,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             cov = 1./len(x)*np.dot(coord,coord.T)
             # Find the eigen values and vectors.
             eig_val, eig_vec = np.linalg.eig(cov)
-            eig_vec = np.array(eig_vec).T
+            decreasing_index = eig_val.argsort()[::-1]
+            eig_val, eig_vec = eig_val[decreasing_index], eig_vec[:,decreasing_index] # np.linalg.eig return eigenvectors by column !!
+            eig_vec = np.array(eig_vec).T # ... our standard is by rows !
 
             if real:
                 for i in xrange(3):
@@ -1486,9 +1488,9 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             inertia_eig_val.append(eig_val)
 
         if len(labels)==1 :
-            return return_list_of_vectors(inertia_eig_vec[0],by_row=1), inertia_eig_val[0]
+            return return_list_of_vectors(inertia_eig_vec[0]), inertia_eig_val[0]
         else:
-            return self.convert_return(return_list_of_vectors(inertia_eig_vec,by_row=1),labels), self.convert_return(inertia_eig_val,labels)
+            return self.convert_return(return_list_of_vectors(inertia_eig_vec),labels), self.convert_return(inertia_eig_val,labels)
 
 
     def reduced_inertia_axis(self, labels = None, real = True, verbose=False):
