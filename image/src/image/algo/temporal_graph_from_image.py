@@ -244,7 +244,7 @@ def create_fused_image_analysis(graph, SpI_Analysis, image2fuse=[], starting_SpI
         else:
             fused_image_analysis[tp_2fuse] = fused_image
 
-	#here problem at line 711 if there is only one time transition. I comment this in order to keep only a dictionary as return
+    #here problem at line 711 if there is only one time transition. I comment this in order to keep only a dictionary as return
     #if len(image2fuse)==1:
         #return fused_image_analysis[tp_2fuse]
     #else:
@@ -736,9 +736,9 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 # - Displaying informations about how good this landmarks association step went :
                 #here issue if wall_median is of length 0, added a try
                 try:
-					print "Found {} associations over {} ({}%)".format(len(asso),len(wall_median),round(float(len(asso))/len(wall_median)*100,1))
-				except ZeroDivisionError:
-					print "the wall_median has a size of 0 (temporal_graph_from_image)"
+                    print "Found {} associations over {} ({}%)".format(len(asso),len(wall_median),round(float(len(asso))/len(wall_median)*100,1))
+                except ZeroDivisionError:
+                    print "the wall_median has a size of 0 (temporal_graph_from_image)"
                 new_contact_from_fusing = set(fused_anticlinal_wall_median[tp_2fuse].keys())-set(asso.keys())
                 if not new_contact_from_fusing == set([]):
                     print "New contact found after daughters fusion :"
