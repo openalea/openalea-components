@@ -244,10 +244,12 @@ def create_fused_image_analysis(graph, SpI_Analysis, image2fuse=[], starting_SpI
         else:
             fused_image_analysis[tp_2fuse] = fused_image
 
-    if len(image2fuse)==1:
-        return fused_image_analysis[tp_2fuse]
-    else:
-        return fused_image_analysis
+	#here problem at line 711 if there is only one time transition. I comment this in order to keep only a dictionary as return
+    #if len(image2fuse)==1:
+        #return fused_image_analysis[tp_2fuse]
+    #else:
+        #return fused_image_analysis
+    return fused_image_analysis
 
 
 def generate_graph_topology(labels, neighborhood):
