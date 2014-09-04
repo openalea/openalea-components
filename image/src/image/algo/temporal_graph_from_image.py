@@ -734,7 +734,11 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 # - Saving detected landmarks association:
                 extend_edge_property_from_dictionary(graph, 'surfacic_3D_landmarks', asso, time_point=ref_tp)
                 # - Displaying informations about how good this landmarks association step went :
-                print "Found {} associations over {} ({}%)".format(len(asso),len(wall_median),round(float(len(asso))/len(wall_median)*100,1))
+                #here issue if wall_median is of length 0, added a try
+                try:
+					print "Found {} associations over {} ({}%)".format(len(asso),len(wall_median),round(float(len(asso))/len(wall_median)*100,1))
+				except ZeroDivisionError:
+					print "the wall_median has a size of 0 (temporal_graph_from_image)"
                 new_contact_from_fusing = set(fused_anticlinal_wall_median[tp_2fuse].keys())-set(asso.keys())
                 if not new_contact_from_fusing == set([]):
                     print "New contact found after daughters fusion :"
