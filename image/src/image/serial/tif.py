@@ -74,6 +74,7 @@ def read_tif(filename,channel=0):
     info_dict = dict( filter( lambda x: len(x)==2,
                               (inf.split(':') for inf in info_str.split("\n"))
                               ) )
+    info_dict.update(dict( filter( lambda x: len(x)==2,(inf.split('=') for inf in info_str.split("\n"))) ))
     for k,v in info_dict.iteritems():
         info_dict[k] = v.strip()
 
