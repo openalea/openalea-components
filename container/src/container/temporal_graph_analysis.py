@@ -225,7 +225,7 @@ def translate_keys_Image2Graph(graph, dictionary, time_point):
 
 
 def __normalized_parameters(func):
-    def wrapped_function(graph, vertex_property, vids = None, rank = 1 , verbose = False):
+    def wrapped_function(graph, vertex_property, vids = None, rank = 1 , edge_type = 's'):
         """
         :Parameters:
         - 'graph' : a TPG.
@@ -250,14 +250,14 @@ def __normalized_parameters(func):
         # -- Now execute the called 'func':
         if isinstance(vids, int):
             # - for single id, compute single result
-            return func(graph, vertex_property, vids, rank, False)
+            return func(graph, vertex_property, vids, rank, 's')
         else:
             # - for set of ids, we compute a dictionary of resulting values.
             l={}
             for k in vids:
                 if verbose and k%10==0: print k,'/',len(vids)
                 try:
-                    l[k] = func(graph, vertex_property, k, rank, edge_type='s')
+                    l[k] = func(graph, vertex_property, k, rank, edge_type)
                 except:
                     print 'Error computing {} value for vid {}...'.format(func, k)
             return l
