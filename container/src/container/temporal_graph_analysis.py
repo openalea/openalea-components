@@ -250,7 +250,7 @@ def __normalized_parameters(func):
         # -- Now execute the called 'func':
         if isinstance(vids, int):
             # - for single id, compute single result
-            return func(graph, vertex_property, vids, rank)
+            return func(graph, vertex_property, vids, rank, False)
         else:
             # - for set of ids, we compute a dictionary of resulting values.
             l={}
