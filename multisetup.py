@@ -47,6 +47,7 @@ except ImportError:
 
 dirs = """
 deploy
+misc
 deploygui
 vpltk
 core
@@ -55,7 +56,6 @@ grapheditor
 visualea
 stdlib
 sconsx
-misc
 pkg_builder
 image
 numpy
