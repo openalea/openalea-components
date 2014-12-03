@@ -1,8 +1,4 @@
 
-
-
-
-
 import math
 import numpy
 

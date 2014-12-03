@@ -53,7 +53,7 @@ where = Factory(name= "where",
                            dict(name='x', interface=None),
                            dict(name='y', interface=None),),
                outputs = ( dict(name='out', interface=None),),
-               nodemodule = "sorting_searching",
+               nodemodule = "numpy.sorting_searching.sorting_searching",
                nodeclass = "wra_where",
             )
 

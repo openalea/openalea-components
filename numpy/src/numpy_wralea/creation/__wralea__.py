@@ -52,7 +52,7 @@ array = Factory(name= "array",
         dict(name='ndmin', interface= IInt,
         value=0),),
         outputs = (dict(name='array', interface=None),),
-        nodemodule = "basics",
+        nodemodule = "openalea.numpy_wralea.basics",
         nodeclass = "wra_array",
             )
 
@@ -303,7 +303,7 @@ fromfunction = Factory(name= "fromfunction",
                            dict(name='shape', interface=ITuple),
                            dict(name='dtype', interface=IEnumStr(list_type), value='float64'),),
      	        outputs = (dict(name='array', interface=None),),
-           	nodemodule = "basics",
+           	nodemodule = "openalea.numpy_wralea.basics",
            	nodeclass = "wra_fromfunction",
             )
 
@@ -340,7 +340,7 @@ axis_rotation = Factory(name= "axis_rotation_matrix",
                                    dict(name='min_space', interface=ITuple3, value=None),
                                    dict(name='angle (degree)', interface=ITuple3, value=None),),
                                    outputs = (dict(name='rotation_matrix', interface=ISequence),),
-                                   nodemodule = "numpy_utils",
+                                   nodemodule = "openalea.numpy_wralea.numpy_utils",
                                    nodeclass = "axis_rotation_matrix",
                                    )
 

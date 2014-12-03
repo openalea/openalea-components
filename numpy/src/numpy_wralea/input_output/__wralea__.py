@@ -58,9 +58,11 @@ load = Factory( name = "load",
 __all__.append("load")
 
 #this one needs a little bit of work to have dynamic number args 
-savez = Factory(name = "savez",
-    description = "Save several arrays into a single, compressed file in .npz format.",
-    category = "numpy",
+"""
+savez = Factory(name = 'savez',
+    description = 'Save several arrays into a single, compressed file in .npz format.',
+    category = 'numpy',
     inputs = (dict(name='filename', interface=IStr), dict(name='array', interface=ISequence)),
-    nodeclass = "savez",
+    nodeclass = 'savez',
 )
+"""
