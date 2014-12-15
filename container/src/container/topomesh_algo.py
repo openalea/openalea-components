@@ -439,8 +439,8 @@ def ordered_pids (mesh, fid) :
     except TypeError :
         raise AssertionError("unable to order")
     
-    assert len(set(mesh.borders(1,eids.pop() ) ) \
-             - set([pids[0],pids[-1] ]) ) == 0
+    #print set(mesh.borders(1,eids.pop())), set([pids[0],pids[-1]])
+    assert len(set(mesh.borders(1,eids.pop() ) )  - set([pids[0],pids[-1] ]) ) == 0
     return pids
 
 def topo_triangulate_polygon (pids) :
@@ -686,7 +686,7 @@ def topo_divide_face (mesh, fid, pid1, pid2) :
     
     #remove old face
     mesh.remove_wisp(2,fid)
-    
+
     #return
     return fid1,fid2,eid
 

@@ -19,3 +19,6 @@ from topomesh import *
 from topomesh_txt import write_topomesh,read_topomesh
 from topomesh_algo import *
 from topomesh_geom_algo import *
+
+from array_dict import array_dict
+from property_topomesh import PropertyTopomesh
