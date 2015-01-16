@@ -1404,6 +1404,9 @@ def __strain_parameters2(func):
 def stretch_matrix(graph, xyz_t1, xyz_t2):
     """
     Compute the stretch / deformation matrix.
+     - xyz_t1: (N x d) matrix giving the landmarks coordinates before deformation,
+     - xyz_t2: (N x d) matrix giving the landmarks coordinates after deformation,
+    where: 'd' is the dimensionality (i.e. d=2 if 2D, d=3 if 3D)
     """
     from sklearn import linear_model
     # - Compute the centroids:

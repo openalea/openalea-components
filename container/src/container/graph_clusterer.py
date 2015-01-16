@@ -38,7 +38,7 @@ def distance_matrix_from_vector(data, variable_types, no_dist_index = []):
     Each values are attached to an individual.
 
     :Parameters:
-     - `data` (list) - vector/list of value
+     - `data` (list) - vector (list) of values
      - `variable_types` (str) - type of variable
 
     :Returns:
@@ -106,12 +106,14 @@ def mad_based_outlier(points, thresh=3.5):
         return np.array(modified_z_score) > thresh
 
 
-def standardisation(data, norm, variable_types = None, outliers = []):
+def standardisation(data, norm = 'L1', variable_types = None, outliers = []):
     """
     :Parameters:
-     - `data` (np.array|list) - distance matrix
-     - `norm` (str) - "L1" or "L2", select which standarisation metric to apply to the data;
-     - `variable_types` (str) - "Numeric" or "Ordinal" or "Interval"
+     - `data` (np.array|list) - pairwise distance matrix (if np.array) or vector of values (if list or 1D array);
+     - `norm` (str) - define which standarisation metric to apply to the data, takes value in ["L1", "L2"];
+    :Optional:
+     - `variable_types` (str) - used only if a vector of values is provided for `data`, takes value in ["Numeric", "Ordinal", "Interval"];
+     - `outliers` (list) - list of boolean (True|False), sorted in the same order than `data` (and thus of the same lenght), defining if the associated value is an outlier or not;
 
     :Returns:
      - `standard_mat` (np.array) - standardized distance matrix
@@ -120,11 +122,11 @@ def standardisation(data, norm, variable_types = None, outliers = []):
     if (norm.upper() != 'L1') and (norm.upper() != 'L2'):
         raise ValueError("Undefined standardisation metric")
 
-    # -- Identifying case where numpy.array are vectors:
+    # -- Identifying case where numpy.array are 1D vectors:
     if isinstance(data,ndarray) and (((data.shape[0] == 1) and (data.shape[1] > 1)) or ((data.shape[1] == 1) and (data.shape[0] > 1))):
         data.tolist()
 
-    # -- Creating the distance matrix if not provided in `data`:
+    # -- Creating the pairwise distance matrix if not provided in `data`:
     if isinstance(data,list):
         if isinstance(data[0],list) and len(data)==len(data[0]):
             data = np.array(data)
@@ -136,11 +138,19 @@ def standardisation(data, norm, variable_types = None, outliers = []):
     if isinstance(data,ndarray) and (data.shape[0]==data.shape[1]) and ((data.shape[0]!=1)and(data.shape[1]!=1)):
         distance_matrix = data
 
+    # -- We create a copy of the `distance_matrix``as it should also contain the outliers values in the final pairwise distance matrix
+    # (the ouliers are indeed removed only for the dispersion/standardisation measure computation).
     dist_mat = copy.copy(distance_matrix)
-    # Handle outliers :
-    if outliers != []: # setting outliers to np.nan will exclude them of standardisation value computation.
-        outliers_index = [n for n,i in enumerate(outliers) if i ]
-        dist_mat[outliers_index,:] = dist_mat[:,outliers_index] = np.nan
+    
+    # -- Handling outliers by setting their value to np.nan (will exclude them of standardisation value computation).
+    if outliers != []:
+        if len(outliers) != distance_matrix.shape[0]:
+            warnings.warn("The `outliers` list provided is not of the same lenght than the data!!")
+            print "Outliers list lenght:"+str(len(outliers))
+            print "Distance matrix shape:"+str(distance_matrix.shape)
+        else:
+            outliers_index = [n for n,i in enumerate(outliers) if i]
+            dist_mat[outliers_index,:] = dist_mat[:,outliers_index] = np.nan
 
     # -- Now we can start the standardisation:
     nan_index = np.isnan(dist_mat)
@@ -721,14 +731,14 @@ class Clusterer:
             vtx_list = vids
 
         if ((not ignore_outliers) and (not delete_outliers)):
-            hand_out = None
+            outliers_management = None
         elif ignore_outliers:
-            hand_out = 'ignored'
+            outliers_management = 'ignored'
         else:
-            hand_out = 'deleted'
+            outliers_management = 'deleted'
 
         # -- Shortcut when asking for the same result:
-        if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids and self._outliers == hand_out:
+        if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids and self._outliers == outliers_management:
             if return_data:
                 return self._global_distance_ids, self._global_distance_matrix
             else:
@@ -828,7 +838,7 @@ class Clusterer:
         self._global_distance_ids = vtx_list
         self._global_distance_weights = variable_weights
         self._global_distance_variables = variable_names
-        self._outliers = hand_out
+        self._outliers = outliers_management
 
         if return_data:
             return vtx_list, global_matrix
@@ -1121,6 +1131,8 @@ class Clusterer:
 
         self._clustering = clust
         self._nb_clusters = len(np.unique(self._clustering.values()))
+
+        return 'Done grouping region!'
 
 
     def clusters_from_regions(self, region_names, vids=None, method_name='expert'):
