@@ -534,7 +534,7 @@ class Clusterer:
         #~ """
         #~ Funtion creating the global weighted distance matrix.
         #~ Provided `variable_names` should exist in `self.vertex_matrix_dict`
-#~ 
+#~
         #~ :Parameters:
          #~ - `variable_names` (list) - list of variables names in `self.vertex_matrix_dict` to combine
          #~ - `variable_weights` (list) - list of variables used to create the global weighted distance matrix
@@ -547,7 +547,7 @@ class Clusterer:
         #~ assert len(variable_names) == len(variable_weights)
         #~ assert math.fsum(variable_weights)==1.
         #~ #assert math.fsum(variable_weights)==1. or math.fsum(variable_weights)-1.<1e-5
-#~ 
+#~
         #~ # -- Checking all requested information (i.e. variables names) is present in the dictionary `self._distance_matrix_dict`:
         #~ for k in variable_names:
             #~ if not self._distance_matrix_dict.has_key(k):
@@ -557,7 +557,7 @@ class Clusterer:
                     #~ self.add_euclidean_distance_matrix()
                 #~ else:
                     #~ raise KeyError("'{}' is not in the dictionary `self._distance_matrix_dict`".format(k))
-#~ 
+#~
         #~ # -- Detecting the kind of data we are facing !
         #~ spatial_relation_data, temporal_data, spatial_data = False, False, False
         #~ for k,v in self._distance_matrix_info.iteritems():
@@ -567,7 +567,7 @@ class Clusterer:
                 #~ temporal_data = True
             #~ if v[0] == 's' and k != 'topological' and k != 'euclidean':
                 #~ spatial_data = True
-#~ 
+#~
         #~ # -- Creating the list of vertices:
         #~ # - Checking for unwanted ids:
         #~ if vids is not None:
@@ -589,15 +589,15 @@ class Clusterer:
                 #~ vtx_list = self.vtx_labels
             #~ else:
                 #~ vtx_list = vids
-#~ 
+#~
         #~ # -- Shortcut when asking for the same result:
         #~ if variable_weights == self._global_distance_weights and variable_names == self._global_distance_variables and vtx_list == self._global_distance_ids:
             #~ return self._global_distance_ids, self._global_distance_matrix
-#~ 
+#~
         #~ # -- Standardization step:
         #~ # - Need to check if there is any changes (length or order) in the ids list compared to the initial list used to create the pairwise distance matrix:
         #~ ids_index = [self.vtx_labels.index(v) for v in vtx_list]
-#~ 
+#~
         #~ spatial_standard_distance_matrix, temporal_standard_distance_matrix = {}, {}
         #~ temporal_weights, spatial_weights = [], []
         #~ nb_temp_var, nb_spa_var = 0, 0
@@ -614,7 +614,7 @@ class Clusterer:
                 #~ spatial_standard_distance_matrix[nb_spa_var] = standardisation(self._distance_matrix_dict[var_name][ids_index,:][:,ids_index], self.standardisation_method)
                 #~ spatial_weights.append(variable_weights[n])
                 #~ nb_spa_var += 1
-#~ 
+#~
         #~ # -- Checking for simple cases: no re-weighting to do !
         #~ # - Only 'topological' or 'euclidean' distance asked:
         #~ if spatial_relation_data and (nb_spa_var+nb_temp_var)==0:
@@ -628,7 +628,7 @@ class Clusterer:
             #~ print "Paiwise distance matrix based on temporally differentiated variables affected @t_n+1."
             #~ print "There will be no distance for the ids of the first time-point!"
             #~ return vtx_list, temporal_standard_distance_matrix[0]
-#~ 
+#~
         #~ # - Replacing nan by zeros for computation.
         #~ if spatial_relation_data:
             #~ mat_topo = np.nan_to_num(mat_topo_dist_standard)
@@ -642,7 +642,7 @@ class Clusterer:
             #~ temp_mat = [np.nan_to_num(temporal_standard_distance_matrix[n]) for n in xrange(nb_temp_var)]
         #~ else:
             #~ temp_mat, temporal_standard_distance_matrix = [], []
-#~ 
+#~
         #~ print("Creating the global pairwise weighted standard distance matrix...")
         #~ # Finally making the global weighted pairwise standard distance matrix:
         #~ N = len(vtx_list)
@@ -655,13 +655,13 @@ class Clusterer:
                     #~ w_topo, w_var, w_temp = renorm(i,j,mat_topo_dist_standard, spatial_standard_distance_matrix, temporal_standard_distance_matrix, copy.copy(topo_weight), copy.copy(spatial_weights), copy.copy(temporal_weights))
                     #~ # - Pairwise weighted standard distance matrix
                     #~ global_matrix[i,j] = global_matrix[j,i] = w_topo * mat_topo[i,j] + sum([w_var[n]*var_mat[n][i,j] for n in xrange(nb_spa_var)]) + sum([w_temp[n]*temp_mat[n][i,j] for n in xrange(nb_temp_var)])
-#~ 
+#~
         #~ # -- We update caching variables only if there is more than ONE pairwise distance matrix :
         #~ self._global_distance_matrix = global_matrix
         #~ self._global_distance_ids = vtx_list
         #~ self._global_distance_weights = variable_weights
         #~ self._global_distance_variables = variable_names
-#~ 
+#~
         #~ return vtx_list, global_matrix
 
 
@@ -1020,7 +1020,7 @@ class Clusterer:
     def silhouette_estimators(self, clustering_method, k_min=4, k_max=15, beta = 1, plot_estimator = True):
         """
         Compute various estimators based on clustering results.
-        
+
         :Parameters:
          - distance_matrix (np.array): distance matrix to be used for clustering;
          - clustering_method (str): clustering methods to be applyed, must be "Ward" or "Spectral"
@@ -1266,7 +1266,7 @@ class ClustererChecker:
 
         cbar = plt.colorbar()
         cbar.ax.tick_params(labelsize=14)
-        ax1.axes.tick_params(length=0) 
+        ax1.axes.tick_params(length=0)
         plt.tight_layout()
         if isinstance(savefig,str):
             plt.savefig(savefig)
@@ -1697,10 +1697,10 @@ class ClustererChecker:
         return tpg
 
 
-    def plot_clustered_temporal_property_graph(self, no_spatiotemp_data_cluster = 'auto'):
+    def plot_clustered_temporal_property_graph(self, no_spatiotemp_data_cluster = 'auto',filename=None):
         """
         Graphical representations of the clustered spatio-temporal graph.
-        
+
         :Parameters:
          - `clustered_graph` (temporal_property_graph) - a clustered spatio-temporal graph
          - `no_spatiotemp_data_cluster` (str|int|list) - filter for displaying the cluster made of cells without spatio-temporal properties. If 'auto' the cluster is obtained automatically by using the cluster defined at the first time point. A integer or a list of cluster can be provided too.
@@ -1730,16 +1730,16 @@ class ClustererChecker:
             no_spatiotemp_data_cluster = []
         if no_spatiotemp_data_cluster == 'auto':
             xy = np.array(pos.values())
-            no_spatiotemp_data_cluster = list(xy[np.where(xy[:,0]==0),1])
+            no_spatiotemp_data_cluster = xy[np.where(xy[:,0]==0),1]
         if isinstance(no_spatiotemp_data_cluster,int):
             no_spatiotemp_data_cluster = [no_spatiotemp_data_cluster]
 
         import networkx as nx
         # -- Draw the graphs:
         fig = plt.figure(figsize=(15,6),dpi=100)
-        fig.subplots_adjust( wspace=0.1, left=0.04, right=0.96, top=0.9)
+        #fig.subplots_adjust( wspace=0.1, left=0.04, right=0.96, top=0.9)
         plt.suptitle('Clustered SpatioTemporal Graph of {}'.format(self.clustering_name))
-        fig.add_subplot(121)
+        ax=fig.add_subplot(121)
         # -- Nodes plotting:
         nx.draw_networkx_nodes(G, pos, node_size=node_size*5, node_color=node_cluster, vmin=min(node_cluster), vmax=max(node_cluster),cmap='jet')
         # -- Edges plotting:
@@ -1751,9 +1751,11 @@ class ClustererChecker:
         # - Axes labels and plot title:
         plt.xlabel('Successive time points')
         plt.ylabel('Cluster id')
+        ax.set_yticklabels(ax.get_yticks(), fontsize=16)
+        xtickNames = plt.setp(ax, xticklabels=["{}".format(n) for n in xrange(self._nb_clusters)])
         plt.title('Edge sizes are related to were children go to.')
 
-        fig.add_subplot(122)
+        ax=fig.add_subplot(122)
         # -- Nodes plotting:
         nx.draw_networkx_nodes(G, pos, node_size=node_size*5, node_color=node_cluster, vmin=min(node_cluster), vmax=max(node_cluster),cmap='jet')
         # -- Edges plotting:
@@ -1765,8 +1767,15 @@ class ClustererChecker:
         # - Axes labels and plot title:
         plt.xlabel('Successive time points')
         plt.ylabel('Cluster id')
+        ax.set_yticklabels(ax.get_yticks(), fontsize=16)
+        xtickNames = plt.setp(ax, xticklabels=["{}".format(n) for n in xrange(self._nb_clusters)])
         plt.title('Edge sizes are related to were children come from.')
-        plt.show()
+        plt.tight_layout()
+        if filename is not None:
+            plt.savefig(filename)
+            plt.close()
+        else:
+            plt.show()
 
 
     def nonHomogen_Markov_Chain(self):
@@ -1845,7 +1854,7 @@ class ClustererChecker:
         ppts = [d for n,d in enumerate(self.info_clustering['variables']) if self.info_clustering['weights'][n]!=0]
         if 'topological' in ppts:
             ppts.remove('topological')
-        
+
         N_ppts = len(ppts)
         fig = plt.figure(figsize=(3.5*N_ppts,5))
         for n,ppt in enumerate(ppts):
@@ -2044,19 +2053,19 @@ class ClustererComparison:
         #~ if np.isnan(mat_topo[line,column]):
             #~ w_renorm_topo = w_topo
             #~ w_topo = 0.
-#~ 
+#~
     #~ w_renorm_var = 0.
     #~ for n in var_mat:
         #~ if np.isnan(var_mat[n][line,column]):
             #~ w_renorm_var += w_var[n]
             #~ w_var[n] = 0.
-#~ 
+#~
     #~ w_renorm_temp = 0.
     #~ for n in temp_mat:
         #~ if np.isnan(temp_mat[n][line,column]):
             #~ w_renorm_temp += w_temp[n]
             #~ w_temp[n] = 0.
-#~ 
+#~
     #~ renorm = (1.-(w_renorm_topo+w_renorm_var+w_renorm_temp))
     #~ if renorm != 0.:
         #~ return w_topo/renorm, np.array(w_var)/renorm if w_var!=[] else [], np.array(w_temp)/renorm if w_temp!=[] else []

@@ -349,7 +349,7 @@ def mean_neigh(graph, vertex_property, vid, rank, edge_type):
     if rank == 1:
         vid_neighborhood = graph.neighborhood(vid,rank, edge_type)
         vid_neighborhood.remove(vid)
-    else: 
+    else:
         vid_neighborhood = graph.neighborhood(vid,rank, edge_type)-graph.neighborhood(vid,rank-1, edge_type)
 
     nb_neighborhood = len(vid_neighborhood)
@@ -357,7 +357,7 @@ def mean_neigh(graph, vertex_property, vid, rank, edge_type):
     result = 0
     ivalue = vertex_property[vid]
     k=0
-    if nb_neighborhood != 0 : 
+    if nb_neighborhood != 0 :
         for i in vid_neighborhood:
             if i in vertex_property.keys():
                 result = result + vertex_property[i]
@@ -993,8 +993,8 @@ def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions,
      - `graph` (temporal_property_graph) - represent the spatio-temporal relations between clusters
      - `vertex_property` (str|dict) - string matching a vertex_property known to the graph or a dictionary
      - `regions` (dict) - dictionary sorting vertex_ids (vids) into groups, *keys=vids: *values=group_ids
-     - `remove_outliers` (int) - if not None, will detect outliers according to given threshold and remove them from boxplot display 
-    
+     - `remove_outliers` (int) - if not None, will detect outliers according to given threshold and remove them from boxplot display
+
     """
     # Handle initial data to work with:
     property_name = None
@@ -1004,7 +1004,7 @@ def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions,
         vertex_property = graph.vertex_property(vertex_property)
 
     temporal = kwargs['temporal'] if 'temporal' in kwargs else False
-    time_points = range(graph.nb_time_points) if temporal else range(graph.nb_time_points+1) 
+    time_points = range(graph.nb_time_points) if temporal else range(graph.nb_time_points+1)
     if temporal:
         vertex_property = keys_to_mother_id(graph, vertex_property)
 
@@ -1345,7 +1345,7 @@ def __strain_parameters2(func):
                 if unlabelled_data and unlab_wm.has_key(vid) and fused_unlab_wm.has_key(vid):
                     landmarks_t1.append(unlab_wm[vid])
                     landmarks_t2.append(fused_unlab_wm[vid])
- 
+
             # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
             nb_missing_data = 0
             for eid in spatial_edges:
@@ -1375,7 +1375,7 @@ def __strain_parameters2(func):
 
             #~ if nb_missing_data != 0:
                 #~ warnings.warn("Missing {} landmark{} for the t_n vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
-            if nb_missing_data == 0 and len(landmarks_t1)>=4: 
+            if nb_missing_data == 0 and len(landmarks_t1)>=4:
                 assert len(landmarks_t1) == len(landmarks_t2)
                 # - Convert voxel based metric into real-worlds units:
                 vid_index = graph.vertex_property('index')[vid]
@@ -1600,9 +1600,16 @@ def time_interval(graph,vid,rank=1):
     return (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
 
 
-def sibling_volume_ratio(graph):
+def sibling_ppty_ratio(graph, ppty, use_sub_lineage=True):
     """
+    Function returning the ratio of a given scalar property defined by vertex.
+    If use_sub_lineage, try to make use of a possible sublineage.
     """
+    if use_sub_lineage and not graph._graph_property.has_key('sub_lineage'):
+        print "No 'sub_lineage' found within the 'graph_property'..."
+    assert ppty in list(graph.vertex_property_names())
+    ppty = graph.vertex_property(ppty)
+
     svr={}
     used_vtx = []
     for vtx in graph.vertices():
@@ -1610,18 +1617,50 @@ def sibling_volume_ratio(graph):
         if sibling is not None and len(sibling)==1 and list(graph.sibling(vtx))[0] not in used_vtx:
             used_vtx.append(vtx)
             sibling = list(graph.sibling(vtx))[0]
-            ratio = graph.vertex_property('volume')[vtx]/graph.vertex_property('volume')[sibling]
-            if ratio >=1:
-                svr[sibling,vtx]=1./ratio
-            else:
-                svr[vtx,sibling]=ratio
+            ratio = ppty[vtx]/ppty[sibling]
+            svr[sibling]=svr[vtx]=ratio if ratio<1 else 1./ratio
+
+    svr_subl = {}
+    if use_sub_lineage:
+        for pid, cids in graph.graph_property("sub_lineage").iteritems():
+            if len(cids)==2:
+                i,j = cids
+                i,j= ([i] if isinstance(i,int) else i), ([j] if isinstance(j,int) else j)
+                vi, vj = sum([ppty[cid] for cid in i]), sum([ppty[cid] for cid in j])
+                r = (vi/vj if vi/vj<1 else vj/vi)
+                for k in i+j:
+                    svr_subl[k] = r
+        svr.update(svr_subl)
+
     return svr
 
+def cell_surface(graph, vids=None):
+    """
+    Fucntion computing the whole surface of the cell from epidermis_surface+contact_surface
+    """
+    if vids is None:
+        vids = graph.vertices()
+    if isinstance(vids,int):
+        vids=[vids]
+
+    csurf = {}
+    for vid in vids:
+        csurf[vid]=0
+        try: csurf[vid]+=graph.vertex_property("epidermis_surface")[vid]
+        except: pass
+        try: csurf[vid]+=graph.vertex_property("unlabelled_wall_surface")[vid]
+        except: pass
+        eids = graph.out_edges(vid, edge_type='s')
+        for eid in eids:
+            try: csurf[vid]+=graph.edge_property("wall_surface")[eid]
+            except: pass
+
+    return csurf if len(vids)>1 else csurf[vids[0]]
 
 def subspace_projection(point_set, subspace_rank = 2, centering=True, verbose=True):
     """
     Project a point set o coordinate into a subspace.
-    
+
     :Parameters:
      - point_set (np.array): list of coordinates of shape (n_point, init_dim).
      - dimension_reduction (int) : the dimension reduction to apply
@@ -1638,7 +1677,7 @@ def subspace_projection(point_set, subspace_rank = 2, centering=True, verbose=Tr
         centered_point_set = point_set
         if point_set.mean(axis=0) != np.zeros([init_dim, init_dim]):
             warnings.warn("The provided point set is not centered!")
-    
+
     # -- Compute the Singular Value Decomposition (SVD) of centered coordinates:
     U,D,V = svd(centered_point_set, full_matrices=False)
     V = V.T
