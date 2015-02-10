@@ -690,7 +690,7 @@ class AbstractSpatialImageAnalysis(object):
                 return None
 
 
-    def neighbors(self, labels=None, min_contact_surface=None, real_surface=True):
+    def neighbors(self, labels=None, min_contact_surface=None, real_surface=True, verbose=True):
         """
         Return the list of neighbors of a label.
 
@@ -728,7 +728,7 @@ class AbstractSpatialImageAnalysis(object):
          6: [1, 2, 5],
          7: [1, 2, 3, 4, 5] }
         """
-        if min_contact_surface is not None:
+        if (min_contact_surface is not None) and verbose:
             if real_surface:
                 print u"Neighbors will be filtered according to a min contact surface of %.2f \u03bcm\u00B2" %min_contact_surface
             else:
@@ -1613,7 +1613,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             # -- If 'vids' is an integer... 
             if isinstance(vids,int):
                 if (vids not in self.layer1()): # - ...but not in the L1 list, there is nothing to do!
-                    warnings.warn("Cell "+str(vids)+" is not in the L1. We won't compute it's curvature.")
+                    warnings.warn("Cell "+str(vids)+" is not in the L1. We won't compute its curvature.")
                     return 0
                 else: # - ... and in the L1 list, we make it iterable.
                     vids=[vids]
@@ -1621,12 +1621,12 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             # -- If 'vids' is a list, we make sure to keep only its 'vid' present in the L1 list!
             if isinstance(vids,list):
                 tmp = copy.deepcopy(vids) # Ensure to scan all the elements of 'vids'
-                for vid in tmp:
-                    if vid not in self.layer1():
-                        warnings.warn("Cell "+str(vid)+" is not in the L1. We won't compute it's curvature.")
-                        vids.remove(vid)
+                no_curvature = [vid for vid in tmp if vid not in self.layer1()]
+                if no_curvature != []:
+                    warnings.warn("Cells {} are not in the L1. We won't compute their curvature.")
+                    vids = list(set(vid)-set(no_curvature))
                 if len(vids) == 0: # if there is no element left in the 'vids' list, there is nothing to do!
-                    warnings.warn('None of the cells you provided bellonged to the L1.')
+                    warnings.warn('None of the cells you provided belong to the L1.')
                     return 0
 
             # -- If 'vids' is `None`, we apply the function to all L1 cells:
