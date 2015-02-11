@@ -814,7 +814,7 @@ class AbstractSpatialImageAnalysis(object):
         else:
             return self._filter_with_surface(edges, min_contact_surface, real_surface)
 
-    def _filter_with_surface(neigborhood_dictionary, min_contact_surface, real_surface):
+    def _filter_with_surface(self, neigborhood_dictionary, min_contact_surface, real_surface):
         """
         Function filtering a neighborhood dictionary according to a minimal contact surface between two neigbhors.
         
@@ -1473,7 +1473,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             coord = np.array([x,y,z])
 
             # compute 1/N*P.P^T
-            cov = 1./len(x)*np.dot(coord,coord.T)
+            cov = 1./len(x) * np.dot(coord,coord.T)
             # Find the eigen values and vectors.
             eig_val, eig_vec = np.linalg.eig(cov)
             decreasing_index = eig_val.argsort()[::-1]
@@ -1495,7 +1495,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
     def reduced_inertia_axis(self, labels = None, real = True, verbose=False):
         """
-        Return the inertia axis of cells, also called the shape main axis.
+        Return the REDUCED (centered coordinates standardized) inertia axis of cells, also called the shape main axis.
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.
         """
         if isinstance(labels, int):
@@ -1534,10 +1534,12 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
             coord = np.array([x/np.std(x),y/np.std(y),z/np.std(z)])
 
             # compute 1/N*P.P^T
-            cov = 1./len(x)*np.dot(coord,coord.T)
+            cov = 1./len(x) * np.dot(coord,coord.T)
             # Find the eigen values and vectors.
             eig_val, eig_vec = np.linalg.eig(cov)
-            eig_vec = np.array(eig_vec).T
+            decreasing_index = eig_val.argsort()[::-1]
+            eig_val, eig_vec = eig_val[decreasing_index], eig_vec[:,decreasing_index] # np.linalg.eig return eigenvectors by column !!
+            eig_vec = np.array(eig_vec).T # ... our standard is by rows !
 
             if real:
                 for i in xrange(3):
