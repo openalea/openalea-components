@@ -825,7 +825,7 @@ class AbstractSpatialImageAnalysis(object):
         """
         filtered_dict = {}
         for label in neigborhood_dictionary.keys():
-            filtered_dict[label] = self._neighbors_filtering_by_contact_surface(self, label, neigborhood_dictionary[label], min_contact_surface, real_surface)
+            filtered_dict[label] = self._neighbors_filtering_by_contact_surface(label, neigborhood_dictionary[label], min_contact_surface, real_surface)
 
         return filtered_dict
 
