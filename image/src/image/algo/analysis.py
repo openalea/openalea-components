@@ -576,7 +576,7 @@ class AbstractSpatialImageAnalysis(object):
         return cell_vtk
 
 
-    def export_cell_vtk(self, fname, labels=None, reduction=0.2, preserve_array_shape=False):
+    def export_cell_vtk(self, fname=None, labels=None, reduction=0.2, preserve_array_shape=False):
         """
         Write the final vtk file using append.
         This code has been adapted from one written by Vincent Mirabet.
@@ -587,6 +587,10 @@ class AbstractSpatialImageAnalysis(object):
          DONE !
         """
         import vtk
+        if fname is None and self.filename is not None:
+            fname = self.filename
+        else:
+            raise TypeError("No filename found within the meta-informations, please provide one!")
         if fname[-4:] != ".vtk":
             fname = fname+".vtk"
 
