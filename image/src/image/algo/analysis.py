@@ -584,7 +584,7 @@ class AbstractSpatialImageAnalysis(object):
          1. 'Add a data source' > 'Load data from file' > select your vtk file
          2. Select the 'VTK file' in the pipeline (upper left)
          3. 'Add a visualisation module' > select 'surface'
-         DONE !
+        or the shell command:  mayavi2 -d <my_data>.vtk -m Surface
         """
         import vtk
         if (fname is None):

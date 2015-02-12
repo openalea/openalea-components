@@ -49,7 +49,7 @@ def read_tif(filename,channel=0):
 
     # TIF reader
     tif = libtiff.TIFF.open(filename)
-    
+
     if tif.GetField('ImageDescription'):
         tif = TIFFfile(filename)
         arr = tif.get_tiff_array()
@@ -77,7 +77,7 @@ def read_tif(filename,channel=0):
     for k,v in info_dict.iteritems():
         info_dict[k] = v.strip()
 
-    info_dict.update({'Filename':filename})
+    info_dict.update({'Filename':filename.split('/')[-1]})
     print info_dict
 
     # -- getting the voxelsizes from the tiff image: sometimes
