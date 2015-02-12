@@ -22,7 +22,7 @@ import warnings, math, copy, gzip, pickle
 import numpy as np
 import scipy.ndimage as nd
 from numpy.linalg import svd
-from os.path import exists
+from os.path import exists, splitext
 
 from openalea.image.spatial_image import SpatialImage
 from openalea.plantgl.math import Vector3
@@ -383,10 +383,10 @@ class AbstractSpatialImageAnalysis(object):
 
         # -- Variables for meta-informations:
         try:
-            self.filename = remove_fname_extension(image.info["filename"]) # Jonathan : 14.05.2012
+            self.filename = splitext(image.info["Filename"])[0]
         except:
             self.filename = None
-        self.info = dict([(k,v) for k,v in image.info.iteritems() if k != "filename"])
+        self.info = dict([(k,v) for k,v in image.info.iteritems() if k != "Filename"])
 
         self.return_type = return_type
 
@@ -543,8 +543,8 @@ class AbstractSpatialImageAnalysis(object):
         nb_cell = len(labels); percent = 0;
         for n, cell in enumerate(labels):
             if (cell>1) and cell in cell_sl.keys():
-                if n*100/float(N) >= percent: print '{}%...'.format(percent),; percent+=10
-                if n+1==N: print "100%"
+                if n*100/float(nb_cell) >= percent: print '{}%...'.format(percent),; percent+=10
+                if n+1==nb_cell: print "100%"
                 sl = cell_sl[cell]
                 ms = img[sl[0]:sl[1],sl[2]:sl[3],sl[4]:sl[5]].copy()
                 ms[ms!=cell] = 0
@@ -576,7 +576,7 @@ class AbstractSpatialImageAnalysis(object):
         return cell_vtk
 
 
-    def export_cell_vtk(self, fname=None, labels=None, reduction=0.2, preserve_array_shape=False):
+    def export_cell_vtk(self, cell_vtk=None, fname=None, labels=None, reduction=0.2, preserve_array_shape=False):
         """
         Write the final vtk file using append.
         This code has been adapted from one written by Vincent Mirabet.
@@ -587,17 +587,20 @@ class AbstractSpatialImageAnalysis(object):
          DONE !
         """
         import vtk
-        if fname is None and self.filename is not None:
-            fname = self.filename
-        else:
-            raise TypeError("No filename found within the meta-informations, please provide one!")
-        if fname[-4:] != ".vtk":
-            fname = remove_fname_extension(fname)+".vtk"
+        if (fname is None):
+            if (not(self.filename is None)):
+                fname = self.filename
+            else:
+                raise TypeError("No filename found within the meta-informations, please provide one!")
 
-        if self._cell_vtk is None:
-            cell_vtk = self.array2cell_vtk(labels, reduction, preserve_array_shape)
-        else:
-            cell_vtk = self._cell_vtk
+        if fname[-4:] != ".vtk":
+            fname = splitext(fname)[0]+".vtk"
+
+        if cell_vtk is None:
+            if self._cell_vtk is None:
+                cell_vtk = self.array2cell_vtk(labels, reduction, preserve_array_shape)
+            else:
+                cell_vtk = self._cell_vtk
 
         if isinstance(labels, int):
             labels = [labels]
@@ -617,6 +620,7 @@ class AbstractSpatialImageAnalysis(object):
         if no_mesh != []:
             print "Warning: the following cells did not have any mesh: {}".format(no_mesh)
 
+        labels = list(set(labels)-set(no_mesh))
         # We now make sure all data within the vtkPolyData (cell_vtk) are in vtkAppendPolyData (ap)
         cell = cell_vtk[labels[-1]]
         for k in range(cell.GetCellData().GetNumberOfArrays()):
@@ -2285,9 +2289,6 @@ def projection_matrix(point_set, subspace_rank = 2):
 
     return H
 
-def remove_fname_extension(fname)
-    split_name = fname.split('.')
-    return ".".join(split_name[:-1])
 
 #~ def OLS_wall(xyz):
     #~ """

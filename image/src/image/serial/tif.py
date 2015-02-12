@@ -70,7 +70,6 @@ def read_tif(filename,channel=0):
     nx, ny, nz = _data.shape
 
     # -- prepare metadata dictionnary --
-    
     info_dict = dict( filter( lambda x: len(x)==2,
                               (inf.split(':') for inf in info_str.split("\n"))
                               ) )
@@ -78,6 +77,7 @@ def read_tif(filename,channel=0):
     for k,v in info_dict.iteritems():
         info_dict[k] = v.strip()
 
+    info_dict.update({'Filename':filename})
     print info_dict
 
     # -- getting the voxelsizes from the tiff image: sometimes
@@ -150,6 +150,7 @@ def read_tif(filename,channel=0):
     # -- Return a SpatialImage please! --
     im = SpatialImage(_data, dtype=dt)
     im.resolution = _vx,_vy,_vz
+    im.info = info_dict
 
     return im
 

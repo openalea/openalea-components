@@ -97,7 +97,7 @@ def read_inrimage (filename) :
 
     #read header
     prop = _read_header(f)
-    prop["filename"] = filename # Jonathan : 14.05.2012
+    prop["Filename"] = filename # Jonathan : 14.05.2012
 
     #extract usefull infos to read image
     zdim = int(prop.pop("ZDIM") )
