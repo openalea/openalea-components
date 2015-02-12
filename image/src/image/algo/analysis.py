@@ -383,7 +383,7 @@ class AbstractSpatialImageAnalysis(object):
 
         # -- Variables for meta-informations:
         try:
-            self.filename = image.info["filename"] # Jonathan : 14.05.2012
+            self.filename = remove_fname_extension(image.info["filename"]) # Jonathan : 14.05.2012
         except:
             self.filename = None
         self.info = dict([(k,v) for k,v in image.info.iteritems() if k != "filename"])
@@ -592,7 +592,7 @@ class AbstractSpatialImageAnalysis(object):
         else:
             raise TypeError("No filename found within the meta-informations, please provide one!")
         if fname[-4:] != ".vtk":
-            fname = fname+".vtk"
+            fname = remove_fname_extension(fname)+".vtk"
 
         if self._cell_vtk is None:
             cell_vtk = self.array2cell_vtk(labels, reduction, preserve_array_shape)
@@ -2284,6 +2284,10 @@ def projection_matrix(point_set, subspace_rank = 2):
     H = np.dot(V[:,0:subspace_rank], V[:,0:subspace_rank].T)
 
     return H
+
+def remove_fname_extension(fname)
+    split_name = fname.split('.')
+    return ".".join(split_name[:-1])
 
 #~ def OLS_wall(xyz):
     #~ """
