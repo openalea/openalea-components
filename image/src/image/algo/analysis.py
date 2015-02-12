@@ -379,6 +379,7 @@ class AbstractSpatialImageAnalysis(object):
         self._neighbors = None
         self._layer1 = None
         self._center_of_mass = {} # voxel units
+        self._cell_vtk=None
 
         # -- Variables for meta-informations:
         try:
@@ -487,6 +488,147 @@ class AbstractSpatialImageAnalysis(object):
         # -- We save a compresed version of the file:
         write_inrimage(filename, self.image)
         print "File " + filename + " succesfully created !!"
+
+
+    def array2cell_vtk(self, labels=None, reduction=0.2, preserve_array_shape=False):
+        """
+        This function create a vtk file of the SpatialImage (array).
+        Each cell will be a closed mesh, which deciomation is controlled by the `reduction` factor.
+        This code has been adapted from one written by Vincent Mirabet.
+        """
+        try:
+            from mayavi import mlab
+            from tvtk.api import tvtk
+        except ImportError:
+            from enthought.mayavi import mlab
+            from enthought.tvtk.api import tvtk
+        mlab.options.offscreen = True
+
+        if isinstance(labels, int):
+            labels = [labels]
+        elif isinstance(labels, list):
+            labels = list(set(labels)&set(self.labels()))
+        else:
+            labels = self.labels()
+
+        if (not preserve_array_shape):
+            s = max(self.image.shape)
+            print "The original `SpatialImage` has the following shape: {}".format(self.image.shape)
+            n = max([2,s/300])
+            print "Zoom computation... using 1 array value every {}!".format(n)
+            img = self.image[::n,::n,::n]
+            print "The `SpatialImage` used to create the vtk object now has the following shape: {}".format(img.shape)
+
+            print "Now need to recompute the boundingboxes..."
+            slices = nd.find_objects(img,)
+        else:
+            img = self.image
+            slices = [self.boundingbox(c) for c in range(1,max(labels))]
+
+        cell_sl={}
+        for i,j in enumerate(slices):
+            xmax, ymax, zmax = img.shape
+            if j:
+                #ici rajouter la correction pour agrandir la slice
+                x,y,z=j
+                xd=[x.start-1,x.start][x.start==0]
+                xf=[x.stop+1,x.stop][x.stop==xmax-1]
+                yd=[y.start-1,y.start][y.start==0]
+                yf=[y.stop+1,y.stop][y.stop==ymax-1]
+                zd=[z.start-1,z.start][z.start==0]
+                zf=[z.stop+1,z.stop][z.stop==zmax-1]
+                cell_sl[i+1]=xd,xf,yd,yf,zd,zf # 'i+1' 'cause the `for loop` start at '0' and the `nd.find_objects` start at `1`
+
+        cell_vtk = {}
+        nb_cell = len(labels); percent = 0;
+        for n, cell in enumerate(labels):
+            if (cell>1) and cell in cell_sl.keys():
+                if n*100/float(N) >= percent: print '{}%...'.format(percent),; percent+=10
+                if n+1==N: print "100%"
+                sl = cell_sl[cell]
+                ms = img[sl[0]:sl[1],sl[2]:sl[3],sl[4]:sl[5]].copy()
+                ms[ms!=cell] = 0
+                src = mlab.pipeline.scalar_field(ms)
+                thresh_filter = tvtk.ImageThreshold()
+                lower_thr, upper_thr = 0,cell
+                thresh_filter.threshold_between(lower_thr, upper_thr)
+                thresh = mlab.pipeline.user_defined(src, filter=thresh_filter)
+                contour = mlab.pipeline.contour(thresh, )
+                contour.filter.contours = [cell, ]
+                contour.outputs[0].points = [(i+sl[0],j+sl[2],k+sl[4]) for i,j,k in contour.outputs[0].points]
+                dec = mlab.pipeline.decimate_pro(contour)
+                dec.filter.target_reduction = reduction
+                connect_ = tvtk.PolyDataConnectivityFilter(extraction_mode=6)
+                connect = mlab.pipeline.user_defined(dec, filter=connect_)
+                compute_normals = mlab.pipeline.poly_data_normals(connect)
+                compute_normals.filter.feature_angle = 60
+                #~ res=compute_normals.outputs[0]
+                res = connect.outputs[0]
+                try:
+                    res.point_data.scalars = np.ones(len(compute_normals.outputs[0].points))*cell
+                    res.point_data.scalars.name = "identite"
+                    cell_vtk[cell] = tvtk.to_vtk(res)
+                except TypeError:
+                    pass
+                del ms, dec, connect, thresh, src
+
+        self._cell_vtk=cell_vtk
+        return cell_vtk
+
+
+    def export_cell_vtk(self, fname, labels=None, reduction=0.2, preserve_array_shape=False):
+        """
+        Write the final vtk file using append.
+        This code has been adapted from one written by Vincent Mirabet.
+        Visualisation using Mayavi2:
+         1. 'Add a data source' > 'Load data from file' > select your vtk file
+         2. Select the 'VTK file' in the pipeline (upper left)
+         3. 'Add a visualisation module' > select 'surface'
+         DONE !
+        """
+        import vtk
+        if fname[-4:] != ".vtk":
+            fname = fname+".vtk"
+
+        if self._cell_vtk is None:
+            cell_vtk = self.array2cell_vtk(labels, reduction, preserve_array_shape)
+        else:
+            cell_vtk = self._cell_vtk
+
+        if isinstance(labels, int):
+            labels = [labels]
+        elif isinstance(labels, list):
+            labels = list(set(labels)&set(self.labels()))
+        else:
+            labels = self.labels()
+
+        # vtkAppend is a vtk function appending several polydata:
+        ap = vtk.vtkAppendPolyData(); no_mesh = [];
+        # cell_vtk is a dictionary [int]-[vtkPolyData] == [cell_id]-[cell_mesh]
+        for c in labels:
+            try:
+                ap.AddInput(cell_vtk[c])
+            except:
+                no_mesh.append(c)
+        if no_mesh != []:
+            print "Warning: the following cells did not have any mesh: {}".format(no_mesh)
+
+        # We now make sure all data within the vtkPolyData (cell_vtk) are in vtkAppendPolyData (ap)
+        cell = cell_vtk[labels[-1]]
+        for k in range(cell.GetCellData().GetNumberOfArrays()):
+            name = cell.GetCellData().GetArrayName(k)
+            ap.SetInputArrayToProcess(0,0,0,k,name)
+        # IMPORTANT: ensure vtk pipeline to be active!
+        ap.Update()
+        cell_vtkSep = vtk.vtkPolyData()
+        cell_vtkSep.DeepCopy(ap.GetOutput())
+        del ap
+
+        w=vtk.vtkPolyDataWriter()
+        w.SetFileName(fname)
+        w.SetInput(cell_vtkSep)
+        w.Write()
+        return "Successfully created the vtk file '{}'!".format(fname)
 
 
     def convert_return(self, values, labels = None, overide_return_type = None):
@@ -1774,7 +1916,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         return float(self.principal_curvatures[vid][0] - self.principal_curvatures[vid][1])/float(self.principal_curvatures[vid][0] + self.principal_curvatures[vid][1])
 
 
-    def epidermis_shape_anisotropy(self, vids=None, real=False, verbose=False):
+    def epidermis_shape_anisotropy(self, vids=None, real=False, flatten=False, verbose=False):
         """
         Compute anisotropy of epidermis cell from inertia axis length.
         Based on the first layer of voxels only!!
@@ -1785,7 +1927,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         """
         first_voxel_layer = self.first_voxel_layer(keep_background=True)
         if vids is None:
-            vids = list(np.unique(first_voxel_layer))
+            vids = self.layer1()
         if isinstance(vids,int):
             vids = [vids]
         if 0 in vids:
@@ -1816,7 +1958,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
 
     def moment_invariants(self, vids = None, order = [], verbose = True):
         """
-        Calcul of 3D invariant moment to translation, rotation and scale.
+        Computation of 3D invariant moment (invariant to translation, rotation and scale).
         
         2nd order moments are calculated from:
          - Sadjadi, F. A. & Hall, E. L. Three-Dimensional Moment Invariants. IEEE Transactions on Pattern Analysis and Machine Intelligence, 1980, PAMI-2, 127-136.
