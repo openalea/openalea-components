@@ -379,7 +379,9 @@ class AbstractSpatialImageAnalysis(object):
         self._neighbors = None
         self._layer1 = None
         self._center_of_mass = {} # voxel units
-        self._cell_vtk=None
+        self._cell_vtk = None
+        self._vtk_reduction = 0.2
+        self._vtk_preserve_array_shape = True
 
         # -- Variables for meta-informations:
         try:
@@ -490,7 +492,7 @@ class AbstractSpatialImageAnalysis(object):
         print "File " + filename + " succesfully created !!"
 
 
-    def array2cell_vtk(self, labels=None, reduction=0.2, preserve_array_shape=False):
+    def __array2vtk_surfaces(self, reduction=0.2, preserve_array_shape=True):
         """
         This function create a vtk file of the SpatialImage (array).
         Each cell will be a closed mesh, which deciomation is controlled by the `reduction` factor.
@@ -502,20 +504,15 @@ class AbstractSpatialImageAnalysis(object):
         except ImportError:
             from enthought.mayavi import mlab
             from enthought.tvtk.api import tvtk
-        mlab.options.offscreen = True
+        #~ mlab.options.offscreen = True
 
-        if isinstance(labels, int):
-            labels = [labels]
-        elif isinstance(labels, list):
-            labels = list(set(labels)&set(self.labels()))
-        else:
-            labels = self.labels()
+        labels = self.labels()
 
         if (not preserve_array_shape):
             s = max(self.image.shape)
             print "The original `SpatialImage` has the following shape: {}".format(self.image.shape)
             n = max([2,s/300])
-            print "Zoom computation... using 1 array value every {}!".format(n)
+            print "Zoom computation... using 1 value every {} in each direction (x, y and z)!".format(n)
             img = self.image[::n,::n,::n]
             print "The `SpatialImage` used to create the vtk object now has the following shape: {}".format(img.shape)
 
@@ -566,78 +563,169 @@ class AbstractSpatialImageAnalysis(object):
                 res = connect.outputs[0]
                 try:
                     res.point_data.scalars = np.ones(len(compute_normals.outputs[0].points))*cell
-                    res.point_data.scalars.name = "identite"
+                    res.point_data.scalars.name = "cell_ids"
                     cell_vtk[cell] = tvtk.to_vtk(res)
                 except TypeError:
                     pass
                 del ms, dec, connect, thresh, src
 
-        self._cell_vtk=cell_vtk
-        return cell_vtk
+        mlab.close()
+        self._cell_vtk = cell_vtk
+        self._vtk_reduction = reduction
+        self._vtk_preserve_array_shape = preserve_array_shape
+        return "All cells found within the image now have a 'vtk surface' that can be displayed!"
 
 
-    def export_cell_vtk(self, cell_vtk=None, fname=None, labels=None, reduction=0.2, preserve_array_shape=False):
+    def _append_cell_vtk(self, labels):
         """
-        Write the final vtk file using append.
-        This code has been adapted from one written by Vincent Mirabet.
-        Visualisation using Mayavi2:
-         1. 'Add a data source' > 'Load data from file' > select your vtk file
-         2. Select the 'VTK file' in the pipeline (upper left)
-         3. 'Add a visualisation module' > select 'surface'
-        or the shell command:  mayavi2 -d <my_data>.vtk -m Surface
+        Function used to obtain a displayable vtk
         """
         import vtk
-        if (fname is None):
-            if (not(self.filename is None)):
-                fname = self.filename
-            else:
-                raise TypeError("No filename found within the meta-informations, please provide one!")
-
-        if fname[-4:] != ".vtk":
-            fname = splitext(fname)[0]+".vtk"
-
-        if cell_vtk is None:
-            if self._cell_vtk is None:
-                cell_vtk = self.array2cell_vtk(labels, reduction, preserve_array_shape)
-            else:
-                cell_vtk = self._cell_vtk
-
-        if isinstance(labels, int):
-            labels = [labels]
-        elif isinstance(labels, list):
-            labels = list(set(labels)&set(self.labels()))
-        else:
-            labels = self.labels()
-
+        assert isinstance(labels,list)
         # vtkAppend is a vtk function appending several polydata:
         ap = vtk.vtkAppendPolyData(); no_mesh = [];
         # cell_vtk is a dictionary [int]-[vtkPolyData] == [cell_id]-[cell_mesh]
-        for c in labels:
+        for cell in labels:
             try:
-                ap.AddInput(cell_vtk[c])
+                ap.AddInput(self._cell_vtk[cell])
             except:
-                no_mesh.append(c)
+                no_mesh.append(cell)
         if no_mesh != []:
-            print "Warning: the following cells did not have any mesh: {}".format(no_mesh)
+            print "Warning: the following provided labels do not have any mesh: {}".format(no_mesh)
 
-        labels = list(set(labels)-set(no_mesh))
-        # We now make sure all data within the vtkPolyData (cell_vtk) are in vtkAppendPolyData (ap)
-        cell = cell_vtk[labels[-1]]
-        for k in range(cell.GetCellData().GetNumberOfArrays()):
-            name = cell.GetCellData().GetArrayName(k)
-            ap.SetInputArrayToProcess(0,0,0,k,name)
+        #~ labels = list(set(labels)-set(no_mesh))
+        #~ # We now make sure all data within the vtkPolyData (cell_vtk) are in vtkAppendPolyData (ap)
+        #~ cell = self._cell_vtk[labels[-1]]
+        #~ for k in range(cell.GetCellData().GetNumberOfArrays()):
+            #~ name = cell.GetCellData().GetArrayName(k)
+            #~ ap.SetInputArrayToProcess(0,0,0,k,name)
+        
         # IMPORTANT: ensure vtk pipeline to be active!
         ap.Update()
         cell_vtkSep = vtk.vtkPolyData()
         cell_vtkSep.DeepCopy(ap.GetOutput())
         del ap
 
+        return cell_vtkSep
+
+
+    def get_cell_vtk_surfaces(self, labels, reduction=0.2, preserve_array_shape=True):
+        """
+        Function used to return a dictionary [int]-[vtkPolyData] corresponding to [cell_id]-[cell_meshed_surface].
+        """
+        # Check the provided `labels`:
+        labels = self.__labels_handler(labels)
+        # If no 'self._cell_vtk' can be found or the vtk_surfaces parameters have changed, we need to recompute the vtk_surfaces:
+        if (self._cell_vtk is None) or (reduction != self._vtk_reduction) or (preserve_array_shape != self._vtk_preserve_array_shape):
+            self.__array2vtk_surfaces(reduction, preserve_array_shape)
+
+        return self._append_cell_vtk(labels)
+
+
+    def write_vtk(self, cell_vtkSep=None, fname=None, labels=None, reduction=0.2, preserve_array_shape=True):
+        """
+        Write a final vtk file containing the 'vtk surface' of each provided labels using `vtk.vtkAppendPolyData`.
+        :Parameters:
+        INPUT:
+         - `cell_vtkSep` (vtk.vtkPolyData) : typically an object returned by `self.get_cell_vtk_surfaces`;
+         - `fname` (str) : the name under wich to create the vtk file;
+         - `labels` (int|list|str) : cell labels to be written within the vtk file;
+         - `reduction` (float) : decimation factor used when creating the surface;
+         - `preserve_array_shape` (bool) : if True, the whole array is used to create the cell vtk_surfaces, else a compressed version is used (of at leat a factor 2);
+
+        This code has been adapted from one written by Vincent Mirabet.
+        Visualisation using Mayavi2:
+         1. 'Add a data source' > 'Load data from file' > select your vtk file
+         2. Select the 'VTK file' in the pipeline (upper left)
+         3. 'Add a visualisation module' > select 'surface'
+        Or the shell command:  mayavi2 -d <my_data>.vtk -m Surface
+        """
+        import vtk
+        # Handle the case were no vtk filename is given:
+        if (fname is None):
+            if (not(self.filename is None)):
+                fname = self.filename
+            else:
+                raise TypeError("No filename found within the meta-informations, please provide one!")
+
+        # Check the vtk file extension:
+        if fname[-4:] != ".vtk":
+            fname = splitext(fname)[0]+".vtk"
+
+        # Check the provided `labels`:
+        labels = self.__labels_handler(labels)
+        # If no 'cell_vtk' is provided and no cell 'vtk surface' can be found:
+        if (cell_vtkSep is None):
+            cell_vtkSep = self.get_cell_vtk_surfaces(labels, reduction, preserve_array_shape)
+
+        # Now write a vtk file for the given `labels` using `self._append_cell_vtk`
         w=vtk.vtkPolyDataWriter()
         w.SetFileName(fname)
         w.SetInput(cell_vtkSep)
         w.Write()
         return "Successfully created the vtk file '{}'!".format(fname)
 
+    #~ def vtk_surface_display(): ??
+    def vtk_display(self, labels=None, data=None, CM_nb_labels=None, CM_nb_colors=None, CM_data_range=None, colorbar=True, AzElDi=None, focaldist=None, roll=None, cmap='jet', **kwargs):
+        """
+        """
+        import vtk; from mayavi import mlab; from tvtk.api import tvtk; import numpy as np
+        try:
+            mlab.options.offscreen = kwargs['offscreen']
+        except:
+            mlab.options.offscreen = False
+
+        # Check the provided `labels`:
+        labels = self.__labels_handler(labels)
+
+        if data is None:
+            data = dict([(k,k) for k in labels])
+        if isinstance(data, str) and (data.lower() == 'random'):
+            data = random_color_dict(labels)
+        if isinstance(data, str) and (data.lower() == 'volume'):
+            data = self.volume(labels)
+
+        mini, maxi = min(data.values()), max(data.values())
+        if CM_data_range is None:
+            CM_data_range = [mini,maxi]
+        else:
+            mini, maxi = CM_data_range
+        if CM_nb_colors is None:
+            CM_nb_colors = int(maxi - mini)+1 if ((int(maxi - mini)>=3) and (int(maxi - mini)<=256)) else 256
+        if CM_nb_labels is None:
+            CM_nb_labels = int(maxi - mini)+1 if ((int(maxi - mini)>=3) and (int(maxi - mini)<=10)) else 8
+
+        cell_vtkSep = self.get_cell_vtk_surfaces(labels)
+        # - Now project the data onto the vtk representation :
+        mlab.figure(size=[500, 500])
+        tvt=tvtk.to_tvtk(cell_vtkSep)
+        narray=np.array([data.get(int(cel)) for cel in tvt.point_data.get_array("cell_ids")])
+        n=tvt.point_data.add_array(narray.astype(np.float))
+        tvt.point_data.get_array(n).name=str(n)
+        tvt.point_data.set_active_scalars(str(n))
+        fig=mlab.pipeline.surface(tvt, colormap= cmap, vmin=mini, vmax=maxi)
+        fig.actor.mapper.lookup_table.nan_color=[1,1,1,1]
+        fig.actor.mapper.lookup_table.ramp='linear'
+        # Manage lut display:
+        col_bar = mlab.colorbar(orientation='vertical', nb_labels=CM_nb_labels, nb_colors=CM_nb_colors, label_fmt='%g')
+        col_bar.label_text_property.color=(1.,1.,1.)
+        col_bar.title_text_property.color=(1.,1.,1.)
+        col_bar.label_text_property.trait_set(vertical_justification='bottom')
+        col_bar.label_text_property.trait_set(shadow=1)
+        col_bar.trait_set(visible=colorbar)
+        #~ col_bar.scalar_bar.trait_set(text_position='precede_scalar_bar')
+        # Top view:
+        if AzElDi is not None:
+            mlab.view(AzElDi[0], AzElDi[1], AzElDi[2], focaldist, reset_roll=False)
+        if roll is not None:
+            mlab.roll(roll)
+
+        try:
+            mlab.savefig(kwargs['savefig'])
+        except:
+            pass
+
+        return tvt, n, fig, col_bar
 
     def convert_return(self, values, labels = None, overide_return_type = None):
         """
@@ -717,6 +805,29 @@ class AbstractSpatialImageAnalysis(object):
         if self._labels is None : self._labels = self.__labels()
         return len(self._labels)
 
+    def __labels_handler(self, labels):
+        """
+        The following line are often needed to ensure the correct format of labels, as well as their presence within the image.
+        """
+        if isinstance(labels, int):
+            labels = [labels]
+        elif isinstance(labels, list):
+            labels = list( set(labels) & set(self.labels()) )
+            not_in_labels = list( set(labels) - set(self.labels()) )
+            if not_in_labels != []:
+                print "The following ids were not found within the image labels: {}".format(not_in_labels)
+        elif (labels is None):
+            labels = self.labels()
+        elif isinstance(labels, str):
+            if (labels.lower() == 'all'):
+                labels = self.labels()
+            if (labels.lower() == 'l1'):
+                labels = self.layer1()
+        else:
+            raise ValueError("This is not usable as `labels`: {}".format(labels))
+
+        return labels
+
 
     def center_of_mass(self, labels=None, real=True):
         """
@@ -753,12 +864,8 @@ class AbstractSpatialImageAnalysis(object):
          [1.0, 1.0, 0.0],
          [0.75, 2.75, 0.0]]
         """
-        if isinstance(labels, int):
-            labels = [labels]
-        elif isinstance(labels, list):
-            labels = list(set(labels)&set(self.labels()))
-        else:
-            labels = self.labels()
+        # Check the provided `labels`:
+        labels = self.__labels_handler(labels)
 
         center = {}
         for l in labels:
@@ -1587,12 +1694,8 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         Return the inertia axis of cells, also called the shape main axis.
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.
         """
-        if isinstance(labels, int):
-            labels = [labels]
-        elif isinstance(labels, list):
-            labels = list(set(labels)&set(self.labels()))
-        else:
-            labels = self.labels()
+        # Check the provided `labels`:
+        labels = self.__labels_handler(labels)
 
         # results
         inertia_eig_vec = []
@@ -1648,12 +1751,8 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         Return the REDUCED (centered coordinates standardized) inertia axis of cells, also called the shape main axis.
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.
         """
-        if isinstance(labels, int):
-            labels = [labels]
-        elif isinstance(labels, list):
-            labels = list(set(labels)&set(self.labels()))
-        else:
-            labels = self.labels()
+        # Check the provided `labels`:
+        labels = self.__labels_handler(labels)
 
         # results
         inertia_eig_vec = []
@@ -2051,6 +2150,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         return I1, I2, I3, I4, I5, I6
 
 
+
 def load_analysis( SpatialImageAnalysis, filename ):
     """
     Load a SpatialImageAnalysis from the file `filename`.
@@ -2289,6 +2389,17 @@ def projection_matrix(point_set, subspace_rank = 2):
 
     return H
 
+def random_color_dict(list_cell, alea_range=None):
+    """
+    Generate a dict where keys -from a given list `list_cell`- receive a random integer from the list as value.
+    """
+    import random
+    if isinstance(alea_range,int):
+        return dict(zip( list_cell, [random.randint(0, alea_range) for k in xrange(len(list_cell))] ))
+    elif isinstance(alea_range,list) and (len(alea_range)==2):
+        return dict(zip( list_cell, [random.randint(alea_range[0], alea_range[1]) for k in xrange(len(list_cell))] ))
+    else:
+        return dict(zip( list_cell, [random.randint(0, 255) for k in xrange(len(list_cell))] ))
 
 #~ def OLS_wall(xyz):
     #~ """
