@@ -536,12 +536,12 @@ class AbstractSpatialImageAnalysis(object):
                 zf=[z.stop+1,z.stop][z.stop==zmax-1]
                 cell_sl[i+1]=xd,xf,yd,yf,zd,zf # 'i+1' 'cause the `for loop` start at '0' and the `nd.find_objects` start at `1`
 
+        print "Creating a vtk Surface of each cell..."
         cell_vtk = {}
         nb_cell = len(labels); percent = 0;
         for n, cell in enumerate(labels):
             if (cell>1) and cell in cell_sl.keys():
                 if n*100/float(nb_cell) >= percent: print '{}%...'.format(percent),; percent+=10
-                if n+1==nb_cell: print "100%"
                 sl = cell_sl[cell]
                 ms = img[sl[0]:sl[1],sl[2]:sl[3],sl[4]:sl[5]].copy()
                 ms[ms!=cell] = 0
@@ -569,11 +569,13 @@ class AbstractSpatialImageAnalysis(object):
                     pass
                 del ms, dec, connect, thresh, src
 
+        print "100%"
+        mlab.clf()
         mlab.close()
         self._cell_vtk = cell_vtk
         self._vtk_reduction = reduction
         self._vtk_preserve_array_shape = preserve_array_shape
-        return "All cells found within the image now have a 'vtk surface' that can be displayed!"
+        return None
 
 
     def _append_cell_vtk(self, labels):
@@ -665,7 +667,7 @@ class AbstractSpatialImageAnalysis(object):
         w.Write()
         return "Successfully created the vtk file '{}'!".format(fname)
 
-    #~ def vtk_surface_display(): ??
+
     def vtk_display(self, labels=None, data=None, CM_nb_labels=None, CM_nb_colors=None, CM_data_range=None, colorbar=True, AzElDi=None, focaldist=None, roll=None, cmap='jet', **kwargs):
         """
         """
@@ -724,6 +726,9 @@ class AbstractSpatialImageAnalysis(object):
             mlab.savefig(kwargs['savefig'])
         except:
             pass
+
+        if mlab.options.offscreen:
+            mlab.clf(); mlab.close()
 
         return tvt, n, fig, col_bar
 
