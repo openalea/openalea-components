@@ -1148,12 +1148,13 @@ class AbstractSpatialImageAnalysis(object):
                 
         return self._kernels
 
-    def neighbors_number(self, labels, min_contact_surface, real_surface):
+    def neighbors_number(self, labels=None, min_contact_surface=None, real_surface=True):
         """
         Return the number of neigbors of each label.
         """
         nei = self.neighbors(labels, min_contact_surface, real_surface)
         return dict([(k,len(v)) for k,v in nei.iteritems()])
+
 
     def get_voxel_face_surface(self):
         a = self._voxelsize
