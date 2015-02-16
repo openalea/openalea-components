@@ -686,6 +686,7 @@ class AbstractSpatialImageAnalysis(object):
             data = random_color_dict(labels)
         if isinstance(data, str) and (data.lower() == 'volume'):
             data = self.volume(labels)
+        assert isinstance(data, dict)
 
         mini, maxi = min(data.values()), max(data.values())
         if CM_data_range is None:
@@ -1147,6 +1148,12 @@ class AbstractSpatialImageAnalysis(object):
                 
         return self._kernels
 
+    def neighbors_number(self, labels, min_contact_surface, real_surface):
+        """
+        Return the number of neigbors of each label.
+        """
+        nei = self.neighbors(labels, min_contact_surface, real_surface)
+        return dict([(k,len(v)) for k,v in nei.iteritems()])
 
     def get_voxel_face_surface(self):
         a = self._voxelsize
