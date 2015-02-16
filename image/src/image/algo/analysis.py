@@ -761,7 +761,7 @@ class AbstractSpatialImageAnalysis(object):
             return dict(zip(labels,values))
 
 
-    def labels(self, no_background=False):
+    def labels(self):
         """
         Return the list of labels used.
 
@@ -780,10 +780,7 @@ class AbstractSpatialImageAnalysis(object):
         [1,2,3,4,5,6,7]
         """
         if self._labels is None: self._labels = self.__labels()
-        if no_background:
-            return list(set(self._labels)-set([self._background]))
-        else:
-            return self._labels
+        return self._labels
 
     def __labels(self):
         """
