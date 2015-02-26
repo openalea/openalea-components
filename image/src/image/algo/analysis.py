@@ -616,7 +616,7 @@ class AbstractSpatialImageAnalysis(object):
         Function used to return a dictionary [int]-[vtkPolyData] corresponding to [cell_id]-[cell_meshed_surface].
         """
         # Check the provided `labels`:
-        labels = self.__labels_handler(labels)
+        labels = self._labels_handler(labels)
         # If no 'self._cell_vtk' can be found or the vtk_surfaces parameters have changed, we need to recompute the vtk_surfaces:
         if (self._cell_vtk is None) or (reduction != self._vtk_reduction) or (preserve_array_shape != self._vtk_preserve_array_shape):
             self.__array2vtk_surfaces(reduction, preserve_array_shape)
@@ -655,7 +655,7 @@ class AbstractSpatialImageAnalysis(object):
             fname = splitext(fname)[0]+".vtk"
 
         # Check the provided `labels`:
-        labels = self.__labels_handler(labels)
+        labels = self._labels_handler(labels)
         # If no 'cell_vtk' is provided and no cell 'vtk surface' can be found:
         if (cell_vtkSep is None):
             cell_vtkSep = self.get_cell_vtk_surfaces(labels, reduction, preserve_array_shape)
@@ -667,6 +667,14 @@ class AbstractSpatialImageAnalysis(object):
         w.Write()
         return "Successfully created the vtk file '{}'!".format(fname)
 
+    def read_vtk(self, vtk_fname):
+        import vtk
+        reader = vtk.vtkPolyDataReader()
+        reader.SetFileName(vtk_fname)
+        reader.Update()
+        self._cell_vtk = vtk.vtkPolyData()
+        self._cell_vtk.DeepCopy(reader.GetOutput())
+        return "Successfully read the vtk file '{}'!".format(vtk_fname)
 
     def vtk_display(self, labels=None, data=None, CM_nb_labels=None, CM_nb_colors=None, CM_data_range=None, colorbar=True, AzElDi=None, focaldist=None, roll=None, cmap='jet', **kwargs):
         """
@@ -678,7 +686,7 @@ class AbstractSpatialImageAnalysis(object):
             mlab.options.offscreen = False
 
         # Check the provided `labels`:
-        labels = self.__labels_handler(labels)
+        labels = self._labels_handler(labels)
 
         if data is None:
             data = dict([(k,k) for k in labels])
@@ -811,9 +819,9 @@ class AbstractSpatialImageAnalysis(object):
         if self._labels is None : self._labels = self.__labels()
         return len(self._labels)
 
-    def __labels_handler(self, labels):
+    def _labels_handler(self, labels):
         """
-        The following line are often needed to ensure the correct format of labels, as well as their presence within the image.
+        The following lines are often needed to ensure the correct format of labels, as well as their presence within the image.
         """
         if isinstance(labels, int):
             labels = [labels]
@@ -871,7 +879,7 @@ class AbstractSpatialImageAnalysis(object):
          [0.75, 2.75, 0.0]]
         """
         # Check the provided `labels`:
-        labels = self.__labels_handler(labels)
+        labels = self._labels_handler(labels)
 
         center = {}
         for l in labels:
@@ -1708,7 +1716,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.
         """
         # Check the provided `labels`:
-        labels = self.__labels_handler(labels)
+        labels = self._labels_handler(labels)
 
         # results
         inertia_eig_vec = []
@@ -1765,7 +1773,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
         Return 3 (3D-oriented) vectors by rows and 3 (length) values.
         """
         # Check the provided `labels`:
-        labels = self.__labels_handler(labels)
+        labels = self._labels_handler(labels)
 
         # results
         inertia_eig_vec = []
@@ -1888,7 +1896,7 @@ class SpatialImageAnalysis3D(AbstractSpatialImageAnalysis):
                 no_curvature = [vid for vid in tmp if vid not in self.layer1()]
                 if no_curvature != []:
                     warnings.warn("Cells {} are not in the L1. We won't compute their curvature.")
-                    vids = list(set(vid)-set(no_curvature))
+                    vids = list(set(vids)-set(no_curvature))
                 if len(vids) == 0: # if there is no element left in the 'vids' list, there is nothing to do!
                     warnings.warn('None of the cells you provided belong to the L1.')
                     return 0
