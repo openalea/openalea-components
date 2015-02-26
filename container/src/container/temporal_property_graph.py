@@ -153,7 +153,7 @@ class TemporalPropertyGraph(PropertyGraph):
             unused_lineage = {}
             on_ids_source, on_ids_target = self._old_to_new_ids[-2:]
             for k, l in mapping.iteritems():
-                l_flat = list(flatten(l)) # flatten the lineage if not
+                l_flat = list(flatten(l)) # flatten the lineage (i.e. [[1,2],3] -> [1,2,3])
                 # Check if the mother cell and ALL daugthers are present in their respective graph : WE DON'T WANT TO CREATE A PARTIAL LINEAGE !!!!
                 if on_ids_source[0].has_key(k) and ( sum([on_ids_target[0].has_key(v) for v in l_flat]) == len(l_flat) ):
                     use_sub_lineage(k, l, on_ids_source, on_ids_target)
