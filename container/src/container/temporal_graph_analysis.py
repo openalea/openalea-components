@@ -1312,7 +1312,7 @@ def __strain_parameters2(func):
             except: unlabelled_data = True
 
         # -- If the vid is not associated through time it's not possible to compute the strain.
-        if vids is None:
+        if vids is None: # if no vids are provided we use them all... except those from the last time point!
             vids = list(set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points,fully_lineaged=False)))
         if isinstance(vids,int):
             assert vids in graph.lineaged_vertex(fully_lineaged=False)
@@ -1330,7 +1330,7 @@ def __strain_parameters2(func):
             # - We use the epidermis wall median as an extra landmark if the vertex is in the L1:
             ep_wm = graph.vertex_property('epidermis_wall_median')
             daughters_fused_ep_wm = graph.vertex_property('daughters_fused_epidermis_wall_median')
-            if graph.vertex_property('L1').has_key(vid):
+            if graph.vertex_property('L1')[vid]: # if cell in L1 == True, else False!
                 if ep_wm.has_key(vid) and daughters_fused_ep_wm.has_key(vid):
                     landmarks_t1.append(ep_wm[vid])
                     landmarks_t2.append(daughters_fused_ep_wm[vid])
@@ -1385,7 +1385,9 @@ def __strain_parameters2(func):
                 stretch_mat[vid], score[vid] = func(graph, landmarks_t1, landmarks_t2)
 
         if missing_epidermis_wall_median != []:
-            print 'Could not use the epidermis wall median as an extra landmark for vids: {}'.format(missing_epidermis_wall_median)
+            N_L1 = len(graph.vertex_property('L1'))-len(time_point_property(graph, graph.nb_time_point, 'L1'))
+            N_missing = len(missing_epidermis_wall_median)
+            print 'Could not use the epidermis wall median as an extra landmark for {}% of L1 cells.'.format(round(N_missing/float(N_L1)*100,1))
         if missing_rank2_proj_mat != []:
             print "Missing epidermis_rank-2_projection_matrix for vid: {}".format(vid)
         if missing_daughters_fused_rank2_proj_mat != []:
@@ -1469,7 +1471,7 @@ def strain_rates(graph, stretch_mat=None, **kwargs):
     sr = {}
     for vid in stretch_mat:
         ##  Singular Value Decomposition (SVD) of A.
-        R,D_A,Q=svd(stretch_mat[vid])
+        R, D_A, Q = svd(stretch_mat[vid])
         # Compute Strain Rates :
         sr[vid] = np.log(D_A)/float(time_interval(graph, vid, rank =1))
 
