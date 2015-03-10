@@ -1298,15 +1298,15 @@ def __strain_parameters2(func):
         if use_projected_anticlinal_wall:
             assert 'surfacic_3D_landmarks' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
-            assert 'daughters_fused_epidermis_wall_median' in graph.vertex_property_names()
+            assert 'fused_siblings_epidermis_wall_median' in graph.vertex_property_names()
             assert 'L1' in graph.vertex_property_names()
         else:
             assert '3D_landmarks' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
             assert 'unlabelled_wall_median' in graph.vertex_property_names()
-            assert 'daughters_fused_epidermis_wall_median' in graph.vertex_property_names()
-            assert 'daughters_fused_unlabelled_wall_median' in graph.vertex_property_names()
-            #~ assert 'daughters_fused_wall_median' in graph.vertex_property_names()
+            assert 'fused_siblings_epidermis_wall_median' in graph.vertex_property_names()
+            assert 'fused_siblings_unlabelled_wall_median' in graph.vertex_property_names()
+            #~ assert 'fused_siblings_wall_median' in graph.vertex_property_names()
             unlabelled_data = False
             try: graph.vertex_property('unlabelled_wall_median')
             except: unlabelled_data = True
@@ -1319,7 +1319,7 @@ def __strain_parameters2(func):
             vids = [vids]
 
         N = len(vids); percent=0
-        missing_rank2_proj_mat, missing_daughters_fused_rank2_proj_mat, missing_epidermis_wall_median = [], [], []
+        missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat, missing_epidermis_wall_median = [], [], []
         stretch_mat, score = {}, {}
         for n,vid in enumerate(vids):
             if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
@@ -1329,11 +1329,11 @@ def __strain_parameters2(func):
             landmarks_t1, landmarks_t2 = [], []
             # - We use the epidermis wall median as an extra landmark if the vertex is in the L1:
             ep_wm = graph.vertex_property('epidermis_wall_median')
-            daughters_fused_ep_wm = graph.vertex_property('daughters_fused_epidermis_wall_median')
+            fused_siblings_ep_wm = graph.vertex_property('fused_siblings_epidermis_wall_median')
             if graph.vertex_property('L1')[vid]: # if cell in L1 == True, else False!
-                if ep_wm.has_key(vid) and daughters_fused_ep_wm.has_key(vid):
+                if ep_wm.has_key(vid) and fused_siblings_ep_wm.has_key(vid):
                     landmarks_t1.append(ep_wm[vid])
-                    landmarks_t2.append(daughters_fused_ep_wm[vid])
+                    landmarks_t2.append(fused_siblings_ep_wm[vid])
                 else:
                     missing_epidermis_wall_median.append(vid)
             if use_projected_anticlinal_wall:
@@ -1341,7 +1341,7 @@ def __strain_parameters2(func):
             else:
                 ppt = '3D_landmarks'
                 unlab_wm = graph.vertex_property('unlabelled_wall_median')
-                fused_unlab_wm = graph.vertex_property('daughters_fused_unlabelled_wall_median')
+                fused_unlab_wm = graph.vertex_property('fused_siblings_unlabelled_wall_median')
                 if unlabelled_data and unlab_wm.has_key(vid) and fused_unlab_wm.has_key(vid):
                     landmarks_t1.append(unlab_wm[vid])
                     landmarks_t2.append(fused_unlab_wm[vid])
@@ -1368,10 +1368,10 @@ def __strain_parameters2(func):
                 except:
                     missing_rank2_proj_mat.append(vid)
                 try:
-                    H2_t2 = graph.vertex_property('daughters_fused_epidermis_rank-2_projection_matrix')[vid]
+                    H2_t2 = graph.vertex_property('fused_siblings_epidermis_rank-2_projection_matrix')[vid]
                     landmarks_t2 = np.array([np.dot(H2_t2,pts) for pts in landmarks_t2])
                 except:
-                    missing_daughters_fused_rank2_proj_mat.append(vid)
+                    missing_fused_siblings_rank2_proj_mat.append(vid)
 
             #~ if nb_missing_data != 0:
                 #~ warnings.warn("Missing {} landmark{} for the t_n vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
@@ -1390,8 +1390,8 @@ def __strain_parameters2(func):
             print 'Could not use the epidermis wall median as an extra landmark for {}% of L1 cells.'.format(round(N_missing/float(N_L1)*100,1))
         if missing_rank2_proj_mat != []:
             print "Missing epidermis_rank-2_projection_matrix for vid: {}".format(vid)
-        if missing_daughters_fused_rank2_proj_mat != []:
-            print "Missing daughters_fused_epidermis_rank-2_projection_matrix for vid: {}".format(vid)
+        if missing_fused_siblings_rank2_proj_mat != []:
+            print "Missing fused_siblings_epidermis_rank-2_projection_matrix for vid: {}".format(vid)
 
         # -- Now we return the results of temporal differentiation function:
         if labels_at_t_n:
