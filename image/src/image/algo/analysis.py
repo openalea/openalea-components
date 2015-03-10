@@ -368,7 +368,7 @@ class AbstractSpatialImageAnalysis(object):
                 raise ValueError("The background you provided has not been detected in the image !")
             self._ignoredlabels.update([background])
         else:
-            warnings.warn("You did not specified a value for the background, some functionalities won't work.")
+            warnings.warn("No value defining the background, some functionalities won't work !")
 
         # -- Variables for caching informations:
         self._voxelsize = image.voxelsize
