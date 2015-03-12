@@ -184,7 +184,7 @@ def find_object_boundingbox(image2crop, ignore_cells_in_image_margins=True, **kw
     return global_box
 
 
-def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kwargs):
+def fuse_siblings_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kwargs):
     """
     Based on a TemporalPropertyGraph (lineage info), this script fuse daughters cells between `reference_tp` & `tp_2fuse`.
 
@@ -241,14 +241,14 @@ def fuse_daughters_in_image(image, graph, ref_vids, reference_tp, tp_2fuse, **kw
     return tmp_img
 
 
-def create_fused_image_analysis(graph, SpI_Analysis, image2fuse=[], starting_SpI_A_index=0, return_SpI_A = True):
+def create_fused_image_analysis(graph, SpI_Analysis, images2fuse=[], starting_SpI_A_index=0, return_SpI_A = True):
     """
-    Based on a TemporalPropertyGraph (for lineage informations), this script fuse daughters cells for `SpI_Analysis` indexed in `image2fuse`.
+    Based on a TemporalPropertyGraph (for lineage informations), this script fuse daughters cells for `SpI_Analysis` indexed in `images2fuse`.
 
     :Parameters:
      - `graph` (TemporalPropertyGraph) - a TemporalPropertyGraph used for the lineage information
      - `SpI_Analysis` (list of AbstractSpatialImageAnalysis) - 
-     - `image2fuse` (list) - list giving the index of `SpI_Analysis` to fuse (e.g. 0 can not be fused !)
+     - `images2fuse` (list) - list giving the index of `SpI_Analysis` to fuse (e.g. 0 can not be fused !)
      - `starting_SpI_A_index` (int) - index of the first `SpI_Analysis` in the list regarding the time_point sequence of the `graph`
      - `return_SpI_A` (bool) - if False return `SpatialImage` type instead of `AbstractSpatialImageAnalysis`
 
@@ -256,23 +256,25 @@ def create_fused_image_analysis(graph, SpI_Analysis, image2fuse=[], starting_SpI
      - `starting_SpI_A_index` (AbstractSpatialImageAnalysis|list of AbstractSpatialImageAnalysis) - SpatialImageAnalysis or list of SpatialImageAnalysis containing the fused images
     """
     N_SpI_A = len(SpI_Analysis)
-    if isinstance(image2fuse, int):
-        image2fuse = list(image2fuse)
-    if image2fuse==[]:
-        image2fuse=np.arange(1+starting_SpI_A_index, N_SpI_A+starting_SpI_A_index)
-    # - Basic paranoia (avoid wasting time computing things to get an error in the end!):
-    assert min(image2fuse) >= 1
-    assert max(image2fuse) <= graph.nb_time_points+1
     assert N_SpI_A+starting_SpI_A_index <= graph.nb_time_points+1
+
+    if images2fuse==[]:
+        images2fuse = np.arange(1+starting_SpI_A_index, N_SpI_A+starting_SpI_A_index)
+    if isinstance(images2fuse, int):
+        images2fuse = list(images2fuse)
+    print "List of time-points at wich siblings will be fused and changed to their ancestor id: {}".format(images2fuse)
+    # - Basic paranoia (avoid wasting time computing things to get an error in the end!):
+    assert min(images2fuse) >= 1 # in the first (temporally speaking) image the cells do not have parents, thus no siblings exists and can be fused!
+    assert max(images2fuse) <= graph.nb_time_points+1
     
     # - Start the fusion(s):
     fused_image_analysis = {}
-    for tp_2fuse in image2fuse:
+    for tp_2fuse in images2fuse:
         ref_tp = tp_2fuse-1
         print "Fusion of t{} sibling cells and relabelling with t{} parent cell id:".format(tp_2fuse, ref_tp)
         ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True)]
         # - 'Fusing' daughters from `ref_tp` in `tp_2fuse`:
-        fused_image = fuse_daughters_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=SpI_Analysis[tp_2fuse]._background, verbose=True)
+        fused_image = fuse_siblings_in_image(SpI_Analysis[tp_2fuse], graph, ref_vids, ref_tp, tp_2fuse, background=SpI_Analysis[tp_2fuse]._background, verbose=True)
         if return_SpI_A:
             # - Creating a `SpatialImageAnalysis`:
             fused_image_analysis[tp_2fuse] = SpatialImageAnalysis(fused_image, ignoredlabels = 0, return_type = DICT, background = SpI_Analysis[tp_2fuse]._background)
@@ -480,7 +482,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 #~ surface_normal_axis = SpI_Analysis[tp].inertia_axis_normal_to_surface(labels, real=property_as_real, verbose=True)
                 #~ extend_vertex_property_from_dictionary(graph, 'normal_inertia_axis_to_surface', surface_normal_axis, time_point=tp)
 
-            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
             if 'wall_surface' in spatio_temporal_properties :
                 try: labels_w_undef_neigh
                 except: labels_w_undef_neigh = retrieve_label_neighbors(SpI_Analysis[tp], 0, labelset, min_contact_surface, real_surface) 
@@ -573,7 +575,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                 graph._graph_property["units"].update( {"epidermis_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
                 graph._graph_property["units"].update( {"unlabelled_wall_median":(u'\xb5m' if property_as_real else 'voxels')} )
 
-            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
 
             # -- The following property will not be computed if 'wall_median' property is also asked (handled by `check_properties`)
             if 'rank-2_projection_matrix' in spatio_temporal_properties:
@@ -659,7 +661,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
                         extend_vertex_property_from_dictionary(graph, 'epidermis_wall_principal_curvature_origin', epidermis_pc_origin, time_point=tp)
 
 
-            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+            tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
             if 'epidermis_local_principal_curvature' in spatio_temporal_properties:
                 for radius in graph.graph_property('radius_2_compute'):
                     print '- Computing local_principal_curvature property with radius = {}voxels...'.format(radius)
@@ -685,7 +687,7 @@ def _spatial_properties_from_images(graph, SpI_Analysis, vids, background,
         try: graph.remove_graph_property('radius_2_compute')
         except: pass
     
-    tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+    tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
     return graph
 
 
@@ -704,6 +706,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
      - `property_as_real` (bool) - If property_as_real = True, property is in real-world units else in voxels.
 
     """
+    print "Starting computation of temporal properties"
     try:
         min_contact_surface = graph.graph_property('min_contact_surface')
         real_surface = graph.graph_property('real_min_contact_surface')
@@ -779,7 +782,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                             .format(label_1, label_2, round(s_sib_fused,1), round(s_init,1), "undefined" if (s_init==0) else "filtered")
             print "Done\n"
 
-        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
         if '3D_landmarks' in spatio_temporal_properties:
             """
             Work in progress ...
@@ -849,14 +852,16 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             # -- Now we can proceed to the landmarks association:
             for tp_2fuse in xrange(1,graph.nb_time_points+1,1):
                 ref_tp = tp_2fuse-1
-                print "-- 3D landmarks association between t{} and t{}".format(ref_tp, tp_2fuse)
+                print "-- 3D landmarks association between t{} and 'sibling-fused' t{}".format(ref_tp, tp_2fuse)
                 # -- Pairing t_n and t_n+1 'wall_median' as landmarks:
-                # - Translating 'wall_median' in `graph.edge_property()` with pair of labels as keys:
+                # - the following dict are {cid:coordinates} (not vertex ids!):
+                #wall_median, unlabelled_wall_median, epidermis_wall_median, fused_wall_median, fused_unlabelled_wall_median, fused_epidermis_wall_median
                 edge2labelpair_m = edge2labelpair_map(graph, ref_tp)
                 wall_median = dict([(edge2labelpair_m[eid],m) for eid,m in graph.edge_property('wall_median').iteritems() if edge2labelpair_m.has_key(eid)])
                 ref_vids = [k for k in graph.vertex_at_time(ref_tp, as_parent=True) if k in vids]
-                unlabelled_wall_median =  dict([(k,v) for k,v in graph.vertex_property('unlabelled_wall_median').iteritems() if k in ref_vids])
-                epidermis_wall_median = dict([(k,v) for k,v in graph.vertex_property('epidermis_wall_median').iteritems() if k in ref_vids])
+                vid2cid = dict([(k,v) for k,v in graph.vertex_property('old_label').iteritems() if k in ref_vids])
+                unlabelled_wall_median =  dict([(vid2cid[k],v) for k,v in graph.vertex_property('unlabelled_wall_median').iteritems() if k in ref_vids])
+                epidermis_wall_median = dict([(vid2cid[k],v) for k,v in graph.vertex_property('epidermis_wall_median').iteritems() if k in ref_vids])
                 # - Starting the landmarks association:
                 ldmk, nb_asso, nb_asso_unlabelled, nb_asso_epidermis = {}, 0, 0, 0
                 no_asso, no_asso_unlabelled, no_asso_epidermis = [], [], []
@@ -930,7 +935,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
             div_walls = dict([ (eid, True) for eid in graph.edges() if graph.sibling(graph.edge_vertices(eid)[1]) is not None and graph.edge_vertices(eid)[0] in graph.sibling(graph.edge_vertices(eid)[1])])
             add_edge_property_from_eid_dictionary(graph, 'division_wall', div_walls)
 
-        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
         if 'division_wall_orientation' in spatio_temporal_properties:
             from openalea.image.algo.analysis import wall_voxels_between_two_cells
             pc_values, pc_normal, pc_directions, pc_origin = {}, {}, {}, {}
@@ -967,7 +972,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 add_edge_property_from_eid_dictionary(graph, 'division_wall_principal_curvature_origin', pc_origin)
 
 
-        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+        tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
         if 'projected_division_wall_orientation' in spatio_temporal_properties:
             # NOT WORKING YET !!!!!!!
             # Could do a rank-1 subspace projection of anticlinal wall voxels ?
@@ -993,7 +998,7 @@ def _temporal_properties_from_images(graph, SpI_Analysis, vids, background,
                 extend_vertex_property_from_dictionary(graph, 'fused_siblings_inertia_values', inertia_values, time_point=ref_tp)
 
 
-    tpgfi_tracker_save(graph, tmp_filename+"_graph.pkz")
+    tpgfi_tracker_save(graph, tmp_filename+"_graph.pkl")
     return graph
 
 def resume_tpgfi_feature_extraxtion(spatio_temporal_properties = None,
@@ -1052,14 +1057,14 @@ def tpgfi_tracker_check(obj, images):
     img_names = []
     for n,image in enumerate(images):
         if isinstance(image, str):
-            img_names.append(image.splitext())
+            img_names.append('.'.join(image.split('.')[:-1]))
         elif isinstance(image, SpatialImage):
             fname = image.info["filename"]
             img_names.append(fname.splitext())
         elif isinstance(image, AbstractSpatialImageAnalysis):
             img_names.append(image.filename)
         else:
-            raise TypeError("Unable to recognise objects types from your `images` list: {}".format(images))
+            print "Unable to recognise objects types from your `images` list: {}".format(images)
 
     if not sum([name == analysis[n].filename for n,name in enumerate(img_names)])==len(images):
         print "Done! Status: UN-USABLE."
@@ -1147,6 +1152,11 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     elif isinstance(background, list):
         assert len(background) == nb_images
 
+    images_nopath = [im.split('/')[-1] for im in images]
+    path_images = ['/'.join(images[0].split('/')[:-1])+"/" for im in images]
+    if sum([path_images[0]==p_im for p_im in path_images[1:]]) == (len(path_images)-1):
+        path_images = path_images[0]
+
     # - Recovering **kwargs:
     try: min_contact_surface = kwargs['min_contact_surface']
     except: min_contact_surface = None
@@ -1165,6 +1175,10 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     if isinstance(images[0], str):
         assert [isinstance(image, str) for image in images]
 
+    try_loading = True
+    print "You asked to create a Spatio-Temporal Property Graph using the following {} images: {}".format(nb_images, images_nopath)
+    print "The path{} containing the images and the temporary saved steps {}: {}".format('s' if isinstance(path_images,list) else '', 'are' if isinstance(path_images,list) else 'is', path_images)
+    print "The TPG will be temporarilly saved under '{}+['_step1','_step2','_graph'].pkl' during the creation process.\n\n".format(tmp_filename.split('/')[-1])
     ### ----- STEP #1: AbstractSpatialImageAnalysis & Spatial Graphs creation ----- ###
     print "## ---- AbstractSpatialImageAnalysis & Spatial Graphs creation ---- ##"
     analysis, labels, neighborhood, graphs, label2vertex, edges = {}, {}, {}, {}, {}, {}
@@ -1172,11 +1186,12 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
         print "# -- Trying to retreive previously computed AbstractSpatialImageAnalysis using temporary backup '{}_step1.pkl'...".format(tmp_filename)
         analysis, labels, background, neighborhood, graphs, label2vertex, edges = tpgfi_tracker_loader(tmp_filename+"_step1.pkl")
         # Now check the adequacy of the loaded objects (compare 'images' filenames) with the current computation and remove the temporary file otherwise, before 'failing' the 'try test'...
-        correct_tpgfi_tracker = tpgfi_tracker_check([analysis, labels, background, neighborhood, graphs, label2vertex, edges], images)
-        if (not correct_tpgfi_tracker): 
+        correct_tmp_tpgfi = tpgfi_tracker_check([analysis, labels, background, neighborhood, graphs, label2vertex, edges], images)
+        if (not correct_tmp_tpgfi): 
             for step in ["step1","step2","graph"]:
                 tpgfi_tracker_remove(tmp_filename+"_"+step+".pkl")
-            assert False
+            try_loading = False
+            assert try_loading
     except:
         print "\n# -- Creating Spatial Graphs..."
         for n,image in enumerate(images):
@@ -1208,13 +1223,14 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
     tpg.add_graph_property('min_contact_surface', min_contact_surface)
     tpg.add_graph_property('real_min_contact_surface', real_surface)
-    print "Done\n"
+    print "Done\n\n"
 
 
     ### ----- STEP #2: Images registration ----- ###
     print "## ---- Images registration ---- ##"
     if 'register_images' in kwargs and kwargs['register_images']:
         try:
+            assert try_loading
             print "# -- Trying to retreive the previous REGISTERED AbstractSpatialImageAnalysis and Spatio-Temporal Graph using temporary backup '{}_step2.pkl'...".format(tmp_filename)
             analysis, labels, background, neighborhood, graphs, label2vertex, edges, tpg = tpgfi_tracker_loader(tmp_filename+"_step2.pkl")
         except:
@@ -1279,6 +1295,7 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
     print "\n\n## ---- Adding spatio-temporal features to the Spatio-Temporal Graph ---- ##"
     print "# -- Trying to retreive the previous Spatio-Temporal Graph with Features using temporary backup '{}_graph.pkl'...".format(tmp_filename)
     try:
+        assert try_loading
         analysis, labels, background, neighborhood, graphs, label2vertex, edges, tpg = tpgfi_tracker_loader(tmp_filename+"_graph.pkl")
     except:
         pass
@@ -1341,7 +1358,7 @@ def label2vertex(graph, labels, time_point = None):
 
 def labelpair2edge_map(graph, time_point = None):
     """
-        Compute a dictionary that map pair of labels to edge id.
+        Compute a dictionary that map pair of old_labels to edge id.
         It requires the existence of a 'label' property
 
         :rtype: dict
@@ -1353,7 +1370,7 @@ def labelpair2edge_map(graph, time_point = None):
 
 def edge2labelpair_map(graph, time_point = None):
     """
-        Compute a dictionary that map pair of labels to edge id.
+        Compute a dictionary that map pair of old_labels to edge id.
         It requires the existence of a 'label' property
 
         :rtype: dict
@@ -1365,12 +1382,21 @@ def edge2labelpair_map(graph, time_point = None):
 
 def vertexpair2edge_map(graph):
     """
-        Compute a dictionary that map pair of labels to edge id.
+        Compute a dictionary that map pair of vertex id to edge id.
         It requires the existence of a 'label' property
 
         :rtype: dict
     """
     return dict([((graph.source(eid),graph.target(eid)),eid) for eid in graph.edges()])
+
+def edge2vertexpair_map(graph):
+    """
+        Compute a dictionary that map pair of vertex id to edge id.
+        It requires the existence of a 'label' property
+
+        :rtype: dict
+    """
+    return dict([(eid,(graph.source(eid),graph.target(eid))) for eid in graph.edges()])
 
 
 def add_vertex_property_from_dictionary(graph, name, dictionary, mlabel2vertex = None, time_point = None):

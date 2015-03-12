@@ -35,6 +35,13 @@ def dilation(slices):
     return [ slice(max(0,s.start-1), s.stop+1) for s in slices ]
 
 
+def dilation_by(slices, amount=2):
+    """
+    Function dilating slices: extend the boundingbox of one voxel.
+    """
+    return [ slice(max(0,s.start-amount), s.stop+amount) for s in slices ]
+
+
 def wall(mask_img, label_id):
     """
     TODO
@@ -72,7 +79,7 @@ def hollow_out_cells(image, background, remove_background = True, verbose = True
     :Return:
      - `m` (SpatialImage) - Spatial Image containing hollowed out cells (only walls).
     """
-    if verbose: print 'Hollowing out cells...'
+    if verbose: print 'Hollowing out cells... ',
     b = nd.laplace(image)
     mask = b!=0
     m = image * mask
