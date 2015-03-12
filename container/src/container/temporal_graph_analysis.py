@@ -1401,6 +1401,62 @@ def __strain_parameters2(func):
 
     return  wrapped_function
 
+def __strain_parameters3D(func):
+    def wrapped_function(graph, vids = None, labels_at_t_n = True, verbose = False):
+        """
+        :Parameters:
+         - `graph` (TPG)
+         - `vids` (int|list) - list of (graph) vertex ids @ t_n. If :None: it will be computed for all possible vertex
+         - `use_projected_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('projected_anticlinal_wall_median') to compute a strain in 2D.
+        """
+        # Check if cells landmarks have been recovered ans stored in the graph structure:
+        assert '3D_landmarks' in graph.vertex_property_names()
+
+        # -- If the vid is not associated through time it's not possible to compute the strain.
+        if vids is None: # if no vids are provided we use them all... except those from the last time point!
+            vids = list(set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points,fully_lineaged=False)))
+        if isinstance(vids,int):
+            assert vids in graph.lineaged_vertex(fully_lineaged=False)
+            vids = [vids]
+
+        N = len(vids); percent=0
+        missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat, missing_epidermis_wall_median = [], [], []
+        stretch_mat, score = {}, {}
+        for n,vid in enumerate(vids):
+            if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
+            if verbose and n+1==N: print "100%"
+            # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
+            nb_missing_data = 0
+            ldm_vid = graph.vertex_property('3D_landmarks')[vid]
+            landmarks_t1 = [ldmk[0] for ldmk in ldm_vid]
+            landmarks_t2 = [ldmk[1] for ldmk in ldm_vid]
+
+            if nb_missing_data == 0 and len(landmarks_t1)>=4:
+                assert len(landmarks_t1) == len(landmarks_t2)
+                # - Convert voxel based metric into real-worlds units:
+                vid_index = graph.vertex_property('index')[vid]
+                res_1, res_2 = np.array(graph.graph_property("images_voxelsize")[vid_index]), np.array(graph.graph_property("images_voxelsize")[vid_index+1])
+                landmarks_t1 = landmarks_t1*res_1
+                landmarks_t2 = landmarks_t2*res_2
+                stretch_mat[vid], score[vid] = func(graph, landmarks_t1, landmarks_t2)
+
+        if missing_epidermis_wall_median != []:
+            N_L1 = len(graph.vertex_property('L1'))-len(time_point_property(graph, graph.nb_time_point, 'L1'))
+            N_missing = len(missing_epidermis_wall_median)
+            print 'Could not use the epidermis wall median as an extra landmark for {}% of L1 cells.'.format(round(N_missing/float(N_L1)*100,1))
+        if missing_rank2_proj_mat != []:
+            print "Missing epidermis_rank-2_projection_matrix for vid: {}".format(vid)
+        if missing_fused_siblings_rank2_proj_mat != []:
+            print "Missing fused_siblings_epidermis_rank-2_projection_matrix for vid: {}".format(vid)
+
+        # -- Now we return the results of temporal differentiation function:
+        if labels_at_t_n:
+            return stretch_mat, score
+        else:
+            return translate_keys2daughters_ids(graph, stretch_mat), translate_keys2daughters_ids(graph, score)
+
+    return  wrapped_function
+
 #~ @__strain_parameters
 @__strain_parameters2
 def stretch_matrix(graph, xyz_t1, xyz_t2):
@@ -1422,6 +1478,29 @@ def stretch_matrix(graph, xyz_t1, xyz_t2):
     regr.fit(centered_coord_t1,centered_coord_t2)
 
     return regr.coef_, r2_scoring(centered_coord_t2, np.dot(regr.coef_,centered_coord_t1.T).T)
+
+
+@__strain_parameters3D
+def stretch_matrix3D(graph, xyz_t1, xyz_t2):
+    """
+    Compute the stretch / deformation matrix.
+     - xyz_t1: (N x d) matrix giving the landmarks coordinates before deformation,
+     - xyz_t2: (N x d) matrix giving the landmarks coordinates after deformation,
+    where: 'd' is the dimensionality (i.e. d=2 if 2D, d=3 if 3D)
+    """
+    from sklearn import linear_model
+    # - Compute the centroids:
+    c_t1 = np.mean(xyz_t1,0)
+    c_t2 = np.mean(xyz_t2,0)
+    # - Compute the centered matrix:
+    centered_coord_t1=np.array(xyz_t1-c_t1)
+    centered_coord_t2=np.array(xyz_t2-c_t2)
+    # - A is the affine transformation matrix between the centered vertices position of two time points:
+    regr = linear_model.Ridge (alpha = .01, fit_intercept=False)
+    regr.fit(centered_coord_t1,centered_coord_t2)
+
+    return regr.coef_, r2_scoring(centered_coord_t2, np.dot(regr.coef_,centered_coord_t1.T).T)
+
 
 def stretch_main_orientations(graph, stretch_mat=None, **kwargs):
     """
