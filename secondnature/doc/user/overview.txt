@@ -1,0 +1,7 @@
+SecondNature is the code name for a program that tries to agglomerate, expose and consolidate
+developments happening at VirtualPlants.
+
+The main point of this experiment is to let us define an extension API and a UI paradigm that
+allows for the flexibility we are aiming for.
+
+Its first goal is to merge OpenAlea and LPy in the same interface and let them share resources.

@@ -1,0 +1,12 @@
+Source: openalea-pandas
+Maintainer: OpenAlea consortium <christophe.pradal@cirad.fr>
+Section: python
+Priority: optional
+Build-Depends: python-all (>= 2.6.6-3~), python-setuptools, debhelper (>= 7), python-openalea.deploy
+
+Package: python-openalea.pandas
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}, python-pandas, python-openalea.core
+Provides: ${python:Provides}
+Description: Pandas modules for Visualea
+
