@@ -46,21 +46,14 @@ except ImportError:
 
 
 dirs = """
-deploy
-misc
-deploygui
-vpltk
-core
 scheduler
-grapheditor
-visualea
 stdlib
 sconsx
 pkg_builder
 image
 numpy
 pylab
-pkgit
+container
 """.split()
 #openalea_meta
 
