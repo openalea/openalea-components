@@ -1,0 +1,9 @@
+*.pyc
+*.egg-info
+*.*~
+.svn
+.idea
+.project
+.pydevproject
+.settings
+
