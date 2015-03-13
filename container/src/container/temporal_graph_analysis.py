@@ -1141,16 +1141,16 @@ def weighted_mean( values, weights ):
 
 
 def __strain_parameters(func):
-    def wrapped_function(graph, vids = None, labels_at_t_n = True, use_projected_anticlinal_wall = False, verbose = False):
+    def wrapped_function(graph, vids = None, labels_at_t_n = True, use_surfacic_anticlinal_wall = False, verbose = False):
         """
         :Parameters:
          - `graph` (TPG)
          - `vids` (int|list) - list of (graph) vertex ids @ t_n. If :None: it will be computed for all possible vertex
-         - `use_projected_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('projected_anticlinal_wall_median') to compute a strain in 2D.
+         - `use_surfacic_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('surfacic_anticlinal_wall_median') to compute a strain in 2D.
         """
         # Check if cells landmarks have been recovered ans stored in the graph structure:
-        if use_projected_anticlinal_wall:
-            assert 'projected_anticlinal_wall_median' in graph.edge_property_names()
+        if use_surfacic_anticlinal_wall:
+            assert 'surfacic_anticlinal_wall_median' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
             assert 'epidermis_surface' in graph.vertex_property_names()
         else:
@@ -1171,10 +1171,10 @@ def __strain_parameters(func):
                 tmp.remove(vid)
 
         vids = tmp
-        if use_projected_anticlinal_wall:
+        if use_surfacic_anticlinal_wall:
             spatial_vertices_edge = dict( [(tuple(sorted(v)),k) for k,v in graph._edges.iteritems() if k in graph.edges(edge_type='s')] )
             # Next line could be changed: we could create a smaller dict by looking in something smaller than all graphs edges!!!
-            wall_median_2 = dict( ( tuple(sorted(graph.edge_vertices(eid))), graph.edge_property('projected_anticlinal_wall_median')[eid]) for eid in graph.edges(edge_type='s') if graph.edge_property('projected_anticlinal_wall_median').has_key(eid) )
+            wall_median_2 = dict( ( tuple(sorted(graph.edge_vertices(eid))), graph.edge_property('surfacic_anticlinal_wall_median')[eid]) for eid in graph.edges(edge_type='s') if graph.edge_property('surfacic_anticlinal_wall_median').has_key(eid) )
             stretch_mat = {}
 
             for n,vid in enumerate(vids):
@@ -1182,7 +1182,7 @@ def __strain_parameters(func):
                 missing_data = False
                 spatial_edges = list(graph.edges( vid, 's' ))
                 # We create the dictionary of medians associate over time: {(label_1,label_2):[x,y,z]} with label_1<label_2 and label_1&label_2 in the first layer !
-                wall_median = dict( ( tuple(sorted(graph.edge_vertices(eid))), graph.edge_property('projected_anticlinal_wall_median')[eid] ) for eid in spatial_edges if graph.edge_property('projected_anticlinal_wall_median').has_key(eid) )
+                wall_median = dict( ( tuple(sorted(graph.edge_vertices(eid))), graph.edge_property('surfacic_anticlinal_wall_median')[eid] ) for eid in spatial_edges if graph.edge_property('surfacic_anticlinal_wall_median').has_key(eid) )
 
                 # -- Now we want to associate landmarks over time:
                 xyz_t1, xyz_t2 = [], []
@@ -1286,82 +1286,44 @@ def __strain_parameters(func):
 
     return  wrapped_function
 
-def __strain_parameters2(func):
-    def wrapped_function(graph, vids = None, labels_at_t_n = True, use_projected_anticlinal_wall = False, verbose = False):
+def __strain_parameters3DS(func):
+    def wrapped_function(graph, vids = None, labels_at_t_n = True, flatten_epidermis = True, verbose = False):
         """
         :Parameters:
          - `graph` (TPG)
          - `vids` (int|list) - list of (graph) vertex ids @ t_n. If :None: it will be computed for all possible vertex
-         - `use_projected_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('projected_anticlinal_wall_median') to compute a strain in 2D.
+         - `use_surfacic_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('surfacic_anticlinal_wall_median') to compute a strain in 2D.
         """
         # Check if cells landmarks have been recovered ans stored in the graph structure:
-        if use_projected_anticlinal_wall:
-            assert 'surfacic_3D_landmarks' in graph.edge_property_names()
-            assert 'epidermis_wall_median' in graph.vertex_property_names()
-            assert 'fused_siblings_epidermis_wall_median' in graph.vertex_property_names()
-            assert 'L1' in graph.vertex_property_names()
-        else:
-            assert '3D_landmarks' in graph.edge_property_names()
-            assert 'epidermis_wall_median' in graph.vertex_property_names()
-            assert 'unlabelled_wall_median' in graph.vertex_property_names()
-            assert 'fused_siblings_epidermis_wall_median' in graph.vertex_property_names()
-            assert 'fused_siblings_unlabelled_wall_median' in graph.vertex_property_names()
-            #~ assert 'fused_siblings_wall_median' in graph.vertex_property_names()
-            unlabelled_data = False
-            try: graph.vertex_property('unlabelled_wall_median')
-            except: unlabelled_data = True
+        assert 'surfacic_3D_landmarks' in graph.vertex_property_names()
+        assert 'L1' in graph.vertex_property_names()
+        if flatten_epidermis:
+            assert "epidermis_rank-2_projection_matrix" in graph.vertex_property_names()
 
+        L1_vids = [k for k,v in graph.vertex_property('L1').iteritems() if v]
         # -- If the vid is not associated through time it's not possible to compute the strain.
-        if vids is None: # if no vids are provided we use them all... except those from the last time point!
-            vids = list(set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points,fully_lineaged=False)))
+        if vids is None: # if no vids are provided we use all those belonging to the L1... except those from the last time point!
+            vids = set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points,fully_lineaged=False))
+            vids = list( vids & set(L1_vids) )
         if isinstance(vids,int):
-            assert vids in graph.lineaged_vertex(fully_lineaged=False)
+            assert (vids in graph.lineaged_vertex(fully_lineaged=False)) and (graph.vertex_property('L1')[vid])
             vids = [vids]
 
         N = len(vids); percent=0
-        missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat, missing_epidermis_wall_median = [], [], []
+        missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat = [], []
         stretch_mat, score = {}, {}
         for n,vid in enumerate(vids):
             if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
             if verbose and n+1==N: print "100%"
             spatial_edges = list(graph.edges( vid, 's' ))
             # -- We recover the landmarks associated to each vertex:
-            landmarks_t1, landmarks_t2 = [], []
-            # - We use the epidermis wall median as an extra landmark if the vertex is in the L1:
-            ep_wm = graph.vertex_property('epidermis_wall_median')
-            fused_siblings_ep_wm = graph.vertex_property('fused_siblings_epidermis_wall_median')
-            if graph.vertex_property('L1')[vid]: # if cell in L1 == True, else False!
-                if ep_wm.has_key(vid) and fused_siblings_ep_wm.has_key(vid):
-                    landmarks_t1.append(ep_wm[vid])
-                    landmarks_t2.append(fused_siblings_ep_wm[vid])
-                else:
-                    missing_epidermis_wall_median.append(vid)
-            if use_projected_anticlinal_wall:
-                ppt = 'surfacic_3D_landmarks'
-            else:
-                ppt = '3D_landmarks'
-                unlab_wm = graph.vertex_property('unlabelled_wall_median')
-                fused_unlab_wm = graph.vertex_property('fused_siblings_unlabelled_wall_median')
-                if unlabelled_data and unlab_wm.has_key(vid) and fused_unlab_wm.has_key(vid):
-                    landmarks_t1.append(unlab_wm[vid])
-                    landmarks_t2.append(fused_unlab_wm[vid])
-
             # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
-            nb_missing_data = 0
-            for eid in spatial_edges:
-                # - If the spatial edge we are looking at is pointing to a target outside the L1, we do not want to use it for surfacic 3D:
-                target = graph.edge_vertices(eid)[0] if graph.edge_vertices(eid)[0] != vid else graph.edge_vertices(eid)[1]
-                if use_projected_anticlinal_wall and target not in graph.vertex_property('L1'):
-                    continue # no need to worry, these are not the droids you're looking for !
-                # - Now we add medians between used vertex as landmarks:
-                if graph.edge_property(ppt).has_key(eid):
-                    landmarks_t1.append(graph.edge_property(ppt)[eid][0])
-                    landmarks_t2.append(graph.edge_property(ppt)[eid][1])
-                else:
-                    nb_missing_data+=1
+            ldm_vid = graph.vertex_property('surfacic_3D_landmarks')[vid]
+            landmarks_t1 = [ldmk[0] for ldmk in ldm_vid]
+            landmarks_t2 = [ldmk[1] for ldmk in ldm_vid]
 
             # - Make a projection into the rank-2 subspace:
-            if use_projected_anticlinal_wall and graph._vertex_property.has_key('epidermis_rank-2_projection_matrix'):
+            if flatten_epidermis:
                 try:
                     H2_t1 = graph.vertex_property('epidermis_rank-2_projection_matrix')[vid]
                     landmarks_t1 = np.array([np.dot(H2_t1,pts) for pts in landmarks_t1])
@@ -1373,9 +1335,7 @@ def __strain_parameters2(func):
                 except:
                     missing_fused_siblings_rank2_proj_mat.append(vid)
 
-            #~ if nb_missing_data != 0:
-                #~ warnings.warn("Missing {} landmark{} for the t_n vertex {} at time {}".format(nb_missing_data, "s" if nb_missing_data>=2 else "", vid, graph.vertex_property('index')[vid]))
-            if nb_missing_data == 0 and len(landmarks_t1)>=4:
+            if len(landmarks_t1)>=4:
                 assert len(landmarks_t1) == len(landmarks_t2)
                 # - Convert voxel based metric into real-worlds units:
                 vid_index = graph.vertex_property('index')[vid]
@@ -1384,14 +1344,12 @@ def __strain_parameters2(func):
                 landmarks_t2 = landmarks_t2*res_2
                 stretch_mat[vid], score[vid] = func(graph, landmarks_t1, landmarks_t2)
 
-        if missing_epidermis_wall_median != []:
-            N_L1 = len(graph.vertex_property('L1'))-len(time_point_property(graph, graph.nb_time_point, 'L1'))
-            N_missing = len(missing_epidermis_wall_median)
-            print 'Could not use the epidermis wall median as an extra landmark for {}% of L1 cells.'.format(round(N_missing/float(N_L1)*100,1))
         if missing_rank2_proj_mat != []:
-            print "Missing epidermis_rank-2_projection_matrix for vid: {}".format(vid)
+            n = len(missing_rank2_proj_mat)
+            print "Missing `epidermis_rank-2_projection_matrix` for {} vid{}: {}".format(n, 's' if n>=2 else '', missing_rank2_proj_mat)
         if missing_fused_siblings_rank2_proj_mat != []:
-            print "Missing fused_siblings_epidermis_rank-2_projection_matrix for vid: {}".format(vid)
+            n = len(missing_fused_siblings_rank2_proj_mat)
+            print "Missing `fused_siblings_epidermis_rank-2_projection_matrix` for {} vid{}: {}".format(n, 's' if n>=2 else '', missing_fused_siblings_rank2_proj_mat)
 
         # -- Now we return the results of temporal differentiation function:
         if labels_at_t_n:
@@ -1407,7 +1365,7 @@ def __strain_parameters3D(func):
         :Parameters:
          - `graph` (TPG)
          - `vids` (int|list) - list of (graph) vertex ids @ t_n. If :None: it will be computed for all possible vertex
-         - `use_projected_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('projected_anticlinal_wall_median') to compute a strain in 2D.
+         - `use_surfacic_anticlinal_wall` (bool) - if True, use the medians of projected anticlinal wall ('surfacic_anticlinal_wall_median') to compute a strain in 2D.
         """
         # Check if cells landmarks have been recovered ans stored in the graph structure:
         assert '3D_landmarks' in graph.vertex_property_names()
@@ -1426,12 +1384,11 @@ def __strain_parameters3D(func):
             if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
             if verbose and n+1==N: print "100%"
             # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
-            nb_missing_data = 0
             ldm_vid = graph.vertex_property('3D_landmarks')[vid]
             landmarks_t1 = [ldmk[0] for ldmk in ldm_vid]
             landmarks_t2 = [ldmk[1] for ldmk in ldm_vid]
 
-            if nb_missing_data == 0 and len(landmarks_t1)>=4:
+            if len(landmarks_t1)>=4:
                 assert len(landmarks_t1) == len(landmarks_t2)
                 # - Convert voxel based metric into real-worlds units:
                 vid_index = graph.vertex_property('index')[vid]
@@ -1458,8 +1415,8 @@ def __strain_parameters3D(func):
     return  wrapped_function
 
 #~ @__strain_parameters
-@__strain_parameters2
-def stretch_matrix(graph, xyz_t1, xyz_t2):
+@__strain_parameters3DS
+def stretch_matrix3DS(graph, xyz_t1, xyz_t2):
     """
     Compute the stretch / deformation matrix.
      - xyz_t1: (N x d) matrix giving the landmarks coordinates before deformation,
@@ -1510,11 +1467,11 @@ def stretch_main_orientations(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
-    except: use_projected_anticlinal_wall = False
+    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
+    except: use_surfacic_anticlinal_wall = False
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
 
     directions = {}; values={}
     for vid in stretch_mat:
@@ -1541,11 +1498,11 @@ def strain_rates(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
-    except: use_projected_anticlinal_wall = False
+    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
+    except: use_surfacic_anticlinal_wall = False
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
 
     sr = {}
     for vid in stretch_mat:
@@ -1567,11 +1524,11 @@ def expansion_anisotropy(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
-    except: use_projected_anticlinal_wall = False
+    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
+    except: use_surfacic_anticlinal_wall = False
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
 
     ea = {}
     for vid in stretch_mat:
@@ -1593,11 +1550,11 @@ def areal_strain_rates(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
-    except: use_projected_anticlinal_wall = False
+    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
+    except: use_surfacic_anticlinal_wall = False
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
 
     asr = {}
     for vid in stretch_mat:
@@ -1619,11 +1576,11 @@ def volumetric_strain_rates(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
-    except: use_projected_anticlinal_wall = False
+    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
+    except: use_surfacic_anticlinal_wall = False
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
 
     vsr = {}
     for vid in stretch_mat:
@@ -1652,11 +1609,11 @@ def anisotropy_ratios(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_projected_anticlinal_wall = kwargs['use_projected_anticlinal_wall']
-    except: use_projected_anticlinal_wall = False
+    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
+    except: use_surfacic_anticlinal_wall = False
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_projected_anticlinal_wall, True)
+        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
 
     anisotropy_ratio = {}
     for vid in stretch_mat:
