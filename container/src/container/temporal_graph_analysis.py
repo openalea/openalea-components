@@ -74,7 +74,7 @@ def lineage_colors(graph, list_cell, alea_range=None, distance_between_colors=5)
 def add_graph_vertex_property_from_dictionary(graph, name, dictionary, unit=None):
     """
     Add a vertex property with name 'name' to the graph build from an image.
-    The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels.
+    The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels (vids).
     """
     if name in graph.vertex_properties():
         if (unit is not None) and (not graph._graph_property["units"].has_key(name) or graph._graph_property["units"](name) is None):
