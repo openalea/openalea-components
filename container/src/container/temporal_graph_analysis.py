@@ -77,7 +77,7 @@ def add_graph_vertex_property_from_dictionary(graph, name, dictionary, unit=None
     The values of the property are given as by a dictionary where keys are TemporalPropertyGraph vertex labels (vids).
     """
     if name in graph.vertex_properties():
-        if (unit is not None) and (not graph._graph_property["units"].has_key(name) or graph._graph_property["units"](name) is None):
+        if (unit is not None) and (not graph._graph_property["units"].has_key(name) or graph._graph_property["units"][name] is None):
             graph._graph_property["units"].update({name:unit})
             print '{} unit upgraded in graph to {}.'.format(name, unit)
         raise ValueError('Existing vertex property {}'.format(name))
@@ -1152,7 +1152,7 @@ def __strain_parameters(func):
         if use_surfacic_anticlinal_wall:
             assert 'surfacic_anticlinal_wall_median' in graph.edge_property_names()
             assert 'epidermis_wall_median' in graph.vertex_property_names()
-            assert 'epidermis_surface' in graph.vertex_property_names()
+            assert 'epidermis_area' in graph.vertex_property_names()
         else:
             assert 'wall_median' in graph.edge_property_names()
             assert 'unlabelled_wall_median' in graph.vertex_property_names()
@@ -1191,7 +1191,7 @@ def __strain_parameters(func):
                 # - Using barycenter of the epidermis wall :
                 xyz_t1.append(np.array(graph.vertex_property('epidermis_wall_median')[vid]))
                 if len(descendants_vid)>1:
-                    xyz_t2.append(weighted_mean( [graph.vertex_property('epidermis_wall_median')[desc_id_cp] for desc_id_cp in descendants_vid], [graph.vertex_property('epidermis_surface')[desc_id_cp] for desc_id_cp in descendants_vid if graph.vertex_property('epidermis_surface').has_key(desc_id_cp)] ))
+                    xyz_t2.append(weighted_mean( [graph.vertex_property('epidermis_wall_median')[desc_id_cp] for desc_id_cp in descendants_vid], [graph.vertex_property('epidermis_area')[desc_id_cp] for desc_id_cp in descendants_vid if graph.vertex_property('epidermis_area').has_key(desc_id_cp)] ))
                 else:
                     xyz_t2.append(np.array(graph.vertex_property('epidermis_wall_median')[descendants_vid[0]]))
 
@@ -1210,8 +1210,8 @@ def __strain_parameters(func):
                     if neighbors_descendants != [] and len([wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants])==len(neighbors_descendants):
                         id_couple = (min(vid,neighbor),max(vid,neighbor))
                         xyz_t1.append(np.array(wall_median[id_couple]))
-                        # - We compute a weighted average for the t_n+1 landmark if the cell has divided: x,y,z = sum_i{ wall_surface_i * [x_i,y_i,z_i] }
-                        xyz_t2.append(weighted_mean( [wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants], [graph.edge_property('wall_surface')[spatial_vertices_edge[desc_id_cp]] for desc_id_cp in neighbors_descendants if graph.edge_property('wall_surface').has_key(spatial_vertices_edge[desc_id_cp])] ))
+                        # - We compute a weighted average for the t_n+1 landmark if the cell has divided: x,y,z = sum_i{ wall_area_i * [x_i,y_i,z_i] }
+                        xyz_t2.append(weighted_mean( [wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants], [graph.edge_property('wall_area')[spatial_vertices_edge[desc_id_cp]] for desc_id_cp in neighbors_descendants if graph.edge_property('wall_area').has_key(spatial_vertices_edge[desc_id_cp])] ))
 
                 if not missing_data:
                     assert len(xyz_t1) == len(xyz_t2)
@@ -1253,19 +1253,19 @@ def __strain_parameters(func):
                         if neighbors_descendants != [] and len([wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants])==len(neighbors_descendants):
                             id_couple = (min(vid,neighbor),max(vid,neighbor))
                             xyz_t1.append(np.array(wall_median[id_couple]))
-                            xyz_t2.append(weighted_mean( [wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants], [graph.edge_property('wall_surface')[spatial_vertices_edge[desc_id_cp]] for desc_id_cp in neighbors_descendants] ))
+                            xyz_t2.append(weighted_mean( [wall_median_2[desc_id_cp] for desc_id_cp in neighbors_descendants], [graph.edge_property('wall_area')[spatial_vertices_edge[desc_id_cp]] for desc_id_cp in neighbors_descendants] ))
                         else:
                             missing_data=True
 
                     # -- We need to make sure `unlabelled_wall_median` is both @ t_n and at least for one daughter cell @ t_n+1
                     if not missing_data and graph.vertex_property('unlabelled_wall_median').has_key(vid) and (sum([graph.vertex_property('unlabelled_wall_median').has_key(id2) for id2 in descendants_vid])>=1):
                         xyz_t1.append(graph.vertex_property('unlabelled_wall_median')[vid])
-                        xyz_t2.append( weighted_mean( [graph.vertex_property('unlabelled_wall_median')[desc_vid] for desc_vid in descendants_vid], [graph.vertex_property('unlabelled_wall_surface')[desc_id] for desc_id in descendants_vid] ))
+                        xyz_t2.append( weighted_mean( [graph.vertex_property('unlabelled_wall_median')[desc_vid] for desc_vid in descendants_vid], [graph.vertex_property('unlabelled_wall_area')[desc_id] for desc_id in descendants_vid] ))
 
                     # -- We need to make sure `epidermis_wall_median` is both @ t_n and at least for one daughter cell @ t_n+1
                     if not missing_data and graph.vertex_property('epidermis_wall_median').has_key(vid) and (sum([graph.vertex_property('epidermis_wall_median').has_key(id2) for id2 in descendants_vid])>=1):
                         xyz_t1.append(graph.vertex_property('epidermis_wall_median')[vid])
-                        xyz_t2.append( weighted_mean( [graph.vertex_property('epidermis_wall_median')[desc_vid] for desc_vid in descendants_vid], [graph.vertex_property('epidermis_surface')[desc_id] for desc_id in descendants_vid] ))
+                        xyz_t2.append( weighted_mean( [graph.vertex_property('epidermis_wall_median')[desc_vid] for desc_vid in descendants_vid], [graph.vertex_property('epidermis_area')[desc_id] for desc_id in descendants_vid] ))
 
                 if not missing_data:
                     assert len(xyz_t1) == len(xyz_t2)
@@ -1500,9 +1500,17 @@ def strain_rates(graph, stretch_mat=None, **kwargs):
     except: labels_at_t_n = True
     try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
     except: use_surfacic_anticlinal_wall = False
+    try: flatten_epidermis = kwargs['flatten_epidermis']
+    except: flatten_epidermis = True
+    if flatten_epidermis:
+        use_surfacic_anticlinal_wall = True
+
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
+        if use_surfacic_anticlinal_wall:
+            stretch_mat, score = stretch_matrix3DS(graph, vids, True, flatten_epidermis, True)
+        else:
+            stretch_mat, score = stretch_matrix3D(graph, vids, True, True)
 
     sr = {}
     for vid in stretch_mat:
@@ -1526,9 +1534,17 @@ def expansion_anisotropy(graph, stretch_mat=None, **kwargs):
     except: labels_at_t_n = True
     try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
     except: use_surfacic_anticlinal_wall = False
+    try: flatten_epidermis = kwargs['flatten_epidermis']
+    except: flatten_epidermis = True
+    if flatten_epidermis:
+        use_surfacic_anticlinal_wall = True
+
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
+        if use_surfacic_anticlinal_wall:
+            stretch_mat, score = stretch_matrix3DS(graph, vids, True, flatten_epidermis, True)
+        else:
+            stretch_mat, score = stretch_matrix3D(graph, vids, True, True)
 
     ea = {}
     for vid in stretch_mat:
@@ -1552,9 +1568,17 @@ def areal_strain_rates(graph, stretch_mat=None, **kwargs):
     except: labels_at_t_n = True
     try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
     except: use_surfacic_anticlinal_wall = False
+    try: flatten_epidermis = kwargs['flatten_epidermis']
+    except: flatten_epidermis = True
+    if flatten_epidermis:
+        use_surfacic_anticlinal_wall = True
+
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
+        if use_surfacic_anticlinal_wall:
+            stretch_mat, score = stretch_matrix3DS(graph, vids, True, flatten_epidermis, True)
+        else:
+            stretch_mat, score = stretch_matrix3D(graph, vids, True, True)
 
     asr = {}
     for vid in stretch_mat:
@@ -1576,11 +1600,9 @@ def volumetric_strain_rates(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
-    except: use_surfacic_anticlinal_wall = False
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
+        stretch_mat, score = stretch_matrix3D(graph, vids, True, True)
 
     vsr = {}
     for vid in stretch_mat:
@@ -1611,9 +1633,15 @@ def anisotropy_ratios(graph, stretch_mat=None, **kwargs):
     except: labels_at_t_n = True
     try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
     except: use_surfacic_anticlinal_wall = False
+    try: flatten_epidermis = kwargs['flatten_epidermis']
+    except: flatten_epidermis = True
+
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
-        stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
+        if use_surfacic_anticlinal_wall:
+            stretch_mat, score = stretch_matrix3DS(graph, vids, True, flatten_epidermis, True)
+        else:
+            stretch_mat, score = stretch_matrix3D(graph, vids, True, True)
 
     anisotropy_ratio = {}
     for vid in stretch_mat:
@@ -1672,9 +1700,9 @@ def sibling_ppty_ratio(graph, ppty, use_sub_lineage=True):
 
     return svr
 
-def cell_surface(graph, vids=None):
+def cell_area(graph, vids=None):
     """
-    Fucntion computing the whole surface of the cell from epidermis_surface+contact_surface
+    Fucntion computing the whole area of the cell from epidermis_area+contact_area
     """
     if vids is None:
         vids = graph.vertices()
@@ -1684,13 +1712,13 @@ def cell_surface(graph, vids=None):
     csurf = {}
     for vid in vids:
         csurf[vid]=0
-        try: csurf[vid]+=graph.vertex_property("epidermis_surface")[vid]
+        try: csurf[vid]+=graph.vertex_property("epidermis_area")[vid]
         except: pass
-        try: csurf[vid]+=graph.vertex_property("unlabelled_wall_surface")[vid]
+        try: csurf[vid]+=graph.vertex_property("unlabelled_wall_area")[vid]
         except: pass
         eids = graph.out_edges(vid, edge_type='s')
         for eid in eids:
-            try: csurf[vid]+=graph.edge_property("wall_surface")[eid]
+            try: csurf[vid]+=graph.edge_property("wall_area")[eid]
             except: pass
 
     return csurf if len(vids)>1 else csurf[vids[0]]
