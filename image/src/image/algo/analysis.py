@@ -715,9 +715,9 @@ class AbstractSpatialImageAnalysis(object):
 
         cell_vtkSep = self.get_cell_vtk_surfaces(labels)
         # - Now project the data onto the vtk representation :
-        mlab.figure(size=[500, 500])
+        mlab.figure(bgcolor=(1., 1., 1.), size=(500, 500))
         tvt=tvtk.to_tvtk(cell_vtkSep)
-        narray=np.array([data.get(int(cel)) for cel in tvt.point_data.get_array("cell_ids")])
+        narray=np.array([data.get(int(cel)) for cel in tvt.point_data.get_array("cell_ids") if cel is not np.nan])
         n=tvt.point_data.add_array(narray.astype(np.float))
         tvt.point_data.get_array(n).name=str(n)
         tvt.point_data.set_active_scalars(str(n))
@@ -726,8 +726,8 @@ class AbstractSpatialImageAnalysis(object):
         fig.actor.mapper.lookup_table.ramp='linear'
         # Manage lut display:
         col_bar = mlab.colorbar(orientation='vertical', nb_labels=CM_nb_labels, nb_colors=CM_nb_colors, label_fmt='%g')
-        col_bar.label_text_property.color=(1.,1.,1.)
-        col_bar.title_text_property.color=(1.,1.,1.)
+        col_bar.label_text_property.color=(0.,0.,0.)
+        col_bar.title_text_property.color=(0.,0.,0.)
         col_bar.label_text_property.trait_set(vertical_justification='bottom')
         col_bar.label_text_property.trait_set(shadow=1)
         col_bar.trait_set(visible=colorbar)

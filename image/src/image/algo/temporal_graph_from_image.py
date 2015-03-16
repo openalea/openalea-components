@@ -21,7 +21,7 @@ import numpy as np
 import copy as cp
 import cPickle as pickle
 
-from openalea.image.serial.basics import SpatialImage, imread
+from openalea.image.serial.basics import SpatialImage, imread, imsave
 from openalea.image.algo.analysis import SpatialImageAnalysis, AbstractSpatialImageAnalysis, DICT, find_wall_median_voxel, sort_boundingbox, projection_matrix
 from openalea.image.spatial_image import is2D
 from openalea.container import PropertyGraph
@@ -1120,6 +1120,113 @@ def tpgfi_tracker_remove(fname):
 
     return None
 
+def time_serie_registration(images, lineages, background = 1, time_serie_id = "", **kwargs):
+    """
+    Function creating a TemporalPropertyGraph based on a list of SpatialImages and list of lineage.
+    Optional parameter can be provided, see below.
+
+    :Parameters:
+     - `images` (list) : list of images;
+     - `lineages` (list) : list of lineages;
+     - `background` (int|list) : label or list of labels (list) to use as background during `SpatialImageAnalysis`;
+     - `time_serie_id` (str) : name or id of the time serie to be used --as prefix-- when saving the registered images;
+
+    :**kwargs:
+     - `register_images` (bool) : boolean conditioning the registration of the images using the barycenter of lineaged cells;
+     - `reference_image` (int|list) : if int, will register the other images on this one, if list give the order in with to do the registration (the first one being the initial reference);
+    """
+    nb_images = len(images)
+    assert len(lineages) == nb_images-1
+    if isinstance(background, int):
+        background = [background for k in xrange(nb_images)]
+    elif isinstance(background, list):
+        assert len(background) == nb_images
+
+    images_nopath = [im.split('/')[-1] for im in images]
+    path_images = ['/'.join(images[0].split('/')[:-1])+"/" for im in images]
+    if sum([path_images[0]==p_im for p_im in path_images[1:]]) == (len(path_images)-1):
+        path_images = path_images[0]
+
+    if isinstance(images[0], AbstractSpatialImageAnalysis):
+        assert [isinstance(image, AbstractSpatialImageAnalysis) for image in images]
+    if isinstance(images[0], SpatialImage):
+        assert [isinstance(image, SpatialImage) for image in images]
+    if isinstance(images[0], str):
+        assert [isinstance(image, str) for image in images]
+
+    print "REGISTRATION of the following {} images: {}".format(nb_images, images_nopath)
+    print "The path{} containing the images and the temporary saved steps {}: {}".format('s' if isinstance(path_images,list) else '', 'are' if isinstance(path_images,list) else 'is', path_images)
+
+    ### ----- AbstractSpatialImageAnalysis & Spatial Graphs creation ----- ###
+    print "## ---- AbstractSpatialImageAnalysis & Spatial Graphs creation ---- ##"
+    for n,image in enumerate(images):
+        print "# - Initialising SpatialImageAnalysis #{}...".format(n)
+        # - First we contruct an object `analysis` from class `AbstractSpatialImageAnalysis`
+        if isinstance(image, str):
+            analysis[n] = SpatialImageAnalysis(imread(image), ignoredlabels = 0, return_type = DICT, background = background[n])
+        elif isinstance(image, SpatialImage):
+            analysis[n] = SpatialImageAnalysis(image, ignoredlabels = 0, return_type = DICT, background = background[n])
+        elif isinstance(image, AbstractSpatialImageAnalysis):
+            analysis[n] = image
+        else:
+            raise TypeError("Unable to create `SpatialImageAnalysis` objects from your `images` list, please check!")
+
+        labels[n] = analysis[n].labels()
+        if background[n] in labels[n]: labels[n].remove(background[n])
+        # -- Now we construct the Spatial Graph (topology):
+        neighborhood[n] = analysis[n].neighbors(labels[n], min_contact_surface, real_surface)
+        graphs[n], label2vertex[n], edges[n] = generate_graph_topology(labels[n], neighborhood[n])
+
+    ### ----- Temporal_Property_Graph initialisation ----- ###
+    print "# -- Spatio-Temporal Graph initialisation..."
+    # -- Now we construct the Temporal Property Graph (with no properties attached to vertex):
+    tpg = TemporalPropertyGraph()
+    tpg.extend([graph for graph in graphs.values()], lineages, time_steps)
+    print "Done\n\n"
+
+
+    ### ----- STEP #2: Images registration ----- ###
+    print "## ---- Images registration ---- ##"
+    # -- Registration step:
+    # - By default we register every images onto the previous one, starting with the last one.
+    ref_images_ids_list = list(np.arange(tpg.nb_time_points,0,-1))
+    unreg_images_ids_list = list(np.array(ref_images_ids_list)-1)
+    # - If a reference image id is given or a sequence (list) of references:
+    if 'reference_image' in kwargs:
+        if isinstance(kwarg['reference_image'],int):
+            ref_image =  kwarg['reference_image']
+            unreg_images_ids_list = list( set(np.arange(tpg.nb_time_points+1)) - set([ref_image]) )
+            ref_images_ids_list = np.repeat(ref_images, tpg.nb_time_points)
+        elif isinstance(kwarg['reference_image'],list):
+            unreg_images_ids_list =  kwarg['reference_image'][0:tpg.nb_time_points-1]
+            ref_images_ids_list =  kwarg['reference_image'][1:tpg.nb_time_points]
+            assert len(ref_images_ids_list) == tpg.nb_time_points
+        else:
+            raise TypeError("You asked for a registration, but I did not understood the provided kwarg 'reference_image'.")
+            print("Using the default order: sequential registration starting from the last time-point.")
+
+    excluded_labels = {}
+    for ref_img_id, unreg_img_id in zip(ref_images_ids_list,unreg_images_ids_list):
+        # - we save previously 'ignored_labels':
+        excluded_labels[unreg_img_id] = analysis[unreg_img_id].ignoredlabels()
+        print "\n- Registering image #{} over {}image #{} ...".format(unreg_img_id, "reference " if ref_img_id==tpg.nb_time_points else "registered ", ref_img_id)
+        # we use only cells that are fully lineaged for stability reasons!
+        unreg_img_vids = tpg.vertex_at_time(unreg_img_id, fully_lineaged = True)
+        # translation into SpatialImage ids:
+        unreg_SpI_ids = translate_ids_Graph2Image(tpg, unreg_img_vids)
+        # we now need the barycenters of the 'fused daughter':
+        fused_siblings_bary = find_daugthers_barycenters(tpg, analysis[ref_img_id], ref_img_id, unreg_img_id, unreg_img_vids)
+        # registration and resampling step:
+        ref_points = [fused_siblings_bary[k] for k in fused_siblings_bary]
+        reg_points = [analysis[unreg_img_id].center_of_mass(unreg_SpI_ids)[k] for k in fused_siblings_bary]
+        print("Image interpolation within the registred frame...")
+        registered_img = image_registration(analysis[unreg_img_id].image, ref_points, reg_points, output_shape=analysis[ref_img_id].image.shape)
+        # redoing the `SpatialImageAnalysis`
+        reg_img_fname = "{}{}t{}_on_t{}.inr.gz".format(time_serie_id, "_" if time_serie_id != "" else "",unreg_img_id, ref_img_id)
+        imsave(path_images+reg_img_fname, analysis[unreg_img_id].image.clone(registered_img))
+
+    return "Done registering Time-Serie!"
+
 def temporal_graph_from_image(images, lineages, time_steps = [], background = 1, spatio_temporal_properties = None,
      properties4lineaged_vertex = False, property_as_real = True, **kwargs):
     """
@@ -1270,8 +1377,10 @@ def temporal_graph_from_image(images, lineages, time_steps = [], background = 1,
                 print("Image interpolation within the registred frame...")
                 registered_img = image_registration(analysis[unreg_img_id].image, ref_points, reg_points, output_shape=analysis[ref_img_id].image.shape)
                 # redoing the `SpatialImageAnalysis`
+                reg_img_fname = "t{}_on_t{}.inr.gz".format(unreg_img_id, ref_img_id)
+                imsave(path_images+reg_img_fname, analysis[unreg_img_id].image.clone(registered_img))
                 print("Recomputing a `SpatialImageAnalysis` based on the registered image...".format(unreg_img_id))
-                analysis[unreg_img_id] = SpatialImageAnalysis(registered_img, ignoredlabels = 0, return_type = DICT, background = background[n])
+                analysis[unreg_img_id] = SpatialImageAnalysis(imread(path_images+reg_img_fname), ignoredlabels = 0, return_type = DICT, background = background[n])
                 analysis[unreg_img_id].add2ignoredlabels(excluded_labels[unreg_img_id])
                 # -- Now we RE-construct the Spatial Graph (topology):
                 labels[n] = analysis[n].labels()
