@@ -1310,7 +1310,7 @@ def __strain_parameters3DS(func):
             vids = [vids]
 
         N = len(vids); percent=0
-        missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat = [], []
+        no_ldmk, missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat = [], [], []
         stretch_mat, score = {}, {}
         for n,vid in enumerate(vids):
             if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
@@ -1318,9 +1318,13 @@ def __strain_parameters3DS(func):
             spatial_edges = list(graph.edges( vid, 's' ))
             # -- We recover the landmarks associated to each vertex:
             # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
-            ldm_vid = graph.vertex_property('surfacic_3D_landmarks')[vid]
-            landmarks_t1 = [ldmk[0] for ldmk in ldm_vid]
-            landmarks_t2 = [ldmk[1] for ldmk in ldm_vid]
+            try:
+                ldm_vid = graph.vertex_property('surfacic_3D_landmarks')[vid]
+                landmarks_t1 = [ldmk[0] for ldmk in ldm_vid]
+                landmarks_t2 = [ldmk[1] for ldmk in ldm_vid]
+            except:
+                no_ldmk.append(vid)
+                continue #no need to go furthee in the loop!
 
             # - Make a projection into the rank-2 subspace:
             if flatten_epidermis:
@@ -1378,15 +1382,19 @@ def __strain_parameters3D(func):
             vids = [vids]
 
         N = len(vids); percent=0
-        missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat, missing_epidermis_wall_median = [], [], []
+        no_ldmk, missing_rank2_proj_mat, missing_fused_siblings_rank2_proj_mat, missing_epidermis_wall_median = [], [], [], []
         stretch_mat, score = {}, {}
         for n,vid in enumerate(vids):
             if verbose and n*100/float(N)>=percent: print "{}%...".format(percent),; percent += 10
             if verbose and n+1==N: print "100%"
             # - We create two matrix of landmarks positions (before and after deformation) to compute the strain:
-            ldm_vid = graph.vertex_property('3D_landmarks')[vid]
-            landmarks_t1 = [ldmk[0] for ldmk in ldm_vid]
-            landmarks_t2 = [ldmk[1] for ldmk in ldm_vid]
+            try:
+                ldm_vid = graph.vertex_property('3D_landmarks')[vid]
+                landmarks_t1 = [ldmk[0] for ldmk in ldm_vid]
+                landmarks_t2 = [ldmk[1] for ldmk in ldm_vid]
+            except:
+                no_ldmk.append(vid)
+                continue #no need to go furthee in the loop!
 
             if len(landmarks_t1)>=4:
                 assert len(landmarks_t1) == len(landmarks_t2)
