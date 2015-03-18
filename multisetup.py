@@ -48,7 +48,6 @@ except ImportError:
 dirs = """
 scheduler
 stdlib
-sconsx
 pkg_builder
 image
 numpy
