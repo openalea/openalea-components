@@ -1,0 +1,18 @@
+Source: openalea-svgdraw
+Maintainer: Christophe Pradal <christophe.pradal@cirad.fr>
+Section: python
+Priority: optional
+Build-Depends: python-all (>= 2.6.6-3~), python-setuptools (>= 0.6b3), debhelper (>= 7),  python-openalea.deploy
+
+
+Package: python-openalea.svgdraw
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}, python-openalea, python-vplants.plantgl
+Provides: ${python:Provides}
+Description: manipulate vectorial graphics
+ .
+ svgdraw contains:
+  - a set of vectorial primitives
+  - SVG read and write functions
+  - simple display
+ .

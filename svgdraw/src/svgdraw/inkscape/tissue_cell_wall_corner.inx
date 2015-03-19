@@ -1,0 +1,18 @@
+<inkscape-extension>
+  <_name>Cell Wall Corner</_name>
+  <id>tissue.cell.wall.corner</id>
+  <dependency type="executable" location="extensions">tissue_cell_wall_corner.py</dependency>
+  <dependency type="executable" location="extensions">inkex.py</dependency>
+  <dependency type="executable" location="extensions">simpleprimitive.py</dependency>
+  <dependency type="executable" location="extensions">simplestyle.py</dependency>
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+       <submenu _name="Tissue"/>
+    </effects-menu>
+  </effect>
+  <script>
+    <command reldir="extensions" interpreter="python">tissue_cell_wall_corner.py</command>
+  </script>
+</inkscape-extension>
+

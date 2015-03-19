@@ -1,0 +1,23 @@
+openalea-svgdraw (1.0.1~ppa9) quantal; urgency=low
+
+  * Port to quantal 
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Thu, 20 Dec 2012 18:04:15 +0100
+
+openalea-svgdraw (1.0.1~ppa7) precise; urgency=low
+
+  * Switch to dh_python2 and precise 
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Thu, 13 Sep 2012 15:34:41 +0200
+
+openalea-svgdraw (1.0.0b1~ppa1) oneiric; urgency=low
+
+  * Release 
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Mon, 12 Dec 2011 11:10:26 +0100
+
+openalea-svgdraw (0.9.0-1~ppa1) lucid; urgency=low
+
+  * source package automatically created by stdeb 0.6.0
+
+ -- Christophe Pradal <christophe.pradal@cirad.fr>  Mon, 04 Oct 2010 09:30:42 +0200

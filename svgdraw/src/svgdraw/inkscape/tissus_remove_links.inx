@@ -1,0 +1,16 @@
+<inkscape-extension>
+  <_name>Remove Links</_name>
+  <id>tissue.remove.links</id>
+  <dependency type="executable" location="extensions">tissue_remove_links.py</dependency>
+  <dependency type="executable" location="extensions">inkex.py</dependency>
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+       <submenu _name="Tissue"/>
+    </effects-menu>
+  </effect>
+  <script>
+    <command reldir="extensions" interpreter="python">tissue_remove_links.py</command>
+  </script>
+</inkscape-extension>
+
