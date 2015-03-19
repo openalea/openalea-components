@@ -53,7 +53,7 @@ pkg_builder
 image
 numpy
 pylab
-container
+svgdraw
 """.split()
 #openalea_meta
 
