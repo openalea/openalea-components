@@ -2,7 +2,7 @@
 # -*- python -*-
 #
 #
-#       OpenAlea.OALab: Multi-Paradigm GUI
+#       OpenAlea.StdLib: Multi-Paradigm GUI
 #
 #       Copyright 2015 INRIA - CIRAD - INRA
 #
