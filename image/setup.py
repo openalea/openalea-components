@@ -81,6 +81,10 @@ setup(
             'ImageInterfacePlugin = openalea.image.plugin.interface:ImageInterfacePlugin',
         ],
 
+        'oalab.qt_control': [
+            'IImageWidgetSelectorPlugin = openalea.image.plugin:IImageWidgetSelectorPlugin',
+        ],
+
     },
 
 )
