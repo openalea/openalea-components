@@ -502,12 +502,12 @@ def temporal_rate(graph, vertex_property, vid, rank, time_interval):
     try:
         parent_value = vertex_property[vid_parent]
     except KeyError as e:
-        print KeyError("temporal_rate "+"error 1 "+str(vid_parent))
+        print KeyError("temporal_rate: ERROR when retreiving ancestor value for vid {}.".format(vid_parent))
         return np.nan
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        print KeyError("temporal_rate "+"error 2 "+str(e))
+        print KeyError("temporal_rate: ERROR when computing descendants sum of values for vid {}.".format(e))
         return np.nan
 
     return (descendants_value / parent_value) * 1. / float(time_interval)
@@ -538,12 +538,12 @@ def log_temporal_rate(graph, vertex_property, vid, rank, time_interval):
     try:
         parent_value = vertex_property[vid_parent]
     except KeyError as e:
-        print KeyError("log_temporal_rate "+"error 1 "+str(vid_parent))
+        print KeyError("log_temporal_rate: ERROR when retreiving ancestor value for vid {}.".format(vid_parent))
         return np.nan
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        print KeyError("log_temporal_rate "+"error 2 "+str(e))
+        print KeyError("log_temporal_rate: ERROR when computing descendants sum of values for vid {}.".format(e))
         return np.nan
 
     return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
@@ -574,12 +574,12 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
     try:
         parent_value = vertex_property[vid_parent]
     except KeyError as e:
-        print KeyError("temporal_rate "+"error 1 "+str(vid_parent))
+        print KeyError("temporal_change: ERROR when retreiving ancestor value for vid {}.".format(vid_parent))
         return np.nan
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        print KeyError("temporal_rate "+"error 2 "+str(e))
+        print KeyError("temporal_change: ERROR when computing descendants sum of values for vid {}.".format(e))
         return np.nan
 
     return (descendants_value - parent_value) / float(time_interval)
@@ -602,7 +602,7 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
 
 
-def shape_anisotropy_2D(graph):
+def shape_anisotropy_2D(graph, vids=None):
     """
     Sub-function computing the shape anisotropy of one cell using.
 
@@ -612,7 +612,11 @@ def shape_anisotropy_2D(graph):
      - shape_anisotropy (dict) .
     """
     assert len(graph.vertex_property('inertia_values').values()[0])==2
-    return dict([ (vid, (inertia[0]-inertia[1])/(inertia[0]+inertia[1])) for vid, inertia in graph.vertex_property('inertia_values').iteritems() ])
+    if vids is None:
+        vids = graph.vertex_property('inertia_values').keys()
+    
+    inertia = graph.vertex_property('inertia_values')
+    return dict([ (vid, (inertia[vid][0]-inertia[vid][1])/(inertia[vid][0]+inertia[vid][1])) for vid in vids ])
 
 
 def fractional_anisotropy(eigenvalues):
@@ -629,7 +633,7 @@ def fractional_anisotropy(eigenvalues):
     return math.sqrt(3./2.) * (math.sqrt( (l1-l)**2+(l2-l)**2+(l3-l)**2 )/math.sqrt(l1**2+l2**2+l3**2))
 
 
-def shape_anisotropy_3D(graph):
+def shape_anisotropy_3D(graph, vids=None):
     """
     Sub-function computing the shape anisotropy of one cell using the Fractional anisotropy scalar
 
@@ -638,7 +642,11 @@ def shape_anisotropy_3D(graph):
     :Return:
      - shape_anisotropy = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
     """
-    return dict([ (vid, fractional_anisotropy(inertia)) for vid, inertia in graph.vertex_property('inertia_values').iteritems() ])
+    if vids is None:
+        vids = graph.vertex_property('inertia_values').keys()
+
+    inertia = graph.vertex_property('inertia_values')
+    return dict([ (vid, fractional_anisotropy(inertia[vid])) for vid in vids ])
 
 
 def reduced_shape_anisotropy_3D(graph):
@@ -653,38 +661,56 @@ def reduced_shape_anisotropy_3D(graph):
     return dict([ (vid, fractional_anisotropy(inertia)) for vid, inertia in graph.vertex_property('reduced_inertia_values').iteritems() ])
 
 
-def epidermis_wall_gaussian_curvature(graph):
+def epidermis_wall_gaussian_curvature(graph, vids=None):
     """
     Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
     The principal curvature values saved there are based only on wall voxels
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
     """
-    return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_wall_principal_curvature_values').iteritems()])
+    if vids is None:
+        vids = graph.vertex_property('epidermis_wall_principal_curvature_values').keys()
+
+    curv_values = graph.vertex_property('epidermis_wall_principal_curvature_values')
+    return dict([ (vid, curv_values[vid][0] * curv_values[vid][1]) for vid in vids ])
 
 
-def epidermis_local_gaussian_curvature(graph, radius):
+def epidermis_local_gaussian_curvature(graph, vids=None, radius=None):
     """
     Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
     The principal curvature values saved there are based on voxels present in a within a certain radius around the wall median.
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
     """
-    #assert radius in graph.graph_property('radius_local_principal_curvature_estimation')
-    return dict([ (vid, curv_values[0] * curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
+    if vids is None:
+        vids = graph.vertex_property('epidermis_wall_principal_curvature_values').keys()
+    if radius is None:
+        sampling_radius = graph.graph_property('radius_local_principal_curvature_estimation')
+        for radius in sampling_radius:
+            epidermis_wall_gaussian_curvature(graph, vids, radius)
+
+    curv_values = graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius))
+    return dict([ (vid, curv_values[vid][0] * curv_values[vid][1]) for vid in vids ])
 
 
-def epidermis_local_curvature_ratio(graph, radius):
+def epidermis_local_curvature_ratio(graph, vids=None, radius=None):
     """
     Use the graph vertex property `epidermis_wall_principal_curvature_value` to compute the Gaussian curvature.
     The principal curvature values saved there are based on voxels present in a within a certain radius around the wall median.
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
     """
-    #assert radius in graph.graph_property('radius_local_principal_curvature_estimation')
-    return dict([ (vid, curv_values[0] / curv_values[1]) for vid, curv_values in graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).iteritems()])
+    if vids is None:
+        vids = graph.vertex_property('epidermis_wall_principal_curvature_values').keys()
+    if radius is None:
+        sampling_radius = graph.graph_property('radius_local_principal_curvature_estimation')
+        for radius in sampling_radius:
+            epidermis_wall_gaussian_curvature(graph, vids, radius)
+
+    curv_values = graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius))
+    return dict([ (vid, curv_values[vid][0] / curv_values[vid][1]) for vid in vids ])
 
 
 def division_rate(graph, rank=1, labels_at_t_n = False):
     """
-    Division rate
+    Division rate: (D-1)/(delta T)
     :Parameters:
      - 'graph' (TGP) - a TPG.
      - 'rank' (int) - children at distance 'rank' will be used.
@@ -706,9 +732,9 @@ def division_rate(graph, rank=1, labels_at_t_n = False):
 
         descendants=graph.descendants(vid,rank)-set([vid])
         if descendants == set([]):
-            div_rate[vid] = 1 / float(time_interval)
+            div_rate[vid] = 0
         else:
-            div_rate[vid] = len(descendants) / float(time_interval)
+            div_rate[vid] = (len(descendants)-1) / float(time_interval)
 
     if labels_at_t_n:
         return div_rate
@@ -1475,8 +1501,11 @@ def stretch_main_orientations(graph, stretch_mat=None, **kwargs):
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
     except: labels_at_t_n = True
-    try: use_surfacic_anticlinal_wall = kwargs['use_surfacic_anticlinal_wall']
-    except: use_surfacic_anticlinal_wall = False
+    try: flatten_epidermis = kwargs['flatten_epidermis']
+    except: flatten_epidermis = True
+    if flatten_epidermis:
+        use_surfacic_anticlinal_wall = True
+
     if stretch_mat is None:
         print 'Computing the strecht matrix...'
         stretch_mat, score = stretch_matrix(graph, vids, True, use_surfacic_anticlinal_wall, True)
@@ -1502,6 +1531,8 @@ def strain_rates(graph, stretch_mat=None, **kwargs):
     Return the strain rate: sr[c][i] = np.log(D_A[i])/deltaT, for i = [0,1] if 2D, i = [0,1,2] if 3D.
     Dimensionnality is imposed by the one of the strain matrix.
     """
+    try: rank = kwargs['rank']
+    except: rank = 1
     try: vids = kwargs['vids']
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
@@ -1525,7 +1556,8 @@ def strain_rates(graph, stretch_mat=None, **kwargs):
         ##  Singular Value Decomposition (SVD) of A.
         R, D_A, Q = svd(stretch_mat[vid])
         # Compute Strain Rates :
-        sr[vid] = np.log(D_A)/float(time_interval(graph, vid, rank =1))
+        DeltaT = time_interval(graph, vid, rank)
+        sr[vid] = np.log(D_A)/float(DeltaT) if DeltaT is not None else np.nan
 
     if labels_at_t_n:
         return sr
@@ -1671,7 +1703,14 @@ def time_interval(graph,vid,rank=1):
     Compute the time interval for the vexterx id `vid` thanks to data saved in graph.graph_property('time_steps').
     """
     index_1 = graph.vertex_property('index')[vid]
-    return (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
+    if index_1 == graph.nb_time_points:
+        print "No --forward-- temporal information for the vertex '{}' since it belong to the last time-point.".format(vid)
+        return None
+    elif index_1 + rank > graph.nb_time_points:
+        print "No --forward-- temporal information for the vertex '{}' at rank {} (too far in time!).".format(vid, rank)
+        return None
+    else:
+        return (graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1])
 
 
 def sibling_ppty_ratio(graph, ppty, use_sub_lineage=True):

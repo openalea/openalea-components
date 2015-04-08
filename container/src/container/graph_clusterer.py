@@ -379,11 +379,16 @@ class Clusterer:
             var_name = [var_name]
         if isinstance(var_type,str) or isinstance(var_type,dict):
             var_type = [var_type]
+        assert len(var_name)==len(var_type); n_var = len(var_name)
+
         if var_id is None or isinstance(var_id,str):
-            var_id = [var_id]
+            var_id = [var_id]*n_var
+        else:
+            assert len(var_id) == n_var
         if var_unit is None or isinstance(var_unit,str) or isinstance(var_unit,unicode):
-            var_unit = [var_unit]
-        assert len(var_name)==len(var_type); assert len(var_name)==len(var_id); assert len(var_name)==len(var_unit)
+            var_unit = [var_unit]*n_var
+        else:
+            assert len(var_unit) == n_var
 
         for n, var in enumerate(var_name):
             if (var_id[n] is None or var_id[n] == "") and isinstance(var_name[n],str):
@@ -395,7 +400,7 @@ class Clusterer:
                 raise KeyError("You already have a property named {}".format(var_id[n]))
 
         for n, var in enumerate(var_name):
-            print("Computing the distance matrix related to vertex variables: {}...".format(var_id[n]))
+            print("Computing the distance matrix related to vertex variable: {}...".format(var_id[n]))
             if isinstance(var,str):
                 variable_vector = [self.graph.vertex_property(var)[vid] if self.graph.vertex_property(var).has_key(vid) else np.nan for vid in self.vtx_labels]# we need to do that if we want to have all matrix ordered the same way
             if isinstance(var,dict):
@@ -434,11 +439,16 @@ class Clusterer:
             var_name = [var_name]
         if isinstance(var_type,str) or isinstance(var_type,dict):
             var_type = [var_type]
+        assert len(var_name)==len(var_type); n_var = len(var_name)
+
         if var_id is None or isinstance(var_id,str):
-            var_id = [var_id]
+            var_id = [var_id]*n_var
+        else:
+            assert len(var_id) == n_var
         if var_unit is None or isinstance(var_unit,str) or isinstance(var_unit,unicode):
-            var_unit = [var_unit]
-        assert len(var_name)==len(var_type); assert len(var_name)==len(var_id); assert len(var_name)==len(var_unit)
+            var_unit = [var_unit]*n_var
+        else:
+            assert len(var_unit) == n_var
 
         for n, var in enumerate(var_name):
             if (var_id[n] is None or var_id[n] == "") and isinstance(var_name[n],str):
@@ -455,8 +465,7 @@ class Clusterer:
             if isinstance(temporal_name,dict):
                 dict_temporal = temporal_name
             elif isinstance(temporal_name,str):
-                from openalea.container.temporal_graph_analysis import relative_temporal_change
-                dict_temporal = relative_temporal_change(self.graph, temporal_name, self.vtx_labels, self.rank, labels_at_t_n = False)
+                dict_temporal = self.graph.vertex_property(temporal_name)
             else:
                 raise ValueError("Unrecognized type of data.")
             # - Now we create the 'vector' of data sorted by vertices to create the distance matrix:
@@ -1659,8 +1668,8 @@ class ClustererChecker:
             graphs.append(pg)
 
         # -- Recover the lineage and the number of children between (temporally) successive clusters :
-        lineage = [{},{},{},{}]
-        quantif = [{},{},{},{}]
+        lineage = [{}]*graph.nb_time_points
+        quantif = [{}]*graph.nb_time_points
         for t, q in tp_c.keys():
             if t < graph.nb_time_points: # there will be no children from the last time point
                 vids_in_q_at_t = [k for k in self._ids_by_clusters[q] if k in graph.vertex_at_time(t)]
@@ -1688,9 +1697,9 @@ class ClustererChecker:
         label2vertex = label2vertex_map(tpg)
         # - Add 'cluster_size' property, i.e. the number of cell in each cluster at a give time:
         tpg.add_vertex_property('cluster_size', dict( [(label2vertex[k],v[1]) for k,v in tp_c.iteritems()] ))
-        # - Add 'nb_children' property, i.e. the number of child ren between (temporally) successive clusters:
-        from openalea.image.algo.graph_from_image import vertexpair2edge_map, add_edge_property_from_dictionary
-        add_edge_property_from_dictionary(tpg, 'nb_children', dict( [((label2vertex[(t,q)],label2vertex[(t+1,child)]),value) for t in xrange(len(quantif)) for q in quantif[t] for child,value in quantif[t][q].iteritems()]), vertexpair2edge_map(tpg))
+        # - Add 'nb_children' property, i.e. the number of children between (temporally) successive clusters:
+        from openalea.image.algo.temporal_graph_from_image import vertexpair2edge_map, add_edge_property_from_dictionary
+        add_edge_property_from_dictionary(tpg, 'nb_children', dict( [((label2vertex[(t,q)],label2vertex[(t+1,child)]),value) for t in range(len(quantif)) for q in quantif[t] for child,value in quantif[t][q].iteritems()]), vertexpair2edge_map(tpg))
 
         self.clustered_graph = tpg
 

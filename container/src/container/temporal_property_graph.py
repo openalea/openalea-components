@@ -383,7 +383,30 @@ class TemporalPropertyGraph(PropertyGraph):
         else:
             return [k for k in self.vertices() if self.vertex_property('index')[k]==time_point]
 
-    def vertex_property_with_image_labels(self, vertex_property, graph_labels2keep = None, image_labels2keep = None, time_point = None):
+
+    def vertex_property_at_time(self, vertex_property, time_point, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
+        """
+        Return the `vertex_property``for a given `time_point`.
+        May be conditionned by extra temporal property `lineaged`, `fully_lineaged`, `as_parent`, `as_children`.
+        """
+        return dict([(k,self.vertex_property(vertex_property)[k]) for k in self.vertex_at_time(time_point, lineaged, fully_lineaged, as_parent, as_children)])
+
+
+    #~ def vertex_property_with_image_labels(self, vertex_property, time_point = None, graph_labels2keep = None, image_labels2keep = None):
+        #~ if isinstance(vertex_property,str):
+            #~ if (graph_labels2keep is not None):
+                #~ return translate_keys_Graph2Image(self, self.vertex_property(vertex_property,graph_labels2keep))
+            #~ else:
+                #~ vertex_property = self.vertex_property(vertex_property)
+#~ 
+        #~ if (graph_labels2keep is not None):
+            #~ return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in graph_labels2keep] )) 
+#~ 
+        #~ if (image_labels2keep is not None):
+            #~ return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in translate_ids_Image2Graph(self,image_labels2keep,time_point)] )) 
+#~ 
+
+    def vertex_property_with_image_labels(self, vertex_property, time_point, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
         """
         Return a dictionary extracted from the graph.vertex_property(`vertex_property`) with relabelled keys into "images labels" thanks to the dictionary graph.vertex_property('old_labels').
         
@@ -401,17 +424,7 @@ class TemporalPropertyGraph(PropertyGraph):
          graph.vertex_property_with_image_labels( 'volume' , SpatialImageAnalysis.L1() )
         
         """
-        if isinstance(vertex_property,str):
-            if (graph_labels2keep is not None):
-                return translate_keys_Graph2Image(self, self.vertex_property(vertex_property,graph_labels2keep))
-            else:
-                vertex_property = self.vertex_property(vertex_property)
-
-        if (graph_labels2keep is not None):
-            return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in graph_labels2keep] )) 
-
-        if (image_labels2keep is not None):
-            return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in translate_ids_Image2Graph(self,image_labels2keep,time_point)] )) 
+        return translate_keys_Graph2Image(self, self.vertex_property_at_time(vertex_property, time_point, lineaged, fully_lineaged, as_parent, as_children))
 
 
     def region_vids(self, region_name):
