@@ -1655,7 +1655,7 @@ class ClustererChecker:
         # -- Create a list of spatial `graphs` at each time point (no spatial relation taken into account!)
         from openalea.container.property_graph import PropertyGraph
         graphs = []
-        for t in xrange(graph.nb_time_points+1):
+        for t in xrange(graph.nb_time_points):
             pg = PropertyGraph()
             vertex2label = {}
             # - Add a vertex for each cluster `q` at time `t`:
@@ -1668,10 +1668,10 @@ class ClustererChecker:
             graphs.append(pg)
 
         # -- Recover the lineage and the number of children between (temporally) successive clusters :
-        lineage = [{}]*graph.nb_time_points
-        quantif = [{}]*graph.nb_time_points
+        lineage = [{}]*graph.nb_time_points-1
+        quantif = [{}]*graph.nb_time_points-1
         for t, q in tp_c.keys():
-            if t < graph.nb_time_points: # there will be no children from the last time point
+            if t < graph.nb_time_points-1: # there will be no children from the last time point
                 vids_in_q_at_t = [k for k in self._ids_by_clusters[q] if k in graph.vertex_at_time(t)]
                 lineage[t][q]=[]
                 quantif[t][q]={}
@@ -1803,12 +1803,12 @@ class ClustererChecker:
 
         # -- Initialisation of transition and initial probability matrix:
         p_init = []
-        for t in xrange(clustered_graph.nb_time_points+1):
+        for t in xrange(clustered_graph.nb_time_points):
             # - For each time point we have an initial proba matrix
             p_init.append(np.zeros((nb_clusters,)))
 
         p_trans = []
-        for t in xrange(clustered_graph.nb_time_points):
+        for t in xrange(clustered_graph.nb_time_points-1):
             # - For each time interval we have an homogen transition proba matrix
             p_trans.append(np.zeros((nb_clusters, nb_clusters)))
 
@@ -1820,7 +1820,7 @@ class ClustererChecker:
                 p_init[index][label] = clustered_graph.vertex_property('cluster_size')[vid]
 
         # - We now normalise by the number of new individual at each time point:
-        for t in xrange(clustered_graph.nb_time_points+1):
+        for t in xrange(clustered_graph.nb_time_points):
             if float(sum(p_init[t])) != 0.:
                 p_init[t] = p_init[t]/float(sum(p_init[t]))
 
@@ -1833,7 +1833,7 @@ class ClustererChecker:
             p_trans[index2-1][label1,label2] = clustered_graph.edge_property('nb_children')[eid]
 
         # - We now normalise by the total number of children from each state (per lines in the matrix)
-        for t in xrange(clustered_graph.nb_time_points):
+        for t in xrange(clustered_graph.nb_time_points-1):
             for i in xrange(nb_clusters):
                 if float(sum(p_trans[t][i,])) != 0.:
                     p_trans[t][i,] = p_trans[t][i,]/float(sum(p_trans[t][i,]))
@@ -2049,34 +2049,3 @@ class ClustererComparison:
         """
         relabelling_dict = self.relabelling_dictionary(2)
         return dict([(vid,relabelling_dict[cid]) for vid, cid in self.clustering_2.iteritems()])
-
-
-
-
-#~ def renorm(line, column, mat_topo, var_mat, temp_mat, w_topo, w_var, w_temp):
-    """
-    !!! WORKS WITH assemble_matrix_OLD !!!
-    """
-    #~ w_renorm_topo = 0.
-    #~ if w_topo != 0.:
-        #~ if np.isnan(mat_topo[line,column]):
-            #~ w_renorm_topo = w_topo
-            #~ w_topo = 0.
-#~
-    #~ w_renorm_var = 0.
-    #~ for n in var_mat:
-        #~ if np.isnan(var_mat[n][line,column]):
-            #~ w_renorm_var += w_var[n]
-            #~ w_var[n] = 0.
-#~
-    #~ w_renorm_temp = 0.
-    #~ for n in temp_mat:
-        #~ if np.isnan(temp_mat[n][line,column]):
-            #~ w_renorm_temp += w_temp[n]
-            #~ w_temp[n] = 0.
-#~
-    #~ renorm = (1.-(w_renorm_topo+w_renorm_var+w_renorm_temp))
-    #~ if renorm != 0.:
-        #~ return w_topo/renorm, np.array(w_var)/renorm if w_var!=[] else [], np.array(w_temp)/renorm if w_temp!=[] else []
-    #~ else:
-        #~ return w_topo, w_var, w_temp

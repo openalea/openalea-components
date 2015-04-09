@@ -64,8 +64,7 @@ class TemporalPropertyGraph(PropertyGraph):
         assert len(graphs) == len(mappings)+1
 
         self.append(graphs[0])
-        #~ self.add_graph_property('nb_time_points')
-        #~ len(mappings) = self.graph_property('nb_time_points')
+        self.nb_time_points += 1
         for g, m in zip(graphs[1:],mappings):
             self.append(g,m)
             self.nb_time_points += 1
@@ -286,7 +285,7 @@ class TemporalPropertyGraph(PropertyGraph):
             return neighbs
         else :
             if n is None :
-                n = self.nb_time_points                
+                n = self.nb_time_points-1
             for vid in vids :
                 neighbs |= (self.descendants(self.out_neighbors(vid, edge_type), n-1) | set([vid]))
                 if list(neighbs)==self._vertices.keys():
@@ -324,7 +323,7 @@ class TemporalPropertyGraph(PropertyGraph):
             return neighbs
         else :
             if n is None:
-                n = self.nb_time_points
+                n = self.nb_time_points-1
             for vid in vids :
                 neighbs |= (self.ancestors(self.in_neighbors(vid, edge_type), n-1) | set([vid]))
                 if list(neighbs)==self._vertices.keys():
@@ -351,10 +350,10 @@ class TemporalPropertyGraph(PropertyGraph):
          - `fully_lineaged` (bool) : if True, return vertices temporally linked from the beginning to the end, otherwise return vertices having at least a parent or a child(ren).
         """
         if fully_lineaged:
-            last_tp_ids_lineaged_from_0 = [k for k in self.vertices() if exist_all_relative_at_rank(self, k, -self.nb_time_points)]
-            first_tp_ids_lineaged_from_0 = [k for k in self.ancestors(last_tp_ids_lineaged_from_0, self.nb_time_points) if self.vertex_property('index')[k]==0]
-            first_tp_ids_fully_lineaged = [k for k in first_tp_ids_lineaged_from_0 if exist_all_relative_at_rank(self, k, self.nb_time_points)]
-            return list(np.sort(list(self.descendants(first_tp_ids_fully_lineaged, self.nb_time_points))))
+            last_tp_ids_lineaged_from_0 = [k for k in self.vertices() if exist_all_relative_at_rank(self, k, -self.nb_time_points-1)]
+            first_tp_ids_lineaged_from_0 = [k for k in self.ancestors(last_tp_ids_lineaged_from_0, self.nb_time_points-1) if self.vertex_property('index')[k]==0]
+            first_tp_ids_fully_lineaged = [k for k in first_tp_ids_lineaged_from_0 if exist_all_relative_at_rank(self, k, self.nb_time_points-1)]
+            return list(np.sort(list(self.descendants(first_tp_ids_fully_lineaged, self.nb_time_points-1))))
         else:
             return [k for k in self.vertices() if (self.has_children(k) or self.has_parent(k))]
 
@@ -382,7 +381,6 @@ class TemporalPropertyGraph(PropertyGraph):
              ( (self.has_children(k) if as_parent else False ) or ( self.has_parent(k) if as_children else False ) ) ]
         else:
             return [k for k in self.vertices() if self.vertex_property('index')[k]==time_point]
-
 
     def vertex_property_at_time(self, vertex_property, time_point, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
         """

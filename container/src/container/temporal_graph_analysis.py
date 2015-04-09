@@ -751,14 +751,17 @@ def exist_relative_at_rank(graph, vid, rank):
      - 'vid' (int): the initial point to look-out for rank existence.
      - 'rank' (int): the rank to test.
     """
-    if rank == 0 :
+    if rank > graph.nb_time_points:
+        print "WARNING, the provided rank is superior to the number of time points found within the graph!"
+        return False
+    if rank == 0:
         return True
-    if (rank > 0) :
+    if (rank > 0):
         try :
             return graph.descendants(vid,rank)-graph.descendants(vid,rank-1) != set()
         except:
             return False
-    if (rank < 0) :
+    if (rank < 0):
         try :
             return graph.ancestors(vid,abs(rank))-graph.ancestors(vid,abs(rank)-1) != set()
         except:
@@ -887,7 +890,7 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
         property_name = vertex_property
         vertex_property = graph.vertex_property(vertex_property)
     if time_points is None:
-        time_points = range(graph.nb_time_points+1)
+        time_points = range(graph.nb_time_points)
 
     # kwargs associated to graph properties:
     ppt_kwargs = {}
@@ -1030,7 +1033,7 @@ def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions,
         vertex_property = graph.vertex_property(vertex_property)
 
     temporal = kwargs['temporal'] if 'temporal' in kwargs else False
-    time_points = range(graph.nb_time_points) if temporal else range(graph.nb_time_points+1)
+    time_points = range(graph.nb_time_points-1) if temporal else range(graph.nb_time_points)
     if temporal:
         vertex_property = keys_to_mother_id(graph, vertex_property)
 
@@ -1121,7 +1124,7 @@ def translate_keys2daughters_ids(graph, dictionary):
         if vid_descendants != set():
             for id_descendant in vid_descendants:
                 dictionary_daughters[id_descendant]=dictionary[vid]
-        elif graph.vertex_property('index')[vid] < graph.nb_time_points-1: #if `vid``belong to the last time point, it's perfectly normal that there is no descendants
+        elif graph.vertex_property('index')[vid] < graph.nb_time_points-2: #if `vid``belong to the last time point, it's perfectly normal that there is no descendants
             no_descendants.append(vid)
 
     if no_descendants!=[]:
@@ -1141,7 +1144,7 @@ def translate_list2daughters_ids(graph, ids_list):
         if vid_descendants != set():
             for id_descendant in vid_descendants:
                 list_daughters.append(id_descendant)
-        elif graph.vertex_property('index')[vid] < graph.nb_time_points-1: #if `vid``belong to the last time point, it's perfectly normal that there is no descendants
+        elif graph.vertex_property('index')[vid] < graph.nb_time_points-2: #if `vid``belong to the last time point, it's perfectly normal that there is no descendants
             no_descendants.append(vid)
 
     if no_descendants!=[]:
@@ -1329,7 +1332,7 @@ def __strain_parameters3DS(func):
         L1_vids = [k for k,v in graph.vertex_property('L1').iteritems() if v]
         # -- If the vid is not associated through time it's not possible to compute the strain.
         if vids is None: # if no vids are provided we use all those belonging to the L1... except those from the last time point!
-            vids = set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points,fully_lineaged=False))
+            vids = set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points-1,fully_lineaged=False))
             vids = list( vids & set(L1_vids) )
         if isinstance(vids,int):
             assert (vids in graph.lineaged_vertex(fully_lineaged=False)) and (graph.vertex_property('L1')[vid])
@@ -1402,7 +1405,7 @@ def __strain_parameters3D(func):
 
         # -- If the vid is not associated through time it's not possible to compute the strain.
         if vids is None: # if no vids are provided we use them all... except those from the last time point!
-            vids = list(set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points,fully_lineaged=False)))
+            vids = list(set(graph.lineaged_vertex(fully_lineaged=False))-set(graph.vertex_at_time(graph.nb_time_points-1,fully_lineaged=False)))
         if isinstance(vids,int):
             assert vids in graph.lineaged_vertex(fully_lineaged=False)
             vids = [vids]
@@ -1703,10 +1706,10 @@ def time_interval(graph,vid,rank=1):
     Compute the time interval for the vexterx id `vid` thanks to data saved in graph.graph_property('time_steps').
     """
     index_1 = graph.vertex_property('index')[vid]
-    if index_1 == graph.nb_time_points:
+    if index_1 == graph.nb_time_points-1:
         print "No --forward-- temporal information for the vertex '{}' since it belong to the last time-point.".format(vid)
         return None
-    elif index_1 + rank > graph.nb_time_points:
+    elif index_1 + rank > graph.nb_time_points-1:
         print "No --forward-- temporal information for the vertex '{}' at rank {} (too far in time!).".format(vid, rank)
         return None
     else:
@@ -1806,7 +1809,7 @@ def subspace_projection(point_set, subspace_rank = 2, centering=True, verbose=Tr
 
 def r2_scoring( Y, Y_pred ):
     """
-    Function computing an r^2-like scoring in 3D.
+    Function computing an r**2-like scoring in 3D (compute squared distance in 3D).
     """
     Y = np.array(Y); Y_pred = np.array(Y_pred)
     assert Y.shape == Y_pred.shape
@@ -1819,6 +1822,38 @@ def r2_scoring( Y, Y_pred ):
     SCT = sum( [distance( Y[n], np.mean(Y,0) )**2 for n in range(n_coord)] )
     return 1-SCR/SCT
 
+
+def lineage_cumulative_sum(graph, ppty, vids=None, t_init=0, t_end=None):
+    """
+    Function returning the evolution of a given `ppty` for `vids`.
+    Return the cumulative sum from starting point t_init to t_end.
+    """
+    if t_end is None:
+        t_end = graph.nb_time_points-1
+    rank = t_end - t_init
+
+    if vids is None:
+        vids = graph.vertex_at_time(t_init, fully_lineaged=True, as_parent=True)
+    else:
+        vids_t_init = graph.vertex_at_time(t_init, fully_lineaged=True, as_parent=True)
+    
+        vids  = list( set(vids) & set(vids_t_init) )
+        unusable_vids = list( set(vids) - set(vids_t_init) )
+        if unusable_vids != []:
+            print "These provided vertex ids are eitheir not from t_init={}, or not lineaged.".format(t_init)
+
+    if isinstance(ppty, str):
+        ppty = graph.vertex_property(ppty)
+
+    cum_sum = {}
+    for vid in vids:
+        if not cum_sum.has_key(vid):
+            cum_sum[vid] = {}
+        for t in range(t_init, t_end+1):
+            descendants = graph.descendants(vid, n=t-t_init)
+            cum_sum[vid][t] = np.nansum([ppty[k] if ppty.has_key(k) else np.nan for k in descendants])
+
+    return cum_sum
 
 def triplot(graphs_list, values2plot, labels_list=None, values_name="", normed=False):
     """
