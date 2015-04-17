@@ -140,6 +140,10 @@ class TemporalPropertyGraph(PropertyGraph):
                 self.graph_property("sub_lineage").update({on_ids_source[0][mother]:tmp_daughters})
 
         def flatten(l):
+            """
+            Flatten everything that's a list!
+            (i.e. [[1,2],3] -> [1,2,3])
+            """
             import collections
             for el in l:
                 if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
@@ -163,6 +167,8 @@ class TemporalPropertyGraph(PropertyGraph):
                     unused_lineage.update({k:l})
             if unused_lineage != {}:
                 print "Un-used lineage info to avoid partial lineage, t{} to t{}: {}".format(current_index-1,current_index,unused_lineage)
+                print "It is most likely that you are trying to add lineage between non-existant vertex in your spatial graphs!"
+                print "Check if you ar not using an out-dated graph and erase temporary files (TPG creation...)."
 
         return relabel_ids
 
@@ -341,7 +347,7 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         return iter(self.ancestors(vids, n))
 
-    def lineaged_vertex(self, fully_lineaged=True):
+    def lineaged_vertex(self, fully_lineaged=False):
         """
         Return ids of lineaged vertices.
         One can ask for strict lineage, i.e. only vertices temporally linked from the beginning (`self.vertex_property('index')`==`0`) to the end (`self.nb_time_points`).
