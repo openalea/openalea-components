@@ -690,7 +690,7 @@ def topo_divide_face (mesh, fid, pid1, pid2) :
     #return
     return fid1,fid2,eid
 
-def topo_divide_cell (mesh, cid, eids) :
+def topo_divide_cell (mesh, cid, eids, positions = None) :
     """Divide a cell into two cells
     
     Remove cid from the mesh and replace it
@@ -742,10 +742,15 @@ def topo_divide_cell (mesh, cid, eids) :
     
     start_fid = (set(mesh.regions(1,edge_list[0]) ) & faces).pop()
     front = [start_fid]
-    for eid in edge_list[1:] :
-        fid, = set(mesh.regions(1,eid) ) \
-             & set(mesh.border_neighbors(2,front[-1]) )
-        front.append(fid)
+    # for eid in edge_list[1:] :
+        # fids = set(mesh.regions(1,eid)) & set(mesh.border_neighbors(2,front[-1]) )
+        # try:
+            # fid, = fids
+        # except:
+            # break
+            # # In this case, a singular value has been found.
+            # # We do not care, it will propagate latter.
+        # front.append(fid)
     
     faces1 = set(front)
     faces -= faces1
@@ -778,6 +783,7 @@ def topo_divide_cell (mesh, cid, eids) :
     
     #return
     return cid1,cid2,fid
+
 
 ###########################################################
 #

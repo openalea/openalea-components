@@ -24,7 +24,7 @@ __revision__=" $Id$ "
 
 class IdMaxGenerator(object) :
     def __init__ (self) :
-        self._id_max = 0
+        self.clear()
 
     def get_id (self, id = None) :
         if id is None :
@@ -45,14 +45,19 @@ class IdMaxGenerator(object) :
         """
         self._id_max = 0
 
+    def enable_id_reuse(self, enabled = True) :
+        pass
+
+    def id_reuse_enabled(self):
+        return False
+
 class IdSetGenerator(object) :
     def __init__ (self) :
-        self._id_max = 0
-        self._available_ids = set()
+        self.clear()
 
     def get_id (self, id = None) :
         if id is None :
-            if len(self._available_ids) == 0 :
+            if len(self._available_ids) == 0 or not self.reuse_enabled:
                 ret = self._id_max
                 self._id_max += 1
                 return ret
@@ -83,18 +88,24 @@ class IdSetGenerator(object) :
         """
         self._id_max = 0
         self._available_ids = set()
+        self.reuse_enabled = True
+
+    def enable_id_reuse(self, enabled = True) :
+        self.reuse_enabled = enabled
+
+    def id_reuse_enabled(self):
+        return self.reuse_enabled
 
 class IdGenerator (IdSetGenerator) :
     pass
 
 class IdListGenerator(object) :
     def __init__ (self) :
-        self._id_max=0
-        self._id_list=[]
+        self.clear()
 
     def get_id (self, id=None) :
         if id is None :
-            if len(self._id_list)==0 :
+            if len(self._id_list)==0 or not self.reuse_enabled:
                 ret=self._id_max
                 self._id_max+=1
                 return ret
@@ -124,3 +135,10 @@ class IdListGenerator(object) :
     def clear (self) :
         self._id_max=0
         self._id_list=[]
+        self.reuse_enabled = True
+
+    def enable_id_reuse(self, enabled = True) :
+        self.reuse_enabled = enabled
+
+    def id_reuse_enabled(self):
+        return self.reuse_enabled

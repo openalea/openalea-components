@@ -23,7 +23,7 @@ from property_graph import *
 import warnings
 import numpy as np
 
-from openalea.container.temporal_graph_analysis import translate_ids_Image2Graph, translate_keys_Graph2Image, exist_all_relative_at_rank
+#from openalea.container.temporal_graph_analysis import translate_ids_Image2Graph, translate_keys_Graph2Image, exist_all_relative_at_rank
 
 class TemporalPropertyGraph(PropertyGraph):
     """
@@ -355,6 +355,7 @@ class TemporalPropertyGraph(PropertyGraph):
         :Parameter:
          - `fully_lineaged` (bool) : if True, return vertices temporally linked from the beginning to the end, otherwise return vertices having at least a parent or a child(ren).
         """
+        from openalea.container.temporal_graph_analysis import exist_all_relative_at_rank
         if fully_lineaged:
             last_tp_ids_lineaged_from_0 = [k for k in self.vertices() if exist_all_relative_at_rank(self, k, -self.nb_time_points-1)]
             first_tp_ids_lineaged_from_0 = [k for k in self.ancestors(last_tp_ids_lineaged_from_0, self.nb_time_points-1) if self.vertex_property('index')[k]==0]
@@ -428,6 +429,7 @@ class TemporalPropertyGraph(PropertyGraph):
          graph.vertex_property_with_image_labels( 'volume' , SpatialImageAnalysis.L1() )
         
         """
+        from openalea.container.temporal_graph_analysis import translate_keys_Graph2Image
         return translate_keys_Graph2Image(self, self.vertex_property_at_time(vertex_property, time_point, lineaged, fully_lineaged, as_parent, as_children))
 
 

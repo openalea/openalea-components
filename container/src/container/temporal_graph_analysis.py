@@ -16,10 +16,7 @@
 ################################################################################
 """This module helps to analyse TemporalPropertyGraph from Spatial Images."""
 
-import warnings, types, numpy as np, copy, math
-import matplotlib.pyplot as plt
-from numpy.linalg import svd
-from openalea.image.algo.analysis import return_list_of_vectors
+import warnings, types, copy, math, numpy as np
 
 
 def regions_from_lineage(graph, starting_tp=0):
@@ -883,6 +880,8 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     """
     Display an histogram or barplot of the provided `vertex_property` by `time_points`.
     """
+    import matplotlib.pyplot as plt
+
     # Handle initial data to work with:
     property_name = None
     if isinstance(vertex_property,str):
@@ -1025,6 +1024,8 @@ def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions,
      - `remove_outliers` (int) - if not None, will detect outliers according to given threshold and remove them from boxplot display
 
     """
+    import matplotlib.pyplot as plt
+
     # Handle initial data to work with:
     property_name = None
     if isinstance(vertex_property,str):
@@ -1461,6 +1462,7 @@ def stretch_matrix3DS(graph, xyz_t1, xyz_t2):
     where: 'd' is the dimensionality (i.e. d=2 if 2D, d=3 if 3D)
     """
     from sklearn import linear_model
+    
     # - Compute the centroids:
     c_t1 = np.mean(xyz_t1,0)
     c_t2 = np.mean(xyz_t2,0)
@@ -1500,6 +1502,8 @@ def stretch_main_orientations(graph, stretch_mat=None, **kwargs):
     """
     Return the stretch main directions and the associated values before deformation (default) or after.
     """
+    from numpy.linalg import svd
+
     try: vids = kwargs['vids']
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
@@ -1534,6 +1538,8 @@ def strain_rates(graph, stretch_mat=None, **kwargs):
     Return the strain rate: sr[c][i] = np.log(D_A[i])/deltaT, for i = [0,1] if 2D, i = [0,1,2] if 3D.
     Dimensionnality is imposed by the one of the strain matrix.
     """
+    from numpy.linalg import svd
+
     try: rank = kwargs['rank']
     except: rank = 1
     try: vids = kwargs['vids']
@@ -1571,6 +1577,8 @@ def expansion_anisotropy(graph, stretch_mat=None, **kwargs):
     """
     Compute the expansion anisotropy in 2D: ea[c] = np.log(D_A[0]/D_A[1])/np.log(D_A[0]*D_A[1]).
     """
+    from numpy.linalg import svd
+
     try: vids = kwargs['vids']
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
@@ -1605,6 +1613,8 @@ def areal_strain_rates(graph, stretch_mat=None, **kwargs):
     """
     Compute the areal strain rate: asr[c] = sum_i(np.log(D_A[i])/deltaT), for i = [0,1].
     """
+    from numpy.linalg import svd
+
     try: vids = kwargs['vids']
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
@@ -1639,6 +1649,8 @@ def volumetric_strain_rates(graph, stretch_mat=None, **kwargs):
     """
     Compute the volumetric strain rate: asr[c] = sum_i(np.log(D_A[i])/deltaT), for i = [0,1,2].
     """
+    from numpy.linalg import svd
+
     try: vids = kwargs['vids']
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
@@ -1670,6 +1682,8 @@ def anisotropy_ratios(graph, stretch_mat=None, **kwargs):
 
     Dimensionnality is imposed by the one of the strain matrix `stretch_mat`.
     """
+    from numpy.linalg import svd
+
     try: vids = kwargs['vids']
     except: vids = None
     try: labels_at_t_n = kwargs['labels_at_t_n']
@@ -1781,6 +1795,8 @@ def subspace_projection(point_set, subspace_rank = 2, centering=True, verbose=Tr
      - point_set (np.array): list of coordinates of shape (n_point, init_dim).
      - dimension_reduction (int) : the dimension reduction to apply
     """
+    from numpy.linalg import svd
+
     point_set = np.array(point_set)
     nb_coord = point_set.shape[0]
     init_dim = point_set.shape[1]

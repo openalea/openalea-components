@@ -49,6 +49,10 @@ class IdDict (dict) :
             self._id_generator=IdGen[gen_name]()
         except KeyError :
             raise UserWarning("the required id generator (%s) is unknown,\navailable generator are %s" % (gen_name,str(IdGen.keys())) )
+
+    def get_generator_type(self):
+        for name, typevalue in IdGen.items():
+            if type(self._id_generator) == typevalue: return name
             
     def add (self, val, key=None) :
         try :
@@ -60,11 +64,18 @@ class IdDict (dict) :
 
     def __deepcopy__(self, memo):
         from copy import deepcopy
-        newval = IdDict()
+        newval = IdDict(idgenerator=self.get_generator_type())
         for key,val in self.iteritems():
             dict.__setitem__(newval,deepcopy(key,memo),deepcopy(val,memo))
         newval._id_generator = deepcopy(self._id_generator,memo)
         return newval
+
+    def enable_id_reuse(self, enabled = True):
+        self._id_generator.enable_id_reuse(enabled)
+
+    def id_reuse_enabled(self):
+        return self._id_generator.id_reuse_enabled()
+
     ################################################
     #
     #               dict interface

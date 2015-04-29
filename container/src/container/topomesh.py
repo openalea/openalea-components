@@ -52,6 +52,18 @@ class Topomesh (ITopomesh,IWispListMesh,INeighborhoodMesh,IMutableMesh) :
         self._degree=degree
         self._borders = [None] + [IdDict(idgenerator = idgenerator) for i in xrange(degree)]
         self._regions = [IdDict(idgenerator = idgenerator)] + [{} for i in xrange(degree-1)]
+
+    def get_idgenerator_type(self):
+        return self._regions[0].get_generator_type()
+
+    def enable_id_reuse(self, enabled = True):
+        for border in self._borders:
+            if not border is None: border.enable_id_reuse(enabled)
+        self._regions[0].enable_id_reuse(enabled)
+
+    def id_reuse_enabled(self):
+        return self._regions[0].id_reuse_enabled()
+
     ########################################################################
     #
     #               Mesh concept
