@@ -584,7 +584,10 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
         print KeyError("temporal_change: ERROR when computing descendants sum of values for vid {}.".format(e))
         return np.nan
 
-    return (descendants_value - parent_value) / float(time_interval)
+    if parent_value == 0:
+        return np.nan
+    else:
+        return (descendants_value - parent_value) / float(time_interval)
 
 
 @__normalized_temporal_parameters
@@ -601,7 +604,10 @@ def relative_temporal_change(graph, vertex_property, vid, rank, time_interval):
     :Return:
     - a single value = relative temporal change between vertex 'vid' and its neighbors at rank 'rank'.
     """
-    return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
+    if vertex_property[vid] == 0:
+        return np.nan
+    else:
+        return temporal_change(graph, vertex_property, vid, rank, time_interval).values()[0] / float(vertex_property[vid])
 
 
 def shape_anisotropy_2D(graph, vids=None):
