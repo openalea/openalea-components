@@ -576,12 +576,12 @@ def temporal_change(graph, vertex_property, vid, rank, time_interval):
     try:
         parent_value = vertex_property[vid_parent]
     except KeyError as e:
-        print KeyError("temporal_change: ERROR when retreiving ancestor value for vid {}.".format(vid_parent))
+        print KeyError("temporal_change: ERROR when retreiving ancestor value for vid {}".format(vid_parent))
         return np.nan
     try:
         descendants_value = sum([vertex_property[id_descendant] for id_descendant in vid_descendants])
     except KeyError as e:
-        print KeyError("temporal_change: ERROR when computing descendants sum of values for vid {}.".format(e))
+        print KeyError("temporal_change: ERROR when computing descendants sum of values for vid {}".format(e))
         return np.nan
 
     if parent_value == 0:
