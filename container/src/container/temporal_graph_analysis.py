@@ -506,7 +506,10 @@ def temporal_rate(graph, vertex_property, vid, rank, time_interval):
         print KeyError("temporal_rate: ERROR when computing descendants sum of values for vid {}.".format(e))
         return np.nan
 
-    return (descendants_value / parent_value) * 1. / float(time_interval)
+    if parent_value == 0:
+        return np.nan
+    else:
+        return (descendants_value / parent_value) * 1. / float(time_interval)
 
 
 @__normalized_temporal_parameters
@@ -542,7 +545,10 @@ def log_temporal_rate(graph, vertex_property, vid, rank, time_interval):
         print KeyError("log_temporal_rate: ERROR when computing descendants sum of values for vid {}.".format(e))
         return np.nan
 
-    return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
+    if parent_value == 0:
+        return np.nan
+    else:
+        return np.log2(descendants_value / parent_value) * 1. / float(time_interval)
 
 
 @__normalized_temporal_parameters
