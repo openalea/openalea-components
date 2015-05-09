@@ -77,7 +77,6 @@ def add_graph_vertex_property_from_dictionary(graph, name, dictionary, unit=None
         if (unit is not None) and (not graph._graph_property["units"].has_key(name) or graph._graph_property["units"][name] is None):
             graph._graph_property["units"].update({name:unit})
             print '{} unit upgraded in graph to {}.'.format(name, unit)
-        raise ValueError('Existing vertex property {}'.format(name))
 
     graph.add_vertex_property(name)
     graph.vertex_property(name).update( dictionary )
@@ -677,15 +676,20 @@ def epidermis_local_gaussian_curvature(graph, vids=None, radius=None):
     The principal curvature values saved there are based on voxels present in a within a certain radius around the wall median.
     Gaussian curvature is the product of principal curvatures 'k1*k2'.
     """
-    if vids is None:
-        vids = graph.vertex_property('epidermis_wall_principal_curvature_values').keys()
     if radius is None:
         sampling_radius = graph.graph_property('radius_local_principal_curvature_estimation')
         for radius in sampling_radius:
-            epidermis_wall_gaussian_curvature(graph, vids, radius)
-
-    curv_values = graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius))
-    return dict([ (vid, curv_values[vid][0] * curv_values[vid][1]) for vid in vids ])
+            epidermis_local_gaussian_curvature(graph, vids, radius)
+    else:
+        if vids is None:
+            vids = graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).keys()
+        else:
+            ids_curv_data = graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius)).keys()
+            vids = set(vids) & set(ids_curv_data)
+            no_curv_data = set(vids) - set(ids_curv_data)
+            if no_curv_data != set([]): print "No curvature data found for required ids: '{}'".format(no_curv_data)
+        curv_values = graph.vertex_property('epidermis_local_principal_curvature_values_r{}'.format(radius))
+        return dict([ (vid, curv_values[vid][0] * curv_values[vid][1]) for vid in vids ])
 
 
 def epidermis_local_curvature_ratio(graph, vids=None, radius=None):

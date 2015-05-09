@@ -193,10 +193,13 @@ class PropertyGraph(IPropertyGraph, Graph):
         """todo"""
         try:
             del self._graph_property[property_name]
-            del self._graph_property['units'][property_name]
         except KeyError:
             raise PropertyError("property %s is undefined on graph"
                                 % property_name)
+        try:
+            del self._graph_property['units'][property_name]
+        except KeyError:
+            pass
 
     def remove_vertex(self, vid):
         """todo"""
