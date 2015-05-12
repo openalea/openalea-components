@@ -916,7 +916,7 @@ def histogram_property_by_time_points(graph, vertex_property, time_points=None, 
     for tp in time_points:
         ppty_dict = time_point_property(graph, tp, property_name, **ppt_kwargs)
         vids.append(np.array(ppty_dict.keys()))
-        data.append(np.array(ppty_dict.values()))
+        data.append(np.array(ppty_dict.values(),np.float))
 
     # Handle kwargs passed to 'plt.hist':
     h_kwargs= {}
@@ -1129,10 +1129,35 @@ def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions,
     return mini,maxi,'Done!'
 
 
+def translate_ppty_to_parent_vid(graph, ppty, vids=None):
+    """
+    Translate keys of a dictionary to parent vids according to the graph (Temporal Property Graph).
+    """
+    import warnings, math
+    if isinstance(ppty, str):
+        ppty = graph.vertex_property(ppty)
+    if vids is None:
+        vids = ppty.keys()
+
+    parents_ppty_dict = {}
+    for vid,v in ppty.iteritems():
+        if vid in vids and not math.isnan(v):
+            parent = list(graph.parent(vid))[0]
+            if parents_ppty_dict.has_key(parent):
+                if v !=  parents_ppty_dict[parent]:
+                    print "Different values have been encountered for common children of vid '{}': {}, {}".format(parent, v, parents_ppty_dict[parent])
+                    kids = list(graph.children(parent)-set([parent]))
+                    print "Checking descendants of vid '{}': {}".format(parent, kids)
+                    print "Checking parent of children: {}".format(dict([(k,list(graph.parent(k))) for k in kids]))
+                    print "Checking children values: {}\n".format(dict([(k,ppty[k]) for k in kids]))
+            else:
+                parents_ppty_dict[parent] = v
+
+    return parents_ppty_dict
 
 def translate_keys2daughters_ids(graph, dictionary):
     """
-    Translate keys of a dictionary to daughter ids according to the graph (Temporal Property Graph).
+    Translate keys of a dictionary to children vids according to the graph (Temporal Property Graph).
     """
     dictionary_daughters={}
     no_descendants=[]
