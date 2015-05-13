@@ -1153,7 +1153,7 @@ def translate_ppty_keys_to_parent_vid(graph, ppty, vids=None):
             except:
                 no_parent.append(vid)
             if ppty_parents.has_key(parent):
-                if v !=  ppty_parents[parent]:
+                if ppty[vid] !=  ppty_parents[parent]:
                     print "Different values have been encountered for common children of vid '{}': {}, {}".format(parent, ppty[vid], ppty_parents[parent])
                     kids = list(graph.children(parent)-set([parent]))
                     print "Checking descendants of vid '{}': {}".format(parent, kids)
