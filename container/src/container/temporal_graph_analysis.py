@@ -721,7 +721,7 @@ def epidermis_local_curvature_ratio(graph, vids=None, radius=None):
     return dict([ (vid, curv_values[vid][0] / curv_values[vid][1]) for vid in vids ])
 
 
-def division_rate(graph, rank=1, labels_at_t_n = False):
+def division_rate(graph, vids=None, rank=1, labels_at_t_n = False):
     """
     Division rate: (D-1)/(delta T)
     :Parameters:
@@ -733,10 +733,12 @@ def division_rate(graph, rank=1, labels_at_t_n = False):
      - div_rate = temporal division rate between vertex 'vid' and its descendants at rank 'rank'.
     """
     if (rank > 1) and (labels_at_t_n is False):
-        raise ValueError("The translation function `translate_keys2daughters_ids` doesn't work for rank != 1.")
+        raise ValueError("The translation function `translate_ppty_keys_to_children_vid` doesn't work for rank != 1.")
+    if vids is None:
+        vids = graph.vertices()
 
     div_rate = {}
-    for vid in graph.vertices():
+    for vid in vids:
         index_1 = graph.vertex_property('index')[vid]
         try:
             time_interval = graph.graph_property('time_steps')[index_1+rank]-graph.graph_property('time_steps')[index_1]
@@ -752,7 +754,7 @@ def division_rate(graph, rank=1, labels_at_t_n = False):
     if labels_at_t_n:
         return div_rate
     else:
-        return translate_keys2daughters_ids(graph, div_rate)
+        return translate_ppty_keys_to_children_vid(graph, div_rate)
 
 
 def exist_relative_at_rank(graph, vid, rank):
@@ -1129,50 +1131,72 @@ def boxplot_property_by_time_points_and_regions(graph, vertex_property, regions,
     return mini,maxi,'Done!'
 
 
-def translate_ppty_to_parent_vid(graph, ppty, vids=None):
+def translate_ppty_keys_to_parent_vid(graph, ppty, vids=None):
     """
     Translate keys of a dictionary to parent vids according to the graph (Temporal Property Graph).
     """
-    import warnings, math
+    import math
     if isinstance(ppty, str):
         ppty = graph.vertex_property(ppty)
+    else:
+        assert isinstance(ppty, dict)
     if vids is None:
         vids = ppty.keys()
 
-    parents_ppty_dict = {}
-    for vid,v in ppty.iteritems():
-        if vid in vids and not math.isnan(v):
-            parent = list(graph.parent(vid))[0]
-            if parents_ppty_dict.has_key(parent):
-                if v !=  parents_ppty_dict[parent]:
-                    print "Different values have been encountered for common children of vid '{}': {}, {}".format(parent, v, parents_ppty_dict[parent])
+    ppty_parents={}; no_parent=[]
+    for vid in vids:
+        if not math.isnan(ppty[vid]):
+            try:
+                parent = list(graph.parent(vid))[0]
+                if len(list(graph.parent(vid)))!=1: #more than one parent per cell is so WRONG !!!!
+                    print "The vertex '{}' as more than one parent !!! CHECK IT !!!".format(vid)
+            except:
+                no_parent.append(vid)
+            if ppty_parents.has_key(parent):
+                if v !=  ppty_parents[parent]:
+                    print "Different values have been encountered for common children of vid '{}': {}, {}".format(parent, ppty[vid], ppty_parents[parent])
                     kids = list(graph.children(parent)-set([parent]))
                     print "Checking descendants of vid '{}': {}".format(parent, kids)
                     print "Checking parent of children: {}".format(dict([(k,list(graph.parent(k))) for k in kids]))
                     print "Checking children values: {}\n".format(dict([(k,ppty[k]) for k in kids]))
             else:
-                parents_ppty_dict[parent] = v
+                ppty_parents[parent] = ppty[vid]
 
-    return parents_ppty_dict
+    # We remove the vids belonging to the first time point since we know for sure they won't have any parents!
+    no_parent = list(set(no_parent)-set(graph.vertex_at_time(0))) 
+    if no_parent!=[]:
+        print "No parent found for those vids: '{}'".format(no_parent)
 
-def translate_keys2daughters_ids(graph, dictionary):
+    return ppty_parents
+
+def translate_ppty_keys_to_children_vid(graph, ppty, vids=None):
     """
     Translate keys of a dictionary to children vids according to the graph (Temporal Property Graph).
     """
-    dictionary_daughters={}
-    no_descendants=[]
-    for vid in dictionary:
-        vid_descendants = graph.descendants(vid ,1)-graph.descendants(vid,0)
-        if vid_descendants != set():
-            for id_descendant in vid_descendants:
-                dictionary_daughters[id_descendant]=dictionary[vid]
-        elif graph.vertex_property('index')[vid] < graph.nb_time_points-2: #if `vid``belong to the last time point, it's perfectly normal that there is no descendants
-            no_descendants.append(vid)
+    import math
+    if isinstance(ppty, str):
+        ppty = graph.vertex_property(ppty)
+    else:
+        assert isinstance(ppty, dict)
+    if vids is None:
+        vids = ppty.keys()
 
-    if no_descendants!=[]:
-        warnings.warn("No daughter found for those vertex:"+str(no_descendants))
+    ppty_children={}; no_children=[]
+    for vid in vids:
+        if not math.isnan(ppty[vid]):
+            children_vids = graph.children(vid)
+            if children_vids != set([]):
+                for id_descendant in children_vids:
+                    ppty_children[id_descendant] = ppty[vid]
+            else:
+                no_children.append(vid)
 
-    return dictionary_daughters
+    # We remove the vids belonging to the last time point since we know for sure they won't have any children!
+    no_children = list(set(no_children)-set(graph.vertex_at_time(graph.nb_time_points-1))) 
+    if no_children!=[]:
+        print "No children found for those vids: '{}'".format(no_children)
+
+    return ppty_children
 
 
 def translate_list2daughters_ids(graph, ids_list):
@@ -1430,7 +1454,7 @@ def __strain_parameters3DS(func):
         if labels_at_t_n:
             return stretch_mat, score
         else:
-            return translate_keys2daughters_ids(graph, stretch_mat), translate_keys2daughters_ids(graph, score)
+            return translate_ppty_keys_to_children_vid(graph, stretch_mat), translate_ppty_keys_to_children_vid(graph, score)
 
     return  wrapped_function
 
@@ -1489,7 +1513,7 @@ def __strain_parameters3D(func):
         if labels_at_t_n:
             return stretch_mat, score
         else:
-            return translate_keys2daughters_ids(graph, stretch_mat), translate_keys2daughters_ids(graph, score)
+            return translate_ppty_keys_to_children_vid(graph, stretch_mat), translate_ppty_keys_to_children_vid(graph, score)
 
     return  wrapped_function
 
@@ -1572,7 +1596,7 @@ def stretch_main_orientations(graph, stretch_mat=None, **kwargs):
     if labels_at_t_n:
         return directions, values
     else:
-        return translate_keys2daughters_ids(graph,directions), translate_keys2daughters_ids(graph,values)
+        return translate_ppty_keys_to_children_vid(graph,directions), translate_ppty_keys_to_children_vid(graph,values)
 
 def strain_rates(graph, stretch_mat=None, **kwargs):
     """
@@ -1612,7 +1636,7 @@ def strain_rates(graph, stretch_mat=None, **kwargs):
     if labels_at_t_n:
         return sr
     else:
-        return translate_keys2daughters_ids(graph,sr)
+        return translate_ppty_keys_to_children_vid(graph,sr)
 
 def expansion_anisotropy(graph, stretch_mat=None, **kwargs):
     """
@@ -1648,7 +1672,7 @@ def expansion_anisotropy(graph, stretch_mat=None, **kwargs):
     if labels_at_t_n:
         return ea
     else:
-        return translate_keys2daughters_ids(graph,ea)
+        return translate_ppty_keys_to_children_vid(graph,ea)
 
 def areal_strain_rates(graph, stretch_mat=None, **kwargs):
     """
@@ -1684,7 +1708,7 @@ def areal_strain_rates(graph, stretch_mat=None, **kwargs):
     if labels_at_t_n:
         return asr
     else:
-        return translate_keys2daughters_ids(graph,asr)
+        return translate_ppty_keys_to_children_vid(graph,asr)
 
 def volumetric_strain_rates(graph, stretch_mat=None, **kwargs):
     """
@@ -1710,7 +1734,7 @@ def volumetric_strain_rates(graph, stretch_mat=None, **kwargs):
     if labels_at_t_n:
         return vsr
     else:
-        return translate_keys2daughters_ids(graph,vsr)
+        return translate_ppty_keys_to_children_vid(graph,vsr)
 
 def anisotropy_ratios(graph, stretch_mat=None, **kwargs):
     """
@@ -1753,7 +1777,7 @@ def anisotropy_ratios(graph, stretch_mat=None, **kwargs):
     if labels_at_t_n:
         return anisotropy_ratio
     else:
-        return translate_keys2daughters_ids(graph,anisotropy_ratio)
+        return translate_ppty_keys_to_children_vid(graph,anisotropy_ratio)
 
 
 def time_interval(graph,vid,rank=1):

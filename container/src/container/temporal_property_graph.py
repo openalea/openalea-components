@@ -168,7 +168,8 @@ class TemporalPropertyGraph(PropertyGraph):
             if unused_lineage != {}:
                 print "Un-used lineage info to avoid partial lineage, t{} to t{}: {}".format(current_index-1,current_index,unused_lineage)
                 print "It is most likely that you are trying to add lineage between non-existant vertex in your spatial graphs!"
-                print "Check if you ar not using an out-dated graph and erase temporary files (TPG creation...)."
+                print "Check if you are not using an out-dated graph and erase temporary files (TPG creation...)."
+                print "Or maybe the lignage is detected as 'incomplete' because some cells have been removed before topological-graph computation."
 
         return relabel_ids
 
