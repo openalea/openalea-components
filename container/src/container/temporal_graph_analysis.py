@@ -1145,7 +1145,7 @@ def translate_ppty_keys_to_parent_vid(graph, ppty, vids=None):
 
     ppty_parents={}; no_parent=[]
     for vid in vids:
-        if not math.isnan(ppty[vid]):
+        if (len(ppty[vid])>1) or (not math.isnan(ppty[vid])): #can only check for `math.isnan` if 'ppty[vid]' is a scalar (hence '>1')
             try:
                 parent = list(graph.parent(vid))[0]
                 if len(list(graph.parent(vid)))!=1: #more than one parent per cell is so WRONG !!!!
@@ -1183,7 +1183,7 @@ def translate_ppty_keys_to_children_vid(graph, ppty, vids=None):
 
     ppty_children={}; no_children=[]
     for vid in vids:
-        if not math.isnan(ppty[vid]):
+        if (len(ppty[vid])>1) or (not math.isnan(ppty[vid])): #can only check for `math.isnan` if 'ppty[vid]' is a scalar (hence '>1')
             children_vids = graph.children(vid)
             if children_vids != set([]):
                 for id_descendant in children_vids:
