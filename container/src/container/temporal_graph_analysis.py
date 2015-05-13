@@ -1145,7 +1145,8 @@ def translate_ppty_keys_to_parent_vid(graph, ppty, vids=None):
 
     ppty_parents={}; no_parent=[]
     for vid in vids:
-        if (len(ppty[vid])>1) or (not math.isnan(ppty[vid])): #can only check for `math.isnan` if 'ppty[vid]' is a scalar (hence '>1')
+        v = ppty[vid]
+        if (not isinstance(v,int) and not isinstance(v,float)) or (not math.isnan(v)): #can only check for `math.isnan` if 'ppty[vid]' is a scalar
             try:
                 parent = list(graph.parent(vid))[0]
                 if len(list(graph.parent(vid)))!=1: #more than one parent per cell is so WRONG !!!!
@@ -1153,14 +1154,14 @@ def translate_ppty_keys_to_parent_vid(graph, ppty, vids=None):
             except:
                 no_parent.append(vid)
             if ppty_parents.has_key(parent):
-                if ppty[vid] !=  ppty_parents[parent]:
-                    print "Different values have been encountered for common children of vid '{}': {}, {}".format(parent, ppty[vid], ppty_parents[parent])
+                if v !=  ppty_parents[parent]:
+                    print "Different values have been encountered for common children of vid '{}': {}, {}".format(parent, v, ppty_parents[parent])
                     kids = list(graph.children(parent)-set([parent]))
                     print "Checking descendants of vid '{}': {}".format(parent, kids)
                     print "Checking parent of children: {}".format(dict([(k,list(graph.parent(k))) for k in kids]))
-                    print "Checking children values: {}\n".format(dict([(k,ppty[k]) for k in kids]))
+                    print "Checking children values: {}\n".format(dict([(k,v) for k in kids]))
             else:
-                ppty_parents[parent] = ppty[vid]
+                ppty_parents[parent] = v
 
     # We remove the vids belonging to the first time point since we know for sure they won't have any parents!
     no_parent = list(set(no_parent)-set(graph.vertex_at_time(0))) 
@@ -1183,11 +1184,12 @@ def translate_ppty_keys_to_children_vid(graph, ppty, vids=None):
 
     ppty_children={}; no_children=[]
     for vid in vids:
-        if (len(ppty[vid])>1) or (not math.isnan(ppty[vid])): #can only check for `math.isnan` if 'ppty[vid]' is a scalar (hence '>1')
+        v = ppty[vid]
+        if (not isinstance(v,int) and not isinstance(v,float)) or (not math.isnan(v)): #can only check for `math.isnan` if 'ppty[vid]' is a scalar
             children_vids = graph.children(vid)
             if children_vids != set([]):
                 for id_descendant in children_vids:
-                    ppty_children[id_descendant] = ppty[vid]
+                    ppty_children[id_descendant] = v
             else:
                 no_children.append(vid)
 
