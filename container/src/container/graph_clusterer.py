@@ -397,7 +397,7 @@ class Clusterer:
                 raise ValueError("You have to give a name to your variable #{} if you want to use it!".format(n))
             # - We make sure self._distance_matrix_dict can receive the distance mattrix with the name var_id[n]:
             if self._distance_matrix_dict.has_key(var_id[n]):
-                raise KeyError("You already have a property named {}".format(var_id[n]))
+                print "You already have a property named {}".format(var_id[n])
 
         for n, var in enumerate(var_name):
             print("Computing the distance matrix related to vertex variable: {}...".format(var_id[n]))
@@ -457,7 +457,7 @@ class Clusterer:
                 raise ValueError("You have to give a name to your variable #{} if you want to use it!".format(n))
             # - We make sure self._distance_matrix_dict can receive the distance mattrix with the name var_id[n]:
             if self._distance_matrix_dict.has_key(var_id[n]):
-                raise KeyError("You already have a property named '{}'".format(var_id[n]))
+                 print "You already have a property named '{}'".format(var_id[n])
 
         # If we want to work with temporally differentiated variables, we will have to filter vertex without parent (since we assign spatio-temporal variable @ t_n+1):
         for n, temporal_name in enumerate(var_name):
@@ -490,7 +490,7 @@ class Clusterer:
         Create the topological distance matrix based on the graph provided and limited to vids if given.
         """
         if self._distance_matrix_dict.has_key("topology") and not force:
-            raise KeyError("You already computed the distance matrix 'topology'. Use 'force=True' to do it again.")
+            print "You already computed the distance matrix 'topology'. Use 'force=True' to do it again."
 
         print("Computing the standardized topological distance matrix...")
         import time
@@ -508,7 +508,7 @@ class Clusterer:
         Create the euclidean distance matrix based on the graph provided and limited to vids if given.
         """
         if self._distance_matrix_dict.has_key("euclidean") and not force:
-            raise KeyError("You already computed the distance matrix 'euclidean'. Use 'force=True' to do it again.")
+            print "You already computed the distance matrix 'euclidean'. Use 'force=True' to do it again."
 
         print("Computing the standardized euclidean distance matrix...")
         import time
