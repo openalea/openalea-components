@@ -28,7 +28,7 @@ def load_local(mod,modules):
     for m in modules:
         globals()[m] = mod.__getattribute__(m)
 
-from openalea.vpltk.qt import *
+from openalea.vpltk.qt import QtGui, QtCore
 load_local(QtCore,'Qt,QObject,SIGNAL,QRectF,QPointF, QPoint')
 load_local(QtGui,"""QApplication,QMainWindow,QGraphicsScene,QGraphicsPixmapItem,
                          QToolBar,QSlider,QLabel,QComboBox,QIcon,QActionGroup,
