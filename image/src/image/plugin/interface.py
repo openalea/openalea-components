@@ -4,7 +4,7 @@
 #
 #       OpenAlea.OALab: Multi-Paradigm GUI
 #
-#       Copyright 2014 INRIA - CIRAD - INRA
+#       Copyright 2015 INRIA - CIRAD - INRA
 #
 #       File author(s): Guillaume Baty <guillaume.baty@inria.fr>
 #
