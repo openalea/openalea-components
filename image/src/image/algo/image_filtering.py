@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 # -*- python -*-
 #
-#
-#
-#       Copyright 2015 INRIA
+#       Copyright 2015 INRIA- CIRAD - INRA
 #
 #       File author(s): Guillaume Baty <guillaume.baty@inria.fr>
 #
 #       File contributor(s):
 #           Christophe Godin <christophe.godin@inria.fr>
+#           Daniel Barbeau <daniel.barbeau@inria.fr>
+#           Eric Moscardi <eric.moscardi@sophia.inria.fr>
 #           Grégoire Malandain <gregoire.malandain@inria.fr>
 #           Guillaume Baty <guillaume.baty@inria.fr>
 #
@@ -16,7 +16,7 @@
 #       See accompanying file LICENSE.txt or copy at
 #           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
 #
-#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#       WebSite : http://openalea.github.io
 #
 ###############################################################################
 
