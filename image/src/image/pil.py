@@ -8,4 +8,3 @@ except ImportError:
         from PIL import Image, ImageQt, ImageOps
     except ImportError:
         raise ImportError, "PIL not found. Please install PIL or pillow"
-
