@@ -74,7 +74,7 @@ setup(
                    'openalea.image.demo = openalea.image_demo_wralea', ],
 
         'oalab.interface': [
-            'ImageInterfacePlugin = openalea.image.plugin:ImageInterfacePlugin',
+            'ImageInterfacePlugin = openalea.image.plugin.interface:ImageInterfacePlugin',
         ],
 
     },
