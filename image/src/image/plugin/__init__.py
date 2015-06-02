@@ -19,8 +19,14 @@
 
 """
 
-Imaging algorithms
-##################
+
+Imaging algorithm plugins
+#########################
+
+.. autofunc:: openalea.image.algo.all.segmentation.region_segmentation_extension_based
+
+Imaging algorithms plugins
+##########################
 
 To add a new algorithm, you need to follow this approach:
     1. Implement algorithm. This algorithm must follow image filtering specification
@@ -28,7 +34,7 @@ To add a new algorithm, you need to follow this approach:
     3. register algorithm in the right category
 
 
-For example, to add a gaussian filter, you need to ... 
+For example, to add a gaussian filter, you need to ...
 
 Step 1:
 
@@ -79,8 +85,8 @@ And register this plugin in category `openalea.image.filtering`
     )
 
 
-Categories
-##########
+Plugin Categories
+#################
 
 
 openalea.image.filtering
@@ -90,7 +96,23 @@ openalea.image.filtering
     :members:
 
 .. autofunc:: openalea.image.algo.all.image_filtering
-    :members:
+
+openalea.image.region_selection
+===============================
+
+.. autofunc:: openalea.image.algo.all.segmentation.region_selection
+
+openalea.image.region_extension
+===============================
+
+.. autofunc:: openalea.image.algo.all.segmentation.region_extension
+
+openalea.image.region_segmentation
+==================================
+
+.. autofunc:: openalea.image.algo.all.segmentation.region_segmentation
+
+
 """
 
 from openalea.core.interface import IInterface
