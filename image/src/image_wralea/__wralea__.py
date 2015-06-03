@@ -42,7 +42,7 @@ __all__ = []
 image = Factory(name = "img",
                 description = "display image",
                 category = "image",
-                nodemodule = "image",
+                nodemodule = "openalea.image_wralea.image",
                 nodeclass = "image",
                 inputs = (dict(name = "img", interface = "IImage"),),
                 outputs = (dict(name = "img", interface = "IImage"),),
@@ -53,7 +53,7 @@ __all__.append("image")
 size2 = Factory(name = "size2",
                 description = "size of a 2D image",
                 category = "image",
-                nodemodule = "image",
+                nodemodule = "openalea.image_wralea.image",
                 nodeclass = "size2",
                 inputs = (dict(name = "img", interface = "IImage"),),
                 outputs = (dict(name = "width", interface = IInt),
@@ -65,7 +65,7 @@ __all__.append("size2")
 size3 = Factory(name = "size3",
                 description = "size of a 3D image",
                 category = "image",
-                nodemodule = "image",
+                nodemodule = "openalea.image_wralea.image",
                 nodeclass = "size3",
                 inputs = (dict(name = "img", interface = "IImage"),),
                 outputs = (dict(name = "width", interface = IInt),
@@ -79,7 +79,7 @@ __all__.append("size3")
 lena = Factory(name = "lena",
                 description = "lena image",
                 category = "image",
-                nodemodule = "image",
+                nodemodule = "openalea.image_wralea.image",
                 nodeclass = "lena",
                 outputs = (dict(name = "img", interface = "IImage"),),
                 )
@@ -192,4 +192,3 @@ null_vector_field_like = Factory( name= "null_vector_field_like",
                          )
 
 __all__.append('null_vector_field_like')
-
