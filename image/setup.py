@@ -73,6 +73,10 @@ setup(
                    'openalea.image.gui = openalea.image_wralea.gui',
                    'openalea.image.demo = openalea.image_demo_wralea', ],
 
+        'openalea.plugin': [
+            'ImageMimeDataCodecPlugin = openalea.image.plugin:ImageMimeDataCodecPlugin',
+        ],
+
         'oalab.interface': [
             'ImageInterfacePlugin = openalea.image.plugin.interface:ImageInterfacePlugin',
         ],

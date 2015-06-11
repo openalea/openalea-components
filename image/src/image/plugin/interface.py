@@ -24,3 +24,22 @@ class ImageInterfacePlugin(object):
     def __call__(self):
         from openalea.image_wralea.image_interface import IImage
         return [IImage]
+
+
+from openalea.oalab.mimedata import QMimeCodecPlugin
+
+
+class IImageCodecPlugin(QMimeCodecPlugin):
+    qtdecode = [
+        ('openalealab/data', 'openalea/interface.IImage'),
+        ('text/uri-list', 'openalea/interface.IImage'),
+    ]
+
+    def __call__(self):
+        from openalea.image.mimedata import IImageCodec
+        return IImageCodec
+
+
+class ImageMimeDataCodecPlugin(object):
+    category = 'openalea.codec.mimetype'
+    plugins = [IImageCodecPlugin]
