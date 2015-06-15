@@ -20,7 +20,28 @@
 #
 ###############################################################################
 
-from openalea.core.service.plugin import plugin_function
+from openalea.core.service.plugin import PIM, PM, enhanced_error
+
+
+def plugin_function(category, method):
+    if category not in PM._plugin:
+        PM._load_plugins(category)
+    try:
+        plugin_class = PM._plugin[category][method]
+    except KeyError:
+        pass
+    else:
+        try:
+            plugin = plugin_class()
+        except TypeError, e:
+            raise enhanced_error(e, plugin_class=plugin_class)
+
+        try:
+            f = plugin()
+        except TypeError, e:
+            raise enhanced_error(e, plugin=plugin, plugin_class=plugin_class)
+
+        return f
 
 
 def image_filtering(original, method=None, **kwds):
