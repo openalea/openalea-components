@@ -70,8 +70,9 @@ def _read_header (f) :
 
     #format infos
     for prop_def in infos :
-        key,val = prop_def.split("=")
-        prop[key] = val
+        if not prop_def.strip().startswith('#'):
+            key,val = prop_def.split("=")
+            prop[key] = val
 
     #return
     return prop
