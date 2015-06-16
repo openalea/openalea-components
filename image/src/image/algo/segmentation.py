@@ -78,7 +78,7 @@ def region_labeling(original, method, **kwds):
         "connected_component_extraction": notimplemented,
     }
     if method in method_dict:
-        method_dict[method](original, **kwds)
+        return method_dict[method](original, **kwds)
     else:
         raise NotImplementedError(method)
 
@@ -96,7 +96,7 @@ def region_selection(segmented, labels, method, **kwds):
     """
     func = plugin_function('openalea.image.region_selection', method)
     if func is not None:
-        func(segmented, labels, **kwds)
+        return func(segmented, labels, **kwds)
     else:
         raise NotImplementedError(method)
 
@@ -114,7 +114,7 @@ def region_extension(segmented, labels, method, **kwds):
     """
     func = plugin_function('openalea.image.region_extension', method)
     if func is not None:
-        func(segmented, labels, **kwds)
+        return func(segmented, labels, **kwds)
     else:
         raise NotImplementedError(method)
 
@@ -161,6 +161,6 @@ def region_segmentation(original, method, **kwds):
     """
     func = plugin_function('openalea.image.region_segmentation', method)
     if func is not None:
-        func(original, **kwds)
+        return func(original, **kwds)
     else:
         raise NotImplementedError(method)
