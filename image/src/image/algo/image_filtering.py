@@ -57,6 +57,6 @@ def image_filtering(original, method=None, **kwds):
 
     func = plugin_function('openalea.image.filtering', method)
     if func is not None:
-        func(original, **kwds)
+        return func(original, **kwds)
     else:
         raise NotImplementedError(method)
