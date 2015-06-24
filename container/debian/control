@@ -1,0 +1,13 @@
+Source: openalea-container
+Maintainer: Christophe Pradal <christophe.pradal@cirad.fr>
+Section: python
+Priority: optional
+Build-Depends: python-all (>= 2.6.6-3~), python-setuptools (>= 0.6b3), debhelper (>= 7),  python-openalea.deploy
+
+
+Package: python-openalea.container
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}, python-numpy, python-scipy, python-networkx, python-openalea.core
+Provides: ${python:Provides}
+Description: Basic data structures in OpenAlea.
+ Container is a set of data structures used in openalea such as : graph, grid, topomesh, tree
