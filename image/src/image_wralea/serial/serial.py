@@ -25,7 +25,6 @@ from numpy import issubdtype
 from openalea.image.spatial_image import SpatialImage
 from openalea.image.serial.inrimage import write_inrimage
 from openalea.image.serial.basics import load,save,imread, imsave
-from pylab import imsave
 
 def wra_load (filename, mmap_mode) :
     return load(filename,mmap_mode),
