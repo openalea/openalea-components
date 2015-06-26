@@ -16,10 +16,11 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-from spatial_image import SpatialImage
-from gui.all import *
-from interpolation.all import *
-from registration.all import *
-from serial.all import *
+from openalea.image.algo.all import *
+from openalea.image.gui.all import *
+from openalea.image.interpolation.all import *
+from openalea.image.registration.all import *
+from openalea.image.serial.all import *
+from openalea.image.spatial_image import SpatialImage
 
 #from image_test import *

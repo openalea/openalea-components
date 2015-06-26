@@ -16,8 +16,8 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-from basic import *
-from morpho import *
-from analysis import *
-from graph_from_image import *
-from image_filtering import *
+from openalea.image.algo.analysis import *
+from openalea.image.algo.basic import *
+from openalea.image.algo.image_filtering import *
+from openalea.image.algo.morpho import *
+#from openalea.image.algo.temporal_graph_from_image import *
