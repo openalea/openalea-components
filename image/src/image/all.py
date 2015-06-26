@@ -13,11 +13,10 @@
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 ################################################################################
 
-__license__= "Cecill-C"
+__license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 from spatial_image import SpatialImage
-from algo.all import *
 from gui.all import *
 from interpolation.all import *
 from registration.all import *

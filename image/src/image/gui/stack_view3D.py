@@ -28,7 +28,7 @@ import scipy.ndimage as nd
 
 from openalea.image.serial.basics import imread
 from openalea.image.spatial_image import SpatialImage
-from openalea.image.algo.analysis import SpatialImageAnalysis3D
+from vplants.tissue_analysis.spatial_image_analysis import SpatialImageAnalysis3D
 
 #compatibility
 try:
