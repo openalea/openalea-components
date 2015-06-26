@@ -97,7 +97,7 @@ class PropertyTopomesh(Topomesh):
             raise TypeError("Values are not in an acceptable type (array, dict, array_dict)")  
         self._wisp_properties[degree][property_name] = values
 
-    def update_wisp_property(self,property_name,degree,values,keys=None):
+    def update_wisp_property(self,property_name,degree,values,keys=None,erase_property=True):
         """todo"""
         if not (isinstance(values, np.ndarray) or isinstance(values, dict) or isinstance(values, array_dict)):
             raise TypeError("Values are not in an acceptable type (array, dict, array_dict)")                                
@@ -108,15 +108,18 @@ class PropertyTopomesh(Topomesh):
         if isinstance(values,np.ndarray):
             if keys is None:
                 keys = np.array(list(self.wisps(degree)))
-            self._wisp_properties[degree][property_name].update(values,keys=keys,ignore_missing_keys=False)
+            #self._wisp_properties[degree][property_name].update(values,keys=keys,ignore_missing_keys=False,erase_missing_keys=erase_property)
+            self._wisp_properties[degree][property_name] = array_dict(values,keys)
         elif isinstance(values,dict):
             if keys is None:
                 keys = np.array(values.keys())
-            self._wisp_properties[degree][property_name].update(np.array(values.values()),keys=keys,ignore_missing_keys=False)
+            #self._wisp_properties[degree][property_name].update(np.array(values.values()),keys=keys,ignore_missing_keys=False,erase_missing_keys=erase_property)
+            self._wisp_properties[degree][property_name] = array_dict(values)
         elif isinstance(values,array_dict):
             if keys is None:
                 keys = values.keys()
-            self._wisp_properties[degree][property_name].update(values.values(),keys=keys,ignore_missing_keys=False)
+            #self._wisp_properties[degree][property_name].update(values.values(),keys=keys,ignore_missing_keys=False,erase_missing_keys=erase_property)
+            self._wisp_properties[degree][property_name] = values
 
     def has_wisp_property(self,property_name,degree,is_computed=False):
         if property_name in self._wisp_properties[degree]:

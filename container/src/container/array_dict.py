@@ -1,6 +1,13 @@
 import numpy as np
 from scipy import ndimage as nd
 
+def isiterable(obj):
+    try:
+        iter(obj)
+        return True
+    except:
+        return False
+
 class array_dict:
 	def __init__(self, values= np.array([]), keys = None):
 		if isinstance(values,array_dict):
@@ -100,11 +107,11 @@ class array_dict:
 		return self.dict_string
 
 	def to_dict(self):
-		return dict([(k,self._values[i]) for i,k in enumerate(self._keys)])
+		return dict([(tuple(k),self._values[i]) if isiterable(k) else (k,self._values[i]) for i,k in enumerate(self._keys)])
 
 	def values(self,keys=None):
-		if keys==None:
-			return self._values
+		if keys is None:
+			return self._values[self._index[self._keys]]
 		else:
 			if isinstance(keys,np.ndarray) and keys.dtype == np.dtype('O'):
 				return np.array([self.values(k) for k in keys])
@@ -117,8 +124,8 @@ class array_dict:
 	def items(self):
 		return [(k,self._values[i]) for i,k in enumerate(self._keys)]
 
-	def update(self,values,keys=None,ignore_missing_keys=True):
-		if keys==None or (len(keys) == len(self._keys) and (keys==self.keys()).all()):
+	def update(self,values,keys=None,ignore_missing_keys=True,erase_missing_keys=True):
+		if keys is None or (len(keys) == len(self._keys) and (keys==self.keys()).all()):
 			assert len(self) == len(values)
 			self._values = values
 		else:
@@ -147,7 +154,18 @@ class array_dict:
 					else:
 						self._values = np.append(self._values,values[key_range],axis=0)
 			else:
-				self._values[self._index[keys]] = values
+				if len(keys_to_assign)!=len(self._keys) or (keys!=self.keys()).any():
+					if erase_missing_keys:
+						print "Warning : missing keys were erased from the dictionary!"
+						self._values = values
+						self._keys = np.array(keys)
+						self._index = np.zeros(self._keys.max()+1,int)
+						self._index[self._keys] = np.arange(len(self._keys))
+					else:
+						self._values[self._index[keys]] = values
+				else:
+					self._values[self._index[keys]] = values
+					
 
 	def delete(self,keys_to_delete):
 		keys_to_delete = np.intersect1d(keys_to_delete,self._keys)
