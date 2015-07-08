@@ -43,3 +43,27 @@ class IImageCodecPlugin(QMimeCodecPlugin):
 class ImageMimeDataCodecPlugin(object):
     category = 'openalea.codec.mimetype'
     plugins = [IImageCodecPlugin]
+
+
+class IImageWidgetSelectorPlugin(ControlWidgetSelectorPlugin):
+
+    controls = ['IImage']
+    name = 'IImageSelector'
+    alias = 'IImage editor'
+    required = []
+    edit_shape = ['responsive']
+    paint = True
+
+    @classmethod
+    def load(cls):
+        from openalea.image.plugin.control import IImageSelector
+        return IImageSelector
+
+
+class ImageStackViewerPlugin(object):
+    name = 'ImageStackViewer'
+    alias = 'Image stack Viewer'
+
+    def __call__(self):
+        from openalea.image.plugin.applet import ImageStackViewer
+        return ImageStackViewer

@@ -19,16 +19,16 @@
 ###############################################################################
 
 from openalea.vpltk.qt import QtGui, QtCore
-from openalea.image.gui.slide_viewer_widget import ImageViewerWidget, to_image
+from openalea.image.gui.slide_viewer_widget import ImageStackViewerWidget, to_image
 from openalea.oalab.gui.control.widget import AbstractQtControlWidget
 from openalea.oalab.plugins.controls.painters import AbstractPainter
 
 
-class IImageViewer(AbstractQtControlWidget, ImageViewerWidget):
+class IImageViewer(AbstractQtControlWidget, ImageStackViewerWidget):
 
     def __init__(self):
         AbstractQtControlWidget.__init__(self)
-        ImageViewerWidget.__init__(self)
+        ImageStackViewerWidget.__init__(self)
 
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setAutoFillBackground(True)
@@ -38,10 +38,10 @@ class IImageViewer(AbstractQtControlWidget, ImageViewerWidget):
         self.setValue(value)
 
     def setValue(self, value):
-        ImageViewerWidget.setValue(self, value)
+        ImageStackViewerWidget.setValue(self, value)
 
     def value(self):
-        ImageViewerWidget.value(self)
+        ImageStackViewerWidget.value(self)
 
 
 class IImagePainter(AbstractPainter):

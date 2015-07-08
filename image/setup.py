@@ -85,6 +85,10 @@ setup(
             'IImageWidgetSelectorPlugin = openalea.image.plugin:IImageWidgetSelectorPlugin',
         ],
 
+        'oalab.applet': [
+            'ImageStackViewerPlugin = openalea.image.plugin:ImageStackViewerPlugin',
+        ],
+
     },
 
 )
