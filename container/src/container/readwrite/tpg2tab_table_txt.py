@@ -1,7 +1,7 @@
 import pickle, gzip
 import numpy as np
 from openalea.image.serial.basics import imread
-from openalea.image.algo.analysis import SpatialImageAnalysis, DICT
+from vplants.tissue_analysis.spatial_image_analysis import SpatialImageAnalysis, DICT
 from openalea.image.algo.graph_from_image import graph_from_image
 from vplants.tissue_analysis import LienTissuTXT
 from openalea.container import TemporalPropertyGraph
