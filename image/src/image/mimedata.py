@@ -22,7 +22,7 @@ from openalea.core.path import path
 from openalea.oalab.mimedata import (MimeConversionError, QMimeCodec)
 from openalea.core.service.project import project_item
 from openalea.image.serial.basics import imread
-from openalea.oalab.plugins.mimedata.codec import BuiltinDataCodec
+from openalea.oalab.mimedata.builtin import BuiltinDataCodec
 
 
 def read_image_path(urls, mimetype_in, mimetype_out):

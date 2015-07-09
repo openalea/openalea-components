@@ -73,20 +73,20 @@ setup(
                    'openalea.image.gui = openalea.image_wralea.gui',
                    'openalea.image.demo = openalea.image_demo_wralea', ],
 
-        'openalea.plugin': [
-            'ImageMimeDataCodecPlugin = openalea.image.plugin:ImageMimeDataCodecPlugin',
+        'openalea.image': [
+            'ImageAlgoExtension = openalea.image.plugin.algo',
         ],
 
-        'oalab.interface': [
-            'ImageInterfacePlugin = openalea.image.plugin.interface:ImageInterfacePlugin',
-        ],
-
-        'oalab.qt_control': [
-            'IImageWidgetSelectorPlugin = openalea.image.plugin:IImageWidgetSelectorPlugin',
+        'oalab.plugin': [
+            'ImageLabExtension = openalea.image.plugin.oalab',
         ],
 
         'oalab.applet': [
-            'ImageStackViewerPlugin = openalea.image.plugin:ImageStackViewerPlugin',
+            'ImageAppletExtension = openalea.image.plugin.applet',
+        ],
+
+        'openalea.core': [
+            'ImageOpenAleaExtension = openalea.image.plugin.interface',
         ],
 
     },

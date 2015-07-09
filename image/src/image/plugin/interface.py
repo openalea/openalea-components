@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # -*- python -*-
 #
-#
-#       OpenAlea.OALab: Multi-Paradigm GUI
-#
 #       Copyright 2015 INRIA - CIRAD - INRA
 #
 #       File author(s): Guillaume Baty <guillaume.baty@inria.fr>
@@ -18,52 +15,13 @@
 #
 ###############################################################################
 
+from openalea.core.plugin.plugin import PluginDef
 
-class ImageInterfacePlugin(object):
+
+@PluginDef
+class IImageInterfacePlugin(object):
+    interface = 'oalab.interface.IInterface'
 
     def __call__(self):
         from openalea.image_wralea.image_interface import IImage
         return [IImage]
-
-
-from openalea.oalab.mimedata import QMimeCodecPlugin
-
-
-class IImageCodecPlugin(QMimeCodecPlugin):
-    qtdecode = [
-        ('openalealab/data', 'openalea/interface.IImage'),
-        ('text/uri-list', 'openalea/interface.IImage'),
-    ]
-
-    def __call__(self):
-        from openalea.image.mimedata import IImageCodec
-        return IImageCodec
-
-
-class ImageMimeDataCodecPlugin(object):
-    category = 'openalea.codec.mimetype'
-    plugins = [IImageCodecPlugin]
-
-
-class IImageWidgetSelectorPlugin(ControlWidgetSelectorPlugin):
-
-    controls = ['IImage']
-    name = 'IImageSelector'
-    alias = 'IImage editor'
-    required = []
-    edit_shape = ['responsive']
-    paint = True
-
-    @classmethod
-    def load(cls):
-        from openalea.image.plugin.control import IImageSelector
-        return IImageSelector
-
-
-class ImageStackViewerPlugin(object):
-    name = 'ImageStackViewer'
-    alias = 'Image stack Viewer'
-
-    def __call__(self):
-        from openalea.image.plugin.applet import ImageStackViewer
-        return ImageStackViewer

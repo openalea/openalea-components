@@ -14,15 +14,3 @@
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 ###############################################################################
-
-from openalea.core.plugin.plugin import PluginDef
-
-
-@PluginDef
-class StackViewer(object):
-    alias = 'Image Stack Viewer'
-    interface = 'IApplet'
-
-    def __call__(self):
-        from openalea.image.plugin.applet import ImageStackViewer
-        return ImageStackViewer
