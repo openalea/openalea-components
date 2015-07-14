@@ -383,7 +383,6 @@ def main():
 
     (opts, args)= parser.parse_args()
 
-    print __revision__
     print "Running create_layout version %s" % __revision__.split()[-1]
 
     if opts.name==None:
