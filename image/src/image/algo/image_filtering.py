@@ -20,28 +20,7 @@
 #
 ###############################################################################
 
-from openalea.core.service.plugin import PIM, PM, enhanced_error
-
-
-def plugin_function(category, method):
-    if category not in PM._plugin:
-        PM._load_plugins(category)
-    try:
-        plugin_class = PM._plugin[category][method]
-    except KeyError:
-        pass
-    else:
-        try:
-            plugin = plugin_class()
-        except TypeError, e:
-            raise enhanced_error(e, plugin_class=plugin_class)
-
-        try:
-            f = plugin()
-        except TypeError, e:
-            raise enhanced_error(e, plugin=plugin, plugin_class=plugin_class)
-
-        return f
+from openalea.core.service.plugin import plugin_function
 
 
 def image_filtering(original, method=None, **kwds):
@@ -55,7 +34,7 @@ def image_filtering(original, method=None, **kwds):
     if method is None:
         return original
 
-    func = plugin_function('openalea.image.filtering', method)
+    func = plugin_function('openalea.image', method)
     if func is not None:
         return func(original, **kwds)
     else:

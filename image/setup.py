@@ -74,19 +74,19 @@ setup(
                    'openalea.image.demo = openalea.image_demo_wralea', ],
 
         'openalea.image': [
-            'ImageAlgoExtension = openalea.image.plugin.algo',
+            'openalea.image/image = openalea.image.plugin.algo',
         ],
 
         'oalab.plugin': [
-            'ImageLabExtension = openalea.image.plugin.oalab',
+            'oalab/image = openalea.image.plugin.oalab',
         ],
 
         'oalab.applet': [
-            'ImageAppletExtension = openalea.image.plugin.applet',
+            'oalab.applet/image = openalea.image.plugin.applet',
         ],
 
-        'openalea.core': [
-            'ImageOpenAleaExtension = openalea.image.plugin.interface',
+        'openalea.interface': [
+            'openalea.interface/image = openalea.image.plugin.interface',
         ],
 
     },

@@ -20,7 +20,7 @@ from openalea.core.plugin.plugin import PluginDef
 
 @PluginDef
 class IImageInterfacePlugin(object):
-    interface = 'oalab.interface.IInterface'
+    implement = 'IInterface'
 
     def __call__(self):
         from openalea.image_wralea.image_interface import IImage

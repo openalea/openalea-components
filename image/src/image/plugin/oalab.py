@@ -21,7 +21,7 @@ from openalea.oalab.mimedata.plugin import QMimeCodecPlugin
 
 @PluginDef
 class IImageCodecPlugin(QMimeCodecPlugin):
-    implements = ['IQMimeCodec']
+    implement = 'IQMimeCodec'
     qtdecode = [
         ('openalealab/data', 'openalea/interface.IImage'),
         ('text/uri-list', 'openalea/interface.IImage'),
@@ -34,7 +34,7 @@ class IImageCodecPlugin(QMimeCodecPlugin):
 
 @PluginDef
 class IImageWidgetSelectorPlugin(object):
-    implements = ['IControlSelector']
+    implement = 'IControlSelector'
     controls = ['IImage']
     alias = 'IImage editor'
     required = []

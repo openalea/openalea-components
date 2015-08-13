@@ -51,8 +51,11 @@ Then, define a plugin that describe algorithm.
     :filename: mypackage/plugin/image_filtering.py
     :linenos:
 
+    from openalea.core.plugin import PluginDef
+
+    @PluginDef
     class GaussianSmoothingPlugin(object):
-        name = 'image_filtering_gaussian_smoothing'
+        implement = 'filtering'
         title =  'Gaussian smoothing filter'
         inputs = [
             {'name': 'std_deviation', 'default': 0.5, 'interface': 'IFloat', 'alias': 'Standard Deviation'}
@@ -73,8 +76,8 @@ And register this plugin in category `openalea.image.filtering`
     setup(
         # Declare scripts and wralea as entry_points (extensions) of your package
         entry_points={
-            'openalea.image.filtering': [
-                'GaussianSmoothingPlugin =  mypackage.plugin.image_filtering:GaussianSmoothingPlugin'
+            'openalea.image': [
+                'ImagingPlugin =  mypackage.plugin.image_filtering'
             ]
         },
     )
@@ -84,29 +87,29 @@ Plugin Categories
 #################
 
 
-openalea.image.filtering
-========================
+openalea.image
+==============
+
+algorithm: **filtering**
 
 .. autoclass:: openalea.image.plugin.IImageFilteringPlugin
     :members:
 
 .. autofunc:: openalea.image.algo.all.image_filtering
 
-openalea.image.region_selection
-===============================
+
+algorithm: **region_selection**
 
 .. autofunc:: openalea.image.algo.all.segmentation.region_selection
 
-openalea.image.region_extension
-===============================
+algorithm: **region_extension**
 
 .. autofunc:: openalea.image.algo.all.segmentation.region_extension
 
-openalea.image.region_segmentation
-==================================
+
+algorithm: **region_segmentation**
 
 .. autofunc:: openalea.image.algo.all.segmentation.region_segmentation
-
 
 """
 from openalea.core.interface import IInterface

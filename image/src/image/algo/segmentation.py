@@ -94,7 +94,7 @@ def region_selection(segmented, labels, method, **kwds):
     :param method: method identifier you want to use (ex: "remove_small_cells")
     :type method: :obj:`str`
     """
-    func = plugin_function('openalea.image.region_selection', method)
+    func = plugin_function('openalea.image', method)
     if func is not None:
         return func(segmented, labels, **kwds)
     else:
@@ -112,7 +112,7 @@ def region_extension(segmented, labels, method, **kwds):
     :param method: method identifier you want to use (ex: "watershed")
     :type method: :obj:`str`
     """
-    func = plugin_function('openalea.image.region_extension', method)
+    func = plugin_function('openalea.image', method)
     if func is not None:
         return func(segmented, labels, **kwds)
     else:
@@ -159,7 +159,7 @@ def region_segmentation(original, method, **kwds):
     :param method: method identifier you want to use (ex: "extension_based")
     :type method: :obj:`str`
     """
-    func = plugin_function('openalea.image.region_segmentation', method)
+    func = plugin_function('openalea.image', method)
     if func is not None:
         return func(original, **kwds)
     else:
