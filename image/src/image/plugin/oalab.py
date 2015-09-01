@@ -34,7 +34,7 @@ class IImageCodecPlugin(QMimeCodecPlugin):
 
 @PluginDef
 class IImageWidgetSelectorPlugin(object):
-    implement = 'IControlSelector'
+    implement = 'IWidgetSelector'
     controls = ['IImage']
     alias = 'IImage editor'
     required = []
