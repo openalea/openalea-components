@@ -37,7 +37,7 @@ class PackageBuilder(object):
     :param name: name of the package (directory name, import in python)
     :param package: name as it appears in the egg name e.g., VisuAlea in OpenAlea.VisuAlea
     :param project: a proper project name (openalea/vplants/alinea)
-    :param release: a relase version 
+    :param release: a relase version
 
 
     :Usage:
@@ -58,7 +58,7 @@ class PackageBuilder(object):
     project_name = dict(openalea='OpenAlea', vplants='VPlants', alinea='Alinea')
 
     def __init__(self, name=None, project='', dir = '.', release='0.1'):
-        
+
         self.name = name # e.g. name = PlantGL
         self.package = name.lower() # e.g. name = plantgl
         self.dir = dir
@@ -119,7 +119,7 @@ class PackageBuilder(object):
             f.touch()
 
     def set_languages(self, cpp = False, c = False, fortran = False):
-        if cpp: 
+        if cpp:
             self.languages.append('cpp')
         if c:
             self.languages.append('c')
@@ -165,7 +165,7 @@ class PackageBuilder(object):
                ])
 
     def set_files(self):
-        self.files = [self.pkg_dir/"src"/self.project/self.package/'__init__.py'] 
+        self.files = [self.pkg_dir/"src"/self.project/self.package/'__init__.py']
         self.files += self.projectinitfiles()
         self.files += self.legalfiles()
         self.files += self.wraleafiles()
@@ -339,7 +339,7 @@ class PackageBuilder(object):
                 else:
                     tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
-            
+
         for f, tpl in tpl_files:
             txt = Template(open(tpl).read())
             txt = txt.substitute(**self.metainfo)
@@ -351,7 +351,7 @@ class PackageBuilder(object):
 
 
 def main():
-    """This function is called by alea_create_package script that is installed 
+    """This function is called by alea_create_package script that is installed
     on your system when installing OpenAlea.PkgBuilder package.
 
     To obtain specific help, type::
@@ -373,17 +373,17 @@ def main():
 
     parser = OptionParser(usage=usage)
 
-    parser.add_option("--project", dest='project', default='',  
+    parser.add_option("--project", dest='project', default='',
         help="project name in [openalea, vplants, alinea]")
-    parser.add_option("--languages", dest='languages', default=None,  
+    parser.add_option("--languages", dest='languages', default=None,
         help="languages separated by a space [cpp, c, fortran]")
     parser.add_option("--release", dest='release', default='1.0', help="the package release")
-    parser.add_option("--name", dest='name', default=None, 
+    parser.add_option("--name", dest='name', default=None,
                       help="The name of the package as it appear in the eggname: e.g., VisuAlea in OpenAlea.VisuAlea")
 
     (opts, args)= parser.parse_args()
 
-    print "Running create_layout version %s" % __revision__.split()[2]
+    print "Running create_layout version %s" % __revision__.split()[-1]
 
     if opts.name==None:
         raise ValueError("""--name must be provided. See help (--help)""")
