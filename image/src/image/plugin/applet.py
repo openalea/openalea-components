@@ -15,13 +15,13 @@
 #
 ###############################################################################
 
-from openalea.core.plugin.plugin import PluginDef
 
-
-@PluginDef
-class IImageInterfacePlugin(object):
-    implement = 'IInterface'
+class StackViewer(object):
+    name = 'StackViewer'
+    label = 'Image Stack Viewer'
+    implement = 'IApplet'
+    __plugin__ = True
 
     def __call__(self):
-        from openalea.image_wralea.image_interface import IImage
-        return [IImage]
+        from openalea.image.gui.oalab.applet import ImageStackViewer
+        return ImageStackViewer

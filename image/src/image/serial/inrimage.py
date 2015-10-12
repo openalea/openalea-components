@@ -122,6 +122,14 @@ def read_inrimage (filename) :
                 ntyp = eval("np.dtype(np.uint%d)" % pixsize)
             except AttributeError :
                 raise UserWarning("undefined pix size: %d" % pixsize)
+    elif dtype == "signed fixed" :
+        if pixsize == 0 :
+            ntyp = np.dtype(np.int)
+        else :
+            try :
+                ntyp = eval("np.dtype(np.int%d)" % pixsize)
+            except AttributeError :
+                raise UserWarning("undefined pix size: %d" % pixsize)
     elif dtype == "float" :
         if pixsize == 0 :
             ntyp = np.dtype(np.float)

@@ -6,6 +6,8 @@
 #
 #       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
 #                       Eric Moscardi <eric.moscardi@gmail.com>
+#       File Contributor(s):
+#                       Manual Forero
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -40,11 +42,14 @@ from pixmap_view import PixmapStackView,ScalableLabel
 
 from slide_viewer_ui import Ui_MainWindow
 
-palette_names.remove('bw')
+if 'bw' in palette_names:
+    palette_names.remove('bw')
 palette_names.sort()
 
 class SlideViewer (QMainWindow) :
     """Display each image in a stack using a slider
+    
+    A pure QWidget (instead of QMainWindow) is also available, see openalea.image.gui.slide_viewer_widget.
     """
 
     viewer_count = 0

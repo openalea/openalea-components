@@ -73,8 +73,20 @@ setup(
                    'openalea.image.gui = openalea.image_wralea.gui',
                    'openalea.image.demo = openalea.image_demo_wralea', ],
 
-        'oalab.interface': [
-            'ImageInterfacePlugin = openalea.image.plugin.interface:ImageInterfacePlugin',
+        'openalea.image': [
+            'openalea.image/image = openalea.image.plugin.algo',
+        ],
+
+        'oalab.plugin': [
+            'oalab/image = openalea.image.plugin.oalab',
+        ],
+
+        'oalab.applet': [
+            'oalab.applet/image = openalea.image.plugin.applet',
+        ],
+
+        'openalea.interface': [
+            'openalea.interface/image = openalea.image.plugin.interface',
         ],
 
     },
