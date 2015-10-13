@@ -8,7 +8,6 @@
 # 2006-06-03 fl: created
 # 2006-06-04 fl: inherit from QImage instead of wrapping it
 # 2006-06-05 fl: removed toimage helper; move string support to ImageQt
-# 2013-11-13 fl: add support for Qt5 (aurelien.ballier@cyclonit.com)
 #
 # Copyright (c) 2006 by Secret Labs AB
 # Copyright (c) 2006 by Fredrik Lundh
@@ -16,20 +15,17 @@
 # See the README file for information on usage and redistribution.
 #
 
-from PIL import Image
-from PIL._util import isPath
+import Image
 
-from openalea.vpltk.qt.QtGui import QImage, qRgba
+from openalea.vpltk.qt.QtGui import QImage, qRgb
 
 ##
 # (Internal) Turns an RGB color into a Qt compatible color integer.
 
-
-def rgb(r, g, b, a=255):
+def rgb(r, g, b):
     # use qRgb to pack the colors, and then turn the resulting long
     # into a negative integer with the same bitpattern.
-    return (qRgba(r, g, b, a) & 0xffffffff)
-
+    return (qRgb(r, g, b) & 0xffffff) - 0x1000000
 
 ##
 # An PIL image wrapper for Qt.  This is a subclass of PyQt4's QImage
@@ -49,7 +45,7 @@ class ImageQt(QImage):
         if hasattr(im, "toUtf8"):
             # FIXME - is this really the best way to do this?
             im = unicode(im.toUtf8(), "utf-8")
-        if isPath(im):
+        if Image.isStringType(im):
             im = Image.open(im)
 
         if im.mode == "1":
@@ -64,13 +60,13 @@ class ImageQt(QImage):
             colortable = []
             palette = im.getpalette()
             for i in range(0, len(palette), 3):
-                colortable.append(rgb(*palette[i:i + 3]))
+                colortable.append(rgb(*palette[i:i+3]))
         elif im.mode == "RGB":
-            data = im.tobytes("raw", "BGRX")
+            data = im.tostring("raw", "BGRX")
             format = QImage.Format_RGB32
         elif im.mode == "RGBA":
             try:
-                data = im.tobytes("raw", "BGRA")
+                data = im.tostring("raw", "BGRA")
             except SystemError:
                 # workaround for earlier versions
                 r, g, b, a = im.split()
@@ -80,7 +76,7 @@ class ImageQt(QImage):
             raise ValueError("unsupported image mode %r" % im.mode)
 
         # must keep a reference, or Qt will crash!
-        self.__data = data or im.tobytes()
+        self.__data = data or im.tostring()
 
         QImage.__init__(self, self.__data, im.size[0], im.size[1], format)
 
