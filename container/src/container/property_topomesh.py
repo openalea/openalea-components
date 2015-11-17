@@ -36,8 +36,9 @@ class PropertyTopomesh(Topomesh):
 
         Topomesh.__init__(self, degree, **kwds)
         if topomesh is not None:
-            self._borders = topomesh._borders
-            self._regions = topomesh._regions
+            from copy import deepcopy
+            self._borders = deepcopy(topomesh._borders)
+            self._regions = deepcopy(topomesh._regions)
             # self.extend(topomesh)
 
     def __getitem__(self,key):
