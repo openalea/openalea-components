@@ -36,7 +36,9 @@ class PropertyTopomesh(Topomesh):
 
         Topomesh.__init__(self, degree, **kwds)
         if topomesh is not None:
-            self.extend(topomesh)
+            self._borders = topomesh._borders
+            self._regions = topomesh._regions
+            # self.extend(topomesh)
 
     def __getitem__(self,key):
         if isinstance(key,tuple) and len(key) == 2:
