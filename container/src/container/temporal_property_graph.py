@@ -19,11 +19,8 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
+import warnings, numpy as np
 from property_graph import *
-import warnings
-import numpy as np
-
-#from openalea.container.temporal_graph_analysis import translate_ids_Image2Graph, translate_keys_Graph2Image, exist_all_relative_at_rank
 
 class TemporalPropertyGraph(PropertyGraph):
     """
@@ -37,7 +34,7 @@ class TemporalPropertyGraph(PropertyGraph):
     def __init__(self, graph=None, **kwds):
         PropertyGraph.__init__(self, graph, idgenerator='max',**kwds)
         self.add_edge_property('edge_type')
-
+        
         # list of dict
         # each dict define the mapping between the new and the old vid.
         # old label define both graph index and local id.
@@ -52,75 +49,74 @@ class TemporalPropertyGraph(PropertyGraph):
         """ Extend the structure with graphs and mappings.
         Each graph contains structural edges. 
         Mapping define dynamic edges between two graphs.
-
+        
         :Parameters:
             - graphs - a list of PropertyGraph
             - mappings - a list defining the dynamic or temporal edges between two graphs.
             - time_steps - time corresponding to each graph
-
+        
         :warning:: len(graphs) == len(mappings)-1
         """
-
         assert len(graphs) == len(mappings)+1
-
+        
         self.append(graphs[0])
         self.nb_time_points += 1
         for g, m in zip(graphs[1:],mappings):
             self.append(g,m)
             self.nb_time_points += 1
-
+        
         if time_steps is not None:
             assert len(graphs) == len(time_steps)
             self.add_graph_property('time_steps',time_steps)
-
+        
         return self._old_to_new_ids
 
 
     def append(self, graph, mapping=None):
         """
-
+        Append a (spatial) graph to the tpg structure with respect to a given temporal mapping.
         """
         if mapping:
             assert len(self._old_to_new_ids) >= 1, 'You have to create temporal edges between two graphs. Add a graph first without mapping'
-
+        
         current_index = len(self._old_to_new_ids)
-
+        
         edge_types = self.edge_property('edge_type')
         old_edge_labels = self.edge_property('old_label')
         old_vertex_labels = self.vertex_property('old_label')
         indices = self.vertex_property('index')
-
+        
         # add and translate the vertex and edge ids of the second graph
         relabel_ids = Graph.extend(self,graph)
         old_to_new_vids, old_to_new_eids = relabel_ids
         # relabel the edge and vertex property
         self._relabel_and_add_vertex_edge_properties(graph, old_to_new_vids, old_to_new_eids)
-
+        
         # update properties on graph
         temporalgproperties = self.graph_properties()
-
+        
         # while on a property graph, graph_property are just dict of dict, 
         # on a temporal property graph, graph_property are dict of list of dict
         # to keep the different values for each time point.
-
+        
         for gname in graph.graph_property_names():
             if gname in [self.metavidtypepropertyname,self.metavidtypepropertyname]:
                 temporalgproperties[gname] = graph.graph_property(gname)
             else:
                 newgproperty = graph.translate_graph_property(gname, old_to_new_vids, old_to_new_eids)
                 temporalgproperties[gname] = temporalgproperties.get(gname,[])+[newgproperty]
-
+        
         self._old_to_new_ids.append(relabel_ids)
-
+        
         # set edge_type property for structural edges
         for old_eid, eid in old_to_new_eids.iteritems():
             edge_types[eid] = self.STRUCTURAL
             old_edge_labels[eid] = old_eid
-
+        
         for old_vid, vid in old_to_new_vids.iteritems():
             old_vertex_labels[vid] = old_vid
             indices[vid] = current_index
-
+        
         def use_sub_lineage(mother, daughters, on_ids_source, on_ids_target):
             found_sub_lineage=False; tmp_daughters = []
             for d in daughters:
@@ -190,7 +186,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vid` : a vertex id
-
+        
         :Returns:
         - `children_list` : the set of the children of the vertex vid
         """
@@ -201,7 +197,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vid` : a vertex id
-
+        
         :Returns:
         - `iterator` : an iterator on the set of the children of the vertex vid
         """
@@ -221,7 +217,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vid` : a vertex id
-
+        
         :Returns:
         - `parents_list` : the set of the parents of the vertex vid
         """
@@ -232,7 +228,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vid` : a vertex id
-
+        
         :Returns:
         - `iterator` : the set of the children of the vertex vid
         """
@@ -252,7 +248,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vid` : a vertex id
-
+        
         :Returns:
         - `sibling_list` : the set of sibling of the vertex vid
         """
@@ -266,7 +262,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vid` : a vertex id
-
+        
         :Returns:
         - `iterator` : an iterator on the set of sibling of the vertex vid
         """
@@ -277,7 +273,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vids` : a set of vertex id
-
+        
         :Returns:
         - `descendant_list` : the set of the 0, 1, ..., nth descendant of the vertex vid
         """
@@ -304,7 +300,7 @@ class TemporalPropertyGraph(PropertyGraph):
         
         :Parameters:
         - `vids` : a set of vertex id
-
+        
         :Returns:
         - `iterator` : an iterator on the set of the 0, 1, ..., nth descendants of the vertex vid
         """
@@ -356,7 +352,7 @@ class TemporalPropertyGraph(PropertyGraph):
         :Parameter:
          - `fully_lineaged` (bool) : if True, return vertices temporally linked from the beginning to the end, otherwise return vertices having at least a parent or a child(ren).
         """
-        from openalea.container.temporal_graph_analysis import exist_all_relative_at_rank
+        from vplants.tissue_analysis.temporal_graph_analysis import exist_all_relative_at_rank
         if fully_lineaged:
             last_tp_ids_lineaged_from_0 = [k for k in self.vertices() if exist_all_relative_at_rank(self, k, -self.nb_time_points-1)]
             first_tp_ids_lineaged_from_0 = [k for k in self.ancestors(last_tp_ids_lineaged_from_0, self.nb_time_points-1) if self.vertex_property('index')[k]==0]
@@ -398,20 +394,6 @@ class TemporalPropertyGraph(PropertyGraph):
         return dict([(k,self.vertex_property(vertex_property)[k]) for k in self.vertex_at_time(time_point, lineaged, fully_lineaged, as_parent, as_children)])
 
 
-    #~ def vertex_property_with_image_labels(self, vertex_property, time_point = None, graph_labels2keep = None, image_labels2keep = None):
-        #~ if isinstance(vertex_property,str):
-            #~ if (graph_labels2keep is not None):
-                #~ return translate_keys_Graph2Image(self, self.vertex_property(vertex_property,graph_labels2keep))
-            #~ else:
-                #~ vertex_property = self.vertex_property(vertex_property)
-#~ 
-        #~ if (graph_labels2keep is not None):
-            #~ return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in graph_labels2keep] )) 
-#~ 
-        #~ if (image_labels2keep is not None):
-            #~ return translate_keys_Graph2Image(self, dict( [(k,v) for k,v in vertex_property.iteritems() if k in translate_ids_Image2Graph(self,image_labels2keep,time_point)] )) 
-#~ 
-
     def vertex_property_with_image_labels(self, vertex_property, time_point, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
         """
         Return a dictionary extracted from the graph.vertex_property(`vertex_property`) with relabelled keys into "images labels" thanks to the dictionary graph.vertex_property('old_labels').
@@ -420,7 +402,7 @@ class TemporalPropertyGraph(PropertyGraph):
          - `vertex_property` : can be an existing 'graph.vertex_property' or a string refering to an existing graph.vertex_property to extract.
          - `image_labels2keep` (int|list) : a list of "image type" labels (i.e. from SpatialImages) to return in the `relabelled_dictionnary`
          - `graph_labels2keep` (int|list) : a list of "graph type" ids (i.e. from PropertyGraphs) to return in the `relabelled_dictionnary`
-
+        
         :Returns:
          - *key_ vertex/cell label, *values_ `vertex_property`
         
@@ -430,7 +412,7 @@ class TemporalPropertyGraph(PropertyGraph):
          graph.vertex_property_with_image_labels( 'volume' , SpatialImageAnalysis.L1() )
         
         """
-        from openalea.container.temporal_graph_analysis import translate_keys_Graph2Image
+        from vplants.tissue_analysis.temporal_graph_analysis import translate_keys_Graph2Image
         return translate_keys_Graph2Image(self, self.vertex_property_at_time(vertex_property, time_point, lineaged, fully_lineaged, as_parent, as_children))
 
 
