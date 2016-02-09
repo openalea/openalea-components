@@ -15,7 +15,7 @@
 # See the README file for information on usage and redistribution.
 #
 
-import Image
+from openalea.image.pil import Image
 
 from openalea.vpltk.qt.QtGui import QImage, qRgb
 
