@@ -6,6 +6,7 @@
 #
 #       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
 #                       Fred Theveny <frederic.theveny@cirad.fr>
+                        Jonathan Legrand <jonathan.legrand@ens-lyon.fr>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
