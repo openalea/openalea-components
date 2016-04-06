@@ -680,23 +680,26 @@ class PropertyGraph(IPropertyGraph, Graph):
 
     def _add_vertex_to_region(self, vids, region_name):
         """
-        add a set of vertices to a region
+        Add a list of vertices to a region.
+        Using 'vertex_property("regions")[vid]' it is possible to see all the regions 'vid' belong to.
+        Using 'graph_property("region_name")' it is possible to get all the vids belonging to the region.
+        TODO: maybe we should save only in 'graph_property("region_name")' and make a function to get vertex_property("regions")[vid] ??
         """
         if not "regions" in self._vertex_property:
-            warnings.warn("Property 'regions' is not defined on vertex. Adding it!")
             self._vertex_property["regions"] = {}
 
         for vid in vids:
+            # Using vertex_property("regions")[vid] it is possible to see all the regions vid belong to:
             if self._vertex_property["regions"].has_key(vid):
                 self._vertex_property["regions"][vid].append(region_name)
             else:
                 self._vertex_property["regions"][vid]=[region_name]
-
+            # Using 'graph_property("region_name")' it is possible to get all the vids belonging to the region
             self._graph_property[region_name].append(vid)
 
     def _remove_vertex_from_region(self, vids, region_name):
         """
-        remove a set of vertices to a region
+        Remove a list of vertices from a region
         """
         for vid in vids:
             self._vertex_property["regions"][vid].remove(region_name)
@@ -707,11 +710,10 @@ class PropertyGraph(IPropertyGraph, Graph):
 
     def add_vertex_to_region(self, vids, region_name):
         """
-        add a set of vertices to a region
+        Add a list of vertices to a region
         """
         if not region_name in self._graph_property:
-            #~ raise PropertyError("property %s is not defined on graph" % region_name)
-            warnings.warn("Property %s is not defined for vertices on the graph, adding it..." % region_name)
+            print "Property '{}' is not defined for vertices, adding it...".format(region_name)
             self._graph_property[region_name] = vids
         
         self._add_vertex_to_region(self.__to_set(vids), region_name)
