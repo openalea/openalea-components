@@ -425,8 +425,10 @@ class TemporalPropertyGraph(PropertyGraph):
         Return the `vertex_property``for a given `time_point`.
         May be conditionned by extra temporal property `lineaged`, `fully_lineaged`, `as_parent`, `as_children`.
         """
-        return dict([(k,self.vertex_property(vertex_property)[k]) for k in self.vertex_at_time(time_point, lineaged, fully_lineaged, as_parent, as_children)])
-
+        vp = self.vertex_property
+        vt = self.vertex_at_time
+        vp_n = vertex_property
+        return dict([(k,vp(vp_n)[k]) for k in vt(time_point, lineaged, fully_lineaged, as_parent, as_children) if vp(vp_n).has_key(k)])
 
     def vertex_property_with_image_labels(self, vertex_property, time_point, lineaged=False, fully_lineaged=False, as_parent=False, as_children=False):
         """
