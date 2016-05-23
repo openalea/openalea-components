@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # -*- python -*-
 #
 #       OpenAlea.Core
