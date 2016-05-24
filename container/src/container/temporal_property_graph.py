@@ -363,6 +363,24 @@ class TemporalPropertyGraph(PropertyGraph):
         """
         return self.rank_descendants(vid,rank) != set()
 
+    def rank_descendants(self, vid, rank=1):
+        """ Return the descendants of the vertex vid only at a given rank
+        :Parameters:
+        - `vid` : a vertex id or a set of vertex id
+        :Returns:
+        - `descendant_list` : the set of the rank-descendant of the vertex vid or a list of set
+        """
+        if isinstance(vid,list):
+            return [self.rank_descendants(v,rank) for v in vid]
+        else:
+            return self.descendants(vid,rank)- self.descendants(vid,rank-1)
+
+    def has_descendants(self, vid, rank=1):
+        """
+        Return True if the vid `vid` has at least a descendant at `rank`.
+        """
+        return self.rank_descendants(vid,rank) != set()
+
     def ancestors(self, vids, n = None):
         """Return the 0, 1, ..., nth ancestors of the vertex vid
 
