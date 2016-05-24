@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # -*- python -*-
 #
 #       OpenAlea.Core
@@ -6,6 +7,7 @@
 #
 #       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
 #                       Fred Theveny <frederic.theveny@cirad.fr>
+                        Jonathan Legrand <jonathan.legrand@ens-lyon.fr>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -92,11 +94,10 @@ class PropertyGraph(IPropertyGraph, Graph):
             raise PropertyError("property %s is undefined on graph"
                                 % property_name)
     graph_property.__doc__ = IPropertyGraph.graph_property.__doc__
-                                
+
     def graph_properties(self):
         return self._graph_property
-    
-    
+
     def graph_property_names(self):
         """todo"""
         return self._graph_property.iterkeys()
@@ -106,14 +107,14 @@ class PropertyGraph(IPropertyGraph, Graph):
         if property_name in self._vertex_property:
             raise PropertyError("property %s is already defined on vertices"
                                 % property_name)
-        if values is None: values = {}                                
+        if values is None: values = {}
         self._vertex_property[property_name] = values
     add_vertex_property.__doc__ = IPropertyGraph.add_vertex_property.__doc__
 
     def extend_vertex_property(self, property_name, values ):
         """todo AND TO CHECK AND TEST !!"""
         if not isinstance(values, dict):
-            raise TypeError("Values %s is not a type 'dict'" % values)                                
+            raise TypeError("Values %s is not a type 'dict'" % values)
         if property_name not in self._vertex_property:
             print PropertyError("Property %s is not defined on vertices"
                                 % property_name)
@@ -147,7 +148,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         if property_name in self._edge_property:
             raise PropertyError("property %s is already defined on edges"
                                 % property_name)
-        if values is None: values = {}                                
+        if values is None: values = {}
         self._edge_property[property_name] = values
     add_edge_property.__doc__ = IPropertyGraph.add_edge_property.__doc__
 
@@ -637,8 +638,7 @@ class PropertyGraph(IPropertyGraph, Graph):
 
 
     def adjacency_matrix(self, edge_type = None, edge_dist = 1, no_edge_val = 0, oriented = True, reflexive = True, reflexive_value = 0):
-        """
-        Return the adjacency matrix of the graph.
+        """ Return the adjacency matrix of the graph.
         :Parameters:
         - `edge_type` : type of edges we want to consider
         - `edge_dist` : cost ot cost function to apply between two edges, default : 1
@@ -676,28 +676,27 @@ class PropertyGraph(IPropertyGraph, Graph):
                     adjacency_matrix[i, j]=min(adjacency_matrix[i, j], 
                                                adjacency_matrix[i, k] + adjacency_matrix[k, j])
         return adjacency_matrix
-        
 
     def _add_vertex_to_region(self, vids, region_name):
-        """
-        add a set of vertices to a region
+        """ Add a set of vertices to a region.
+        Save it in two places: 
+             - self.graph_property[region_name] will return the list of all vertices belonging to 'region_name';
+             - self.vertex_property["regions"][vid] will return the list of all regions `vid` belong to.
         """
         if not "regions" in self._vertex_property:
-            warnings.warn("Property 'regions' is not defined on vertex. Adding it!")
             self._vertex_property["regions"] = {}
-
+        
         for vid in vids:
+            # Adding region_name to the "region" property of each `vid`:
             if self._vertex_property["regions"].has_key(vid):
                 self._vertex_property["regions"][vid].append(region_name)
             else:
                 self._vertex_property["regions"][vid]=[region_name]
-
+            # Adding `vid` to the `region_name` (graph_property) it belong to:
             self._graph_property[region_name].append(vid)
 
     def _remove_vertex_from_region(self, vids, region_name):
-        """
-        remove a set of vertices to a region
-        """
+        """Remove a set of vertices `vids` from a region `region_name`."""
         for vid in vids:
             self._vertex_property["regions"][vid].remove(region_name)
             if self._vertex_property["regions"][vid]==[]:
@@ -706,32 +705,31 @@ class PropertyGraph(IPropertyGraph, Graph):
             self._graph_property[region_name].remove(vid)
 
     def add_vertex_to_region(self, vids, region_name):
-        """
-        add a set of vertices to a region
+        """ Add a set of vertices `vids` to a region `region_name`.
+        Save it in two places: 
+             - self.graph_property[region_name] will return the list of all vertices belonging to 'region_name';
+             - self.vertex_property["regions"][vid] will return the list of all regions `vid` belong to.
         """
         if not region_name in self._graph_property:
             #~ raise PropertyError("property %s is not defined on graph" % region_name)
-            warnings.warn("Property %s is not defined for vertices on the graph, adding it..." % region_name)
+            print "Property %s is not defined for vertices on the graph, adding it..." % region_name
             self._graph_property[region_name] = vids
         
         self._add_vertex_to_region(self.__to_set(vids), region_name)
 
     def remove_vertex_from_region(self, vids, region_name):
-        """
-        remove a set of vertices to a region
-        """
+        """Remove a set of vertices `vids` from a region `region_name`."""
         if not region_name in self._graph_property:
             raise PropertyError("property %s is not defined on graph"
                                 % region_name)
         self._remove_vertex_from_region(self.__to_set(vids), region_name)
 
     def add_region_from_func(self, func, region_name):
-        """ Create a region of vertices according a function
+        """ Create a region `region_name` of vertices according to a function `func`.
         
         :Parameters:
         - `func` : the function to make the region (might return True or False)
         - `region_name` : the name of the region
-        
         """
         if region_name in self._graph_property:
             raise PropertyError("property %s is already defined on graph"
@@ -744,8 +742,7 @@ class PropertyGraph(IPropertyGraph, Graph):
                 self._add_vertex_to_region(set([vid]), region_name)
 
     def add_regions_from_dict(self, dict_regions, region_names):
-        """
-        If one already posses a dict indicating for a list of vertex which region they belong to, it can be given to the graph directly.
+        """ If one already posses a dict indicating for a list of vertex which region they belong to, it can be given to the graph directly.
         
         :Parameters:
         - `dict_regions` (dict) - *keys = ids (SpatialImage); *values = intergers indicating the region(s)
@@ -775,12 +772,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         return iter(self._graph_property[region_name])
 
     def remove_region(self, region_name):
-        """ Remove a region 
-        
-        :Parameters:
-        - `region_name` : the name of the region
-        
-        """
+        """Remove a region `region_name`."""
         if not region_name in self._graph_property:
             raise PropertyError("property %s is not defined on graph"
                                 % region_name)
@@ -793,9 +785,7 @@ class PropertyGraph(IPropertyGraph, Graph):
         return self._graph_property.pop(region_name)
 
     def is_connected_region(self, region_name, edge_type=None):
-        """
-        Return True if a region is connected
-        """
+        """Return True if a region is connected."""
         if not region_name in self._graph_property:
             raise PropertyError("property %s is not defined on graph"
                                 % region_name)
@@ -875,4 +865,3 @@ class PropertyGraph(IPropertyGraph, Graph):
         gp.update(graph.graph)
 
         return g
-
