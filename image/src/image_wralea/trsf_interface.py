@@ -8,7 +8,9 @@
 #
 #------------------------------------------------------------------------------
 
-"""Declaration of ITrsf interface
+"""
+Declaration of ITrsf interface
+Interface for BalTransformation transformations
 """
 
 from openalea.core import *
@@ -18,6 +20,7 @@ except ImportError:
     raise ImportError('Import Error')
 
 class ITrsf(IInterface):
-    """Interface for BalTransformation transformations
+    """
+    Interface for BalTransformation transformations
     """
     __pytype__ = BalTransformation
