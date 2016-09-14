@@ -13,7 +13,7 @@ Declaration of ITrsf interface
 Interface for Bal Transformations
 """
 
-from openalea.core import *
+from openalea.core.interface import IInterface
 
 class ITrsf(IInterface):
     """
