@@ -10,17 +10,12 @@
 
 """
 Declaration of ITrsf interface
-Interface for BalTransformation transformations
+Interface for Bal Transformations
 """
 
 from openalea.core import *
-try:
-    from timagetk.wrapping.bal_trsf import BalTransformation
-except ImportError:
-    raise ImportError('Import Error')
 
 class ITrsf(IInterface):
     """
-    Interface for BalTransformation transformations
+    Interface for Bal Transformations
     """
-    __pytype__ = BalTransformation
