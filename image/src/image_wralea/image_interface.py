@@ -17,7 +17,7 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id: interface.py 2245 2010-02-08 17:11:34Z cokelaer $"
 
-from openalea.core import *
+from openalea.core.interface import IInterface
 from openalea.image.spatial_image import SpatialImage
 
 class IImage(IInterface) :
