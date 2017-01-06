@@ -17,8 +17,7 @@
 __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
-
-from openalea.vpltk.qt import QtCore
+from Qt import QtCore
 
 def file_url_to_path(url):
     qurl = QtCore.QUrl(url)

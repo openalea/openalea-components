@@ -24,38 +24,33 @@ __revision__=" $Id: $ "
 
 __all__ = ["display","SlideViewer"]
 
-def load_local(mod,modules):
-    modules = modules.split()
-    modules = ''.join(modules).split(',')
+import numpy as np
 
-    for m in modules:
-        globals()[m] = mod.__getattribute__(m)
+from Qt import QtCore, QtWidgets
 
 from openalea.image.spatial_image import SpatialImage
-import numpy as np
-from openalea.vpltk.qt import QtCore, QtGui
-load_local(QtCore,'Qt,QObject,SIGNAL')
-load_local(QtGui,"""QApplication,QLabel,QMainWindow,QComboBox,
-                        QSlider,QToolBar""")
+
 from palette import palette_names,palette_factory
 from pixmap_view import PixmapStackView,ScalableLabel
 
 from slide_viewer_ui import Ui_MainWindow
 
+
 if 'bw' in palette_names:
     palette_names.remove('bw')
-palette_names.sort()
+    palette_names.sort()
 
-class SlideViewer (QMainWindow) :
+
+class SlideViewer (QtWidgets.QMainWindow) :
     """Display each image in a stack using a slider
-    
+
     A pure QWidget (instead of QMainWindow) is also available, see openalea.image.gui.slide_viewer_widget.
     """
 
     viewer_count = 0
 
     def __init__ (self, parent=None) :
-        QMainWindow.__init__(self, parent)
+        QtWidgets.QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.axis = 2
@@ -70,66 +65,66 @@ class SlideViewer (QMainWindow) :
         self._last_mouse_x = 0
         self._last_mouse_y = 0
 
-        QObject.connect(self._label,
-                        SIGNAL("mouse_press"),
-                        self.mouse_pressed)
+        QtCore.QObject.connect(self._label,
+                               QtCore.SIGNAL("mouse_press"),
+                               self.mouse_pressed)
 
-        QObject.connect(self._label,
-                        SIGNAL("mouse_move"),
-                        self.mouse_pressed)
+        QtCore.QObject.connect(self._label,
+                               QtCore.SIGNAL("mouse_move"),
+                               self.mouse_pressed)
 
         #toolbar
-        QObject.connect(self.ui.action_close,
-                        SIGNAL("triggered(bool)"),
-                        self.close)
+        QtCore.QObject.connect(self.ui.action_close,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.close)
 
-        QObject.connect(self.ui.action_snapshot,
-                        SIGNAL("triggered(bool)"),
-                        self.snapshot)
+        QtCore.QObject.connect(self.ui.action_snapshot,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.snapshot)
 
-        QObject.connect(self.ui.action_rotate_left,
-                        SIGNAL("triggered(bool)"),
-                        self.rotate_left)
+        QtCore.QObject.connect(self.ui.action_rotate_left,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.rotate_left)
 
-        QObject.connect(self.ui.action_rotate_right,
-                        SIGNAL("triggered(bool)"),
-                        self.rotate_right)
+        QtCore.QObject.connect(self.ui.action_rotate_right,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.rotate_right)
 
         #palette
-        self._palette_select = QComboBox()
+        self._palette_select = QtWidgets.QComboBox()
         self.ui.toolbar.addWidget(self._palette_select)
         for palname in palette_names :
             self._palette_select.addItem(palname)
 
-        QObject.connect(self._palette_select,
-                        SIGNAL("currentIndexChanged(int)"),
-                        self.palette_name_changed)
+        QtCore.QObject.connect(self._palette_select,
+                               QtCore.SIGNAL("currentIndexChanged(int)"),
+                               self.palette_name_changed)
         #axis
-        self._axis = QComboBox(self)
+        self._axis = QtWidgets.QComboBox(self)
         self.ui.toolbar.addWidget(self._axis)
         self._axis.addItem("Z-axis")
         self._axis.addItem("Y-axis")
         self._axis.addItem("X-axis")
-        self.connect(self._axis, SIGNAL('currentIndexChanged(int)'), self.change_axis )
+        self.connect(self._axis, QtCore.SIGNAL('currentIndexChanged(int)'), self.change_axis )
 
         #slider
-        self._bot_toolbar = QToolBar("slider")
+        self._bot_toolbar = QtWidgets.QToolBar("slider")
 
-        self._img_slider = QSlider(Qt.Horizontal)
+        self._img_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self._img_slider.setEnabled(False)
-        QObject.connect(self._img_slider,
-                        SIGNAL("valueChanged(int)"),
-                        self.slice_changed)
+        QtCore.QObject.connect(self._img_slider,
+                               QtCore.SIGNAL("valueChanged(int)"),
+                               self.slice_changed)
 
         self._bot_toolbar.addWidget(self._img_slider)
-        self.addToolBar(Qt.BottomToolBarArea,self._bot_toolbar)
+        self.addToolBar(QtCore.Qt.BottomToolBarArea,self._bot_toolbar)
 
         #statusbar
-        self._lab_coord = QLabel("coords:")
-        self._lab_xcoord = QLabel("% 4d" % 0)
-        self._lab_ycoord = QLabel("% 4d" % 0)
-        self._lab_zcoord = QLabel("% 4d" % 0)
-        self._lab_intens = QLabel("intens: None")
+        self._lab_coord = QtWidgets.QLabel("coords:")
+        self._lab_xcoord = QtWidgets.QLabel("% 4d" % 0)
+        self._lab_ycoord = QtWidgets.QLabel("% 4d" % 0)
+        self._lab_zcoord = QtWidgets.QLabel("% 4d" % 0)
+        self._lab_intens = QtWidgets.QLabel("intens: None")
 
         self.ui.statusbar.addPermanentWidget(self._lab_coord)
         self.ui.statusbar.addPermanentWidget(self._lab_xcoord)
@@ -203,8 +198,8 @@ class SlideViewer (QMainWindow) :
         if palette_name is not None :
             ind = self._palette_select.findText(palette_name)
             self._palette_select.setCurrentIndex(ind)
-        self._im_view.set_palette(palette,self.axis)
-        self.update_pix()
+            self._im_view.set_palette(palette,self.axis)
+            self.update_pix()
 
     def set_title(self, title=None):
         if title is not None :

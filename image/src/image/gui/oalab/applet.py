@@ -18,17 +18,18 @@
 #
 ###############################################################################
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtWidgets
+
 from openalea.image.gui.slide_viewer_widget import ImageStackViewerWidget, ImageStackViewerPanel, connect, disconnect
 from openalea.core.observer import AbstractListener
 from openalea.core.world import World
 from openalea.image.spatial_image import SpatialImage
 
 
-class ImageStackViewer(QtGui.QTabWidget, AbstractListener):
+class ImageStackViewer(QtWidgets.QTabWidget, AbstractListener):
 
     def __init__(self):
-        QtGui.QTabWidget.__init__(self)
+        QtWidgets.QTabWidget.__init__(self)
         AbstractListener.__init__(self)
 
         self.setAcceptDrops(True)

@@ -21,16 +21,14 @@ This module defines functions to transform images into QPixmaps
 __license__= "Cecill-C"
 __revision__ = " $Id: __init__.py 2245 2010-02-08 17:11:34Z cokelaer $ "
 
-from openalea.vpltk.qt import QtCore, QtGui
-from openalea.vpltk.qt import qt
+from Qt import QtGui
+
 from numpy import array, zeros, uint32, uint8
 
 from openalea.image.spatial_image import SpatialImage
 from openalea.image.gui.palette import palette_factory, from_argb_swap_columns_and_recast
 from openalea.image.pil import Image, ImageQt
 
-QPixmap = qt.QtGui.QPixmap
-QImage = qt.QtGui.QImage
 
 def to_img (img, scalar_type=None, lut=None, forceNativeLut=None) :
     """Transform an image array into a QImage
@@ -40,7 +38,7 @@ def to_img (img, scalar_type=None, lut=None, forceNativeLut=None) :
                        i will correspond to y and j to x with origin
                        in the top left corner
 
-    :Returns Type: QImage
+    :Returns Type: QtGui.QImage
     """
     # -- personnal opinion (DB) : there shouldn't be ANY transposition
     # applied automatically in viewing code, except for transpositions
@@ -56,21 +54,21 @@ def to_img (img, scalar_type=None, lut=None, forceNativeLut=None) :
             img = img.transpose(1,0)
         else:
             raise Exception("Unknown image shape, cannot deduce pixel format")
-    _img = Image.fromarray(img)
-    pseudo_QImage = ImageQt.ImageQt(_img)
+        _img = Image.fromarray(img)
+        pseudo_QImage = ImageQt.ImageQt(_img)
     return pseudo_QImage
 
     try:
         imgconvarray={
-            1:QImage.Format_Indexed8,
-            3:QImage.Format_RGB888,
-            4:QImage.Format_ARGB32
-            }
+            1:QtGui.QImage.Format_Indexed8,
+            3:QtGui.QImage.Format_RGB888,
+            4:QtGui.QImage.Format_ARGB32
+        }
     except:
         imgconvarray={
-            1:QImage.Format_Indexed8,
-            4:QImage.Format_ARGB32
-            }
+            1:QtGui.QImage.Format_Indexed8,
+            4:QtGui.QImage.Format_ARGB32
+        }
 
     nb_dim = len(img.shape)
     if nb_dim == 3:
@@ -88,12 +86,12 @@ def to_img (img, scalar_type=None, lut=None, forceNativeLut=None) :
     if not img.flags['C_CONTIGUOUS']:
         img = img.copy("C")
 
-    qimg = QImage(img.data,
-                  img.shape[1],
-                  img.shape[0],
-                  imgconvarray[vdim])
+    qimg = QtGui.QImage(img.data,
+                        img.shape[1],
+                        img.shape[0],
+                        imgconvarray[vdim])
 
-    
+
     return qimg.copy()
 
 def to_img_fast( img, scalar_type=None, lut=None, forceNativeLut=False):
@@ -103,7 +101,7 @@ def to_img_fast( img, scalar_type=None, lut=None, forceNativeLut=False):
     determining the exact flags for QImage and feeding it with the
     data pointer.
 
-    :Returns Type: QImage
+    :Returns Type: QtGui.QImage
     """
     import sip
 
@@ -135,8 +133,8 @@ def to_img_fast( img, scalar_type=None, lut=None, forceNativeLut=False):
                 print "using native 8bit color map"
                 if img.dtype != uint8 :
                     img = uint8(img)
-                qim = QImage(sip.voidptr(img.ctypes.data), img.shape[0], img.shape[1], QImage.Format_Indexed8)
-                qim.setColorTable(lut.tolist())
+                    qim = QtGui.QImage(sip.voidptr(img.ctypes.data), img.shape[0], img.shape[1], QtGui.QImage.Format_Indexed8)
+                    qim.setColorTable(lut.tolist())
                 return qim.copy()
 
             else:
@@ -149,20 +147,20 @@ def to_img_fast( img, scalar_type=None, lut=None, forceNativeLut=False):
 
         elif scalar_type=="argb32":
             print "using native scalar argb32"
-            qim = QImage(sip.voidptr(img.ctypes.data), img.shape[0], img.shape[1], QImage.Format_ARGB32).copy()
+            qim = QtGui.QImage(sip.voidptr(img.ctypes.data), img.shape[0], img.shape[1], QtGui.QImage.Format_ARGB32).copy()
             return qim
 
     elif vdim in [3,4]  : # : We are working on vectorial things like RGB ...
         data = img.ctypes.data
         if vdim == 3:
             print "using native vectorial rgb888"
-            fmt = QImage.Format_RGB888
+            fmt = QtGui.QImage.Format_RGB888
         elif vdim == 4: # ... or RGBA
             print "using native vectorial argb32"
-            fmt = QImage.Format_ARGB32
+            fmt = QtGui.QImage.Format_ARGB32
         else:
             raise Exception("Unhandled vectorial pixel type")
-        qim = QImage(sip.voidptr(data), img.shape[0], img.shape[1], fmt)
+        qim = QtGui.QImage(sip.voidptr(data), img.shape[0], img.shape[1], fmt)
         return qim.copy()
 
     else:
@@ -175,9 +173,9 @@ def to_pix( img, scalar_type=None, lut=None, forceNativeLut=False):
      -`img` (NxMx3 or 4 array of int) - 2D matrix of RGB(A) image pixels
                        i will correspond to x and j to y
 
-    :Returns Type: QPixmap
+    :Returns Type: QtGui.QPixmap
     """
-    return QPixmap.fromImage(to_img(img, scalar_type, lut, forceNativeLut) )
+    return QtGui.QPixmap.fromImage(to_img(img, scalar_type, lut, forceNativeLut) )
 
 def to_tex (img) :
     """Transform an image array into an array usable for texture in opengl
@@ -196,4 +194,3 @@ def to_tex (img) :
         ret = array([img[...,0],img[...,1],img[...,2],alpha],uint8)
 
         return ret.transpose( (1,2,0) )
-

@@ -1,8 +1,9 @@
-from openalea.vpltk.qt import QtGui
+from Qt import QtGui, QtWidgets
+
 from openalea.image_wralea.gui.select_box_widget import SelectBoxWidget
 
 
-qapp = QtGui.QApplication.instance()
+qapp = QtWidgets.QApplication.instance()
 
 if qapp:
 	class DummyNode (object) :
@@ -21,5 +22,3 @@ if qapp:
 	w.setPixmap(QtGui.QPixmap("4_ocean_currents.png") )
 
 	w.show()
-
-

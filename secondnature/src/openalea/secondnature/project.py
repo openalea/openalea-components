@@ -17,7 +17,8 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 
-from openalea.vpltk.qt import QtCore, QtGui
+from Qt import QtCore, QtGui
+
 from openalea.core.singleton import ProxySingleton
 from openalea.core.metaclass import make_metaclass
 import cPickle
@@ -295,22 +296,22 @@ class QActiveProjectManager(QtCore.QObject):
     # Methods that return prebound QActions #
     #########################################
     def get_action_new(self):
-        action = QtGui.QAction("&New project...", self)
+        action = QtWidgets.QAction("&New project...", self)
         action.triggered.connect(self.new_active_project)
         return action
 
     def get_action_open(self):
-        action = QtGui.QAction("&Open project...", self)
+        action = QtWidgets.QAction("&Open project...", self)
         action.triggered.connect(self.open_project)
         return action
 
     def get_action_save(self):
-        action = QtGui.QAction("&Save project...", self)
+        action = QtWidgets.QAction("&Save project...", self)
         action.triggered.connect(self.save_active_project)
         return action
 
     def get_action_close(self):
-        action = QtGui.QAction("&Close project...", self)
+        action = QtWidgets.QAction("&Close project...", self)
         action.triggered.connect(self.close_active_project)
         return action
 
@@ -332,7 +333,7 @@ class QActiveProjectManager(QtCore.QObject):
             else:
                 self.close_active_project()
 
-        name, ok = QtGui.QInputDialog.getText(None,
+        name, ok = QtWidgets.QInputDialog.getText(None,
                                               "New project...",
                                               "Please give a new to your project")
         if ok:
@@ -341,27 +342,27 @@ class QActiveProjectManager(QtCore.QObject):
             return None
 
     def __ask_close_active(self):
-        but = QtGui.QMessageBox.question(None,
+        but = QtWidgets.QMessageBox.question(None,
                                          "Close current project?",
                                          "The current project has not been saved.\n\n"+\
                                          "Do you really want to close it?""",
-                                         QtGui.QMessageBox.Yes|QtGui.QMessageBox.No,
-                                         QtGui.QMessageBox.No)
-        return but == QtGui.QMessageBox.Yes
+                                         QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No,
+                                         QtWidgets.QMessageBox.No)
+        return but == QtWidgets.QMessageBox.Yes
 
     def close_active_project(self):
         proj = self.get_active_project()
         projectClosed = False
         if proj and proj.is_modified():
-            but = QtGui.QMessageBox.question(None,
+            but = QtWidgets.QMessageBox.question(None,
                                              "Unsaved modifications!",
                                              "The current project has not been saved.\n"+\
                                              "All changes will be lost.\n\n"+\
                                              "Do you want to save it before closing it?",
-                                             QtGui.QMessageBox.Yes|QtGui.QMessageBox.No,
-                                             QtGui.QMessageBox.Yes)
+                                             QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No,
+                                             QtWidgets.QMessageBox.Yes)
 
-            if but == QtGui.QMessageBox.Yes:
+            if but == QtWidgets.QMessageBox.Yes:
                 self.save_active_project()
         self.__pm.close_active_project()
 
@@ -369,12 +370,12 @@ class QActiveProjectManager(QtCore.QObject):
     def save_active_project(self):
         proj = self.get_active_project()
         if proj:
-            pth = QtGui.QFileDialog.getSaveFileName(None,
+            pth = QtWidgets.QFileDialog.getSaveFileName(None,
                                                     "Save project to...",
                                                     pj(os.path.expanduser("~"),proj.name+".oas"),
                                                     "OpenAlea project (*.oas)",
                                                     "OpenAlea project (*.oas)",
-                                                    QtGui.QFileDialog.DontResolveSymlinks)
+                                                    QtWidgets.QFileDialog.DontResolveSymlinks)
             if pth == "":
                 return
             else:
@@ -389,19 +390,15 @@ class QActiveProjectManager(QtCore.QObject):
                     self.close_active_project()
 
         proj = None
-        pth = QtGui.QFileDialog.getOpenFileName(None,
+        pth = QtWidgets.QFileDialog.getOpenFileName(None,
                                                 "Open project from...",
                                                 os.path.expanduser("~"),
                                                 "OpenAlea project (*.oas)",
                                                 "OpenAlea project (*.oas)",
-                                                QtGui.QFileDialog.DontResolveSymlinks)
+                                                QtWidgets.QFileDialog.DontResolveSymlinks)
         if pth == "":
             return
         else:
             proj = Project.load_from(str(pth))
             if proj:
                 self.set_active_project(proj)
-
-
-
-

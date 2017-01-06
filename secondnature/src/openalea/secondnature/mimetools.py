@@ -18,18 +18,18 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtWidgets
 
 
-class DataEditorSelector(QtGui.QDialog):
+class DataEditorSelector(QtWidgets.QDialog):
     def __init__(self, items, parent=None):
-        QtGui.QDialog.__init__(self, parent, QtCore.Qt.WindowOkButtonHint|
+        QtWidgets.QDialog.__init__(self, parent, QtCore.Qt.WindowOkButtonHint|
                                              QtCore.Qt.WindowCancelButtonHint)
         self.setWindowTitle("Select a tool")
-        self.__l = QtGui.QVBoxLayout()
-        self.__itemList = QtGui.QListWidget()
-        self.__buttons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok|
-                                                QtGui.QDialogButtonBox.Cancel)
+        self.__l = QtWidgets.QVBoxLayout()
+        self.__itemList = QtWidgets.QListWidget()
+        self.__buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok|
+                                                    QtWidgets.QDialogButtonBox.Cancel)
         self.__l.addWidget(self.__itemList)
         self.__l.addWidget(self.__buttons)
         self.setLayout(self.__l)
@@ -59,10 +59,9 @@ class DataEditorSelector(QtGui.QDialog):
             fac = handlers[0]
         elif nbHandlers > 1:
             selector = DataEditorSelector( [h.name for h in handlers] )
-            if selector.exec_() == QtGui.QDialog.Rejected:
+            if selector.exec_() == QtWidgets.QDialog.Rejected:
                 return
             else:
                 facName = selector.get_selected()
                 fac = filter(lambda x: x.name == facName, handlers)[0]
         return fac
-

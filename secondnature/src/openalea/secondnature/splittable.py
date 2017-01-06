@@ -17,7 +17,8 @@
 __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore
+
 from openalea.visualea.splitterui import SplittableUI, DraggableWidget, RubberBandScrollArea
 
 
@@ -37,4 +38,3 @@ class CustomSplittable(SplittableUI):
         w = SplittableUI._install_child(self, paneId, widget, **kwargs)
         self._raise_overlays(paneId)
         return w
-

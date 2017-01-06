@@ -44,7 +44,7 @@ from openalea.secondnature.urltools import file_url_to_path
 
 # MENU API
 def get_datafactory_menu():
-    from openalea.vpltk.qt import QtCore
+    from Qt import QtCore
     return QtCore.QCoreApplication.instance().win.get_datafactory_menu()
 
 

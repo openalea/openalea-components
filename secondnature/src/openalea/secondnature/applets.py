@@ -16,6 +16,7 @@
 __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
+from Qt import QtCore, QtGui, QtWidgets
 
 from openalea.secondnature.base_mixins import HasName
 from openalea.secondnature.base_mixins import CanBeStarted
@@ -25,7 +26,6 @@ from openalea.core.singleton           import Singleton
 
 from openalea.core.logger import get_logger
 
-from openalea.vpltk.qt import QtCore
 from openalea.vpltk.qt.compat import to_qvariant
 
 mod_logger = get_logger(__name__)
@@ -129,10 +129,6 @@ class AbstractApplet(HasName, CanBeStarted):
 
 
 
-
-
-
-from openalea.vpltk.qt import QtGui, QtCore
 import weakref
 import types
 import traceback
@@ -145,7 +141,7 @@ from openalea.secondnature.qtutils   import ComboBox
 from openalea.secondnature.qtutils   import try_to_disconnect
 from openalea.secondnature.mimetools import DataEditorSelector
 
-class AppletSpace(QtGui.QWidget):
+class AppletSpace(QtWidgets.QWidget):
 
     # -- PROPERTIES --
     name    = property(lambda x:x.__applet.name if x.__applet else "uknown")
@@ -155,7 +151,7 @@ class AppletSpace(QtGui.QWidget):
     __hh__ = 22  # header content height
 
     def __init__(self, proj, applet=None, parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
         assert isinstance(applet, (types.NoneType, AbstractApplet))
         self.__applet  = applet
@@ -167,17 +163,17 @@ class AppletSpace(QtGui.QWidget):
         self.__widgetMap = {} #weakref.WeakKeyDictionary()
         self.__projToWidgets = weakref.WeakKeyDictionary()
         self.setContentsMargins(0,0,0,0)
-        self.__lay     = QtGui.QVBoxLayout(self)
+        self.__lay     = QtWidgets.QVBoxLayout(self)
         self.__lay.setContentsMargins(0,0,0,0)
         self.__lay.setSpacing(0)
-        self.__toolbar = QtGui.QToolBar()
-        self.__stack   = QtGui.QStackedWidget()
+        self.__toolbar = QtWidgets.QToolBar()
+        self.__stack   = QtWidgets.QStackedWidget()
 
 
-        self.__newDataBut    = QtGui.QPushButton("+")
+        self.__newDataBut    = QtWidgets.QPushButton("+")
         self.__browseDataBut = ComboBox()
         self.__browseDataBut.setIconSize(QtCore.QSize(16,16))
-        self.__menubar = QtGui.QMenuBar()
+        self.__menubar = QtWidgets.QMenuBar()
         self.__menubar.setDefaultUp(True)
 
         # -- configure the layout --
@@ -255,7 +251,7 @@ class AppletSpace(QtGui.QWidget):
         self.__stack.setCurrentWidget(content)
 
     def update_dataFac_menu(self):
-        menu = QtGui.QMenu(self.__newDataBut)
+        menu = QtWidgets.QMenu(self.__newDataBut)
         if not self.__restrictedToApplet:
             dataFacs = [f for f in DataFactoryManager().gather_items().itervalues() \
                         if not f.singleton]
@@ -350,17 +346,17 @@ class AppletSpace(QtGui.QWidget):
 
 
 
-class EmptyAppletBackground(QtGui.QWidget):
+class EmptyAppletBackground(QtWidgets.QWidget):
 
     __button_width__ = 200
 
     def __init__(self, applet, appletspace, parent=None, restToApp=False):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
         if restToApp:
             self.__pm = applet.get_background_pixmap()
         else:
             self.__pm = None
-        self.__lay = QtGui.QVBoxLayout()
+        self.__lay = QtWidgets.QVBoxLayout()
         self.__lay.setAlignment(QtCore.Qt.AlignHCenter)
         self.setLayout(self.__lay)
 
@@ -371,13 +367,13 @@ class EmptyAppletBackground(QtGui.QWidget):
             dataFacs = [f for f in DataFactoryManager().gather_items().itervalues() \
                         if not f.singleton]
 
-        label = QtGui.QLabel("Create a new...")
+        label = QtWidgets.QLabel("Create a new...")
         label.setFixedWidth(self.__button_width__)
         self.__lay.addWidget(label)
         for dt in dataFacs:
-            but  = QtGui.QPushButton(dt.icon, dt.name)
-            policy = QtGui.QSizePolicy.Fixed
-            #policy = QtGui.QSizePolicy(policy, policy)
+            but  = QtWidgets.QPushButton(dt.icon, dt.name)
+            policy = QtWidgets.QSizePolicy.Fixed
+            #policy = QtWidgets.QSizePolicy(policy, policy)
             but.setSizePolicy(policy, policy)
             but.setFixedWidth(self.__button_width__)
             self.__lay.addWidget(but)

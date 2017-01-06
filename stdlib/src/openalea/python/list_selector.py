@@ -16,10 +16,10 @@
 from openalea.visualea.node_widget import NodeWidget
 from openalea.core.observer import lock_notify
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtWidgets
 
 
-class ListSelectorWidget(QtGui.QListWidget, NodeWidget):
+class ListSelectorWidget(QtWidgets.QListWidget, NodeWidget):
     """ This Widget allows to select an element in a list
     or in a dictionnary """
 
@@ -29,7 +29,7 @@ class ListSelectorWidget(QtGui.QListWidget, NodeWidget):
         @param parent
         """
 
-        QtGui.QListWidget.__init__(self, parent)
+        QtWidgets.QListWidget.__init__(self, parent)
         NodeWidget.__init__(self, node)
         self.connect(self, QtCore.SIGNAL("currentRowChanged(int)"),
                      self.changed)
@@ -85,7 +85,7 @@ class ListSelectorWidget(QtGui.QListWidget, NodeWidget):
 
         for elt in seq:
 
-            item = QtGui.QListWidgetItem(str(elt))
+            item = QtWidgets.QListWidgetItem(str(elt))
             item.setFlags(QtCore.Qt.ItemIsEnabled |
                           QtCore.Qt.ItemIsSelectable)
             self.addItem(item)

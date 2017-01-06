@@ -12,7 +12,8 @@
 #
 ################################################################################
 
-from openalea.vpltk.qt import QtCore
+from Qt import QtCore
+
 from openalea.visualea.node_widget import NodeWidget
 from openalea.core.observer import lock_notify
 from openalea.image.all import PointSelection, SpatialImage, palette_names, palette_factory

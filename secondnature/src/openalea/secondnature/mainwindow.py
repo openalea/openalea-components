@@ -18,7 +18,7 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtWidgets
 
 import urlparse
 import traceback
@@ -43,9 +43,9 @@ from openalea.secondnature.qtutils    import try_to_disconnect
 
 sn_logger = get_logger(__name__)
 
-class MainWindow(QtGui.QMainWindow):
+class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
-        QtGui.QMainWindow.__init__(self, parent)
+        QtWidgets.QMainWindow.__init__(self, parent)
         self.setMinimumSize(500, 400)
         self.showMaximized()
         self.setWindowTitle("Second Nature")
@@ -58,7 +58,7 @@ class MainWindow(QtGui.QMainWindow):
         self.__extInitialised = False
 
         # -- main menu bar --
-        self._mainMenuBar = QtGui.QMenuBar(self)
+        self._mainMenuBar = QtWidgets.QMenuBar(self)
         self._projectMenu = self._mainMenuBar.addMenu("&Project")
         self.setMenuBar(self._mainMenuBar)
 
@@ -70,13 +70,13 @@ class MainWindow(QtGui.QMainWindow):
         self._projectMenu.addAction(qpm.get_action_close())
 
         # -- a default central widget--
-        self.__centralStack = QtGui.QStackedWidget(self)
+        self.__centralStack = QtWidgets.QStackedWidget(self)
 
         # -- status bar --
-        self._statusBar  = QtGui.QStatusBar(self)
-        self._layoutMode = QtGui.QComboBox(self)
+        self._statusBar  = QtWidgets.QStatusBar(self)
+        self._layoutMode = QtWidgets.QComboBox(self)
         self._statusBar.addPermanentWidget(self._layoutMode)
-        self._layoutMode.setSizeAdjustPolicy(QtGui.QComboBox.AdjustToContents)
+        self._layoutMode.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
         self.__currentLayout = None
         self._statusBar.setStyleSheet("QStatusBar{background-color: " +\
                                       "qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, "+\
@@ -119,7 +119,7 @@ class MainWindow(QtGui.QMainWindow):
                         if not f.singleton]
                         # lambda x,y:cmp(x.name, y.name))
 
-        menu = QtGui.QMenu(self)
+        menu = QtWidgets.QMenu(self)
         for dt in datafactories:
             action = menu.addAction(dt.icon, "New "+dt.name)
             action.setIconVisibleInMenu(True)
@@ -349,7 +349,7 @@ class MainWindow(QtGui.QMainWindow):
         proj = self.__projMan.get_active_project()
 
         pos = splittable.mapToGlobal(pos)
-        menu = QtGui.QMenu(splittable)
+        menu = QtWidgets.QMenu(splittable)
         menu.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         action = menu.addAction("Empty")
@@ -399,7 +399,3 @@ class MainWindow(QtGui.QMainWindow):
         splittable.setContentAt(paneId,
                                 space,
                                 noTearOffs=True, noToolButton=True)
-
-
-
-

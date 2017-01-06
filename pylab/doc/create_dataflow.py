@@ -1,8 +1,9 @@
-from openalea.vpltk.qt import QtGui
+from Qt import QtGui, QtWidgets
+
 from openalea.core.alea import *
 from openalea.visualea.dataflowview import GraphicalGraph
 
-app = QtGui.QApplication([])
+app = QtWidgets.QApplication([])
 
 pm = PackageManager()
 pm.init()
@@ -26,7 +27,7 @@ for this in ['SeveralAxesOnSameFigure']:
     rect = view.scene().sceneRect()
     matrix = view.matrix()
     rect = matrix.mapRect(rect)
-    
+
     pixmap = QtGui.QPixmap(rect.width(), rect.height())
     pixmap.fill()
     painter = QtGui.QPainter(pixmap)

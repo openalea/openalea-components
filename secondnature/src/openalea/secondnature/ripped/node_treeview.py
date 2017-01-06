@@ -26,7 +26,7 @@ __revision__ = " $Id$ "
 import os
 from weakref import ref
 
-from openalea.vpltk.qt import QtCore, QtGui
+from Qt import QtCore, QtGui, QtWidgets
 
 from openalea.core.observer import AbstractListener
 from openalea.core.node import NodeFactory, AbstractFactory
@@ -372,7 +372,7 @@ class NodeFactoryView(object):
         menu  = None
 
         if(isinstance(obj, AbstractFactory)): # Factory
-            menu = QtGui.QMenu(self)
+            menu = QtWidgets.QMenu(self)
             action = menu.addAction("Open")
             self.connect(action, QtCore.SIGNAL("triggered()"), self.open_node)
 
@@ -392,7 +392,7 @@ class NodeFactoryView(object):
             enabled = True#obj.is_real_package()
             pkg = obj
 
-            menu = QtGui.QMenu(self)
+            menu = QtWidgets.QMenu(self)
 
             action = menu.addAction("Open URL")
             action.setEnabled(enabled)
@@ -503,17 +503,17 @@ class NodeFactoryView(object):
         pman = self.model().pman # pkgmanager
 
         if(not pkg.is_directory()):
-            QtGui.QMessageBox.warning(self, "Error",
+            QtWidgets.QMessageBox.warning(self, "Error",
                                              "Cannot Remove old style package\n")
             return
 
         if(not pkg.is_editable()): return
 
-        ret = QtGui.QMessageBox.question(self, "Remove package",
+        ret = QtWidgets.QMessageBox.question(self, "Remove package",
                                          "Remove %s?\n"%(pkg.name,),
-                                         QtGui.QMessageBox.Yes, QtGui.QMessageBox.No,)
+                                         QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No,)
 
-        if(ret == QtGui.QMessageBox.No):
+        if(ret == QtWidgets.QMessageBox.No):
             return
 
         try:
@@ -543,7 +543,7 @@ class NodeFactoryView(object):
         pman = self.model().pman # pkgmanager
 
         if(not pkg.is_directory()):
-            QtGui.QMessageBox.warning(self, "Error",
+            QtWidgets.QMessageBox.warning(self, "Error",
                                              "Cannot edit code of old style package\n")
             return
 
@@ -560,7 +560,7 @@ class NodeFactoryView(object):
         pman = self.model().pman # pkgmanager
 
         if(not pkg.is_directory()):
-            QtGui.QMessageBox.warning(self, "Error",
+            QtWidgets.QMessageBox.warning(self, "Error",
                                              "Cannot reload old style package\n")
             return
 
@@ -574,7 +574,7 @@ class NodeFactoryView(object):
         pman = self.model().pman # pkgmanager
 
         if(not pkg.is_directory()):
-            QtGui.QMessageBox.warning(self, "Error",
+            QtWidgets.QMessageBox.warning(self, "Error",
                                              "Cannot duplicate old style package\n")
             return
 
@@ -597,14 +597,14 @@ class NodeFactoryView(object):
         pman = self.model().pman # pkgmanager
 
         if(not pkg.is_directory()):
-            QtGui.QMessageBox.warning(self, "Error",
+            QtWidgets.QMessageBox.warning(self, "Error",
                                       "Cannot move old style package\n")
             return
 
 
-        (result, ok) = QtGui.QInputDialog.getText(self, "Move/Rename Package",
+        (result, ok) = QtWidgets.QInputDialog.getText(self, "Move/Rename Package",
                                                   "Full new name (ex: openalea.data)",
-                                                  QtGui.QLineEdit.Normal, )
+                                                  QtWidgets.QLineEdit.Normal, )
 
         if(ok):
             new_name = str(result)
@@ -632,11 +632,11 @@ class NodeFactoryView(object):
         if(isinstance(obj, CompositeNodeFactory)):
             for ws in self.__siblings:
                 if obj == ws.factory:
-                    res = QtGui.QMessageBox.warning(self, "Other instances are already opened!",
+                    res = QtWidgets.QMessageBox.warning(self, "Other instances are already opened!",
                                                     msg,
-                                                    QtGui.QMessageBox.Ok | \
-                                                    QtGui.QMessageBox.Cancel)
-                    if res == QtGui.QMessageBox.Cancel:
+                                                    QtWidgets.QMessageBox.Ok | \
+                                                    QtWidgets.QMessageBox.Cancel)
+                    if res == QtWidgets.QMessageBox.Cancel:
                         return
                     else:
                         break
@@ -686,7 +686,7 @@ class NodeFactoryView(object):
         obj   = self.model().data(index, PkgModel.pkgmodelRole)
 
         if(isinstance(obj, DataFactory)):
-            QtGui.QMessageBox.information(self, "Properties", "Data : %s"%(obj.name))
+            QtWidgets.QMessageBox.information(self, "Properties", "Data : %s"%(obj.name))
             return
 
         d = NewGraph("Node Properties", PackageManager(), self, obj)
@@ -701,11 +701,11 @@ class NodeFactoryView(object):
         index = self.currentIndex()
         obj   = self.model().data(index, PkgModel.pkgmodelRole)
 
-        ret = QtGui.QMessageBox.question(self, "Remove Model",
+        ret = QtWidgets.QMessageBox.question(self, "Remove Model",
                                          "Remove %s?\n"%(obj.name,),
-                                         QtGui.QMessageBox.Yes, QtGui.QMessageBox.No,)
+                                         QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No,)
 
-        if(ret == QtGui.QMessageBox.Yes):
+        if(ret == QtWidgets.QMessageBox.Yes):
 
             try:
                 obj.package[obj.name].clean_files()
@@ -718,17 +718,17 @@ class NodeFactoryView(object):
 
 
 
-class PackageManagerView(QtGui.QWidget):
+class PackageManagerView(QtWidgets.QWidget):
     def __init__(self, siblings=[], parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
         statusTip =  """CTRL+F to search for a node"""
         self.setStatusTip(statusTip)
 
-        self.__lay = QtGui.QVBoxLayout()
+        self.__lay = QtWidgets.QVBoxLayout()
         self.__lay.setContentsMargins(2,2,2,2)
         self.__lay.setSpacing(2)
-        self.__searchField = QtGui.QLineEdit()
+        self.__searchField = QtWidgets.QLineEdit()
         self.__treeView    = NodeFactoryTreeView(siblings)
         self.__lay.addWidget(self.__searchField)
         self.__lay.addWidget(self.__treeView)
@@ -753,15 +753,15 @@ class PackageManagerView(QtGui.QWidget):
             return True
         return False
 
-class NodeFactoryTreeView(QtGui.QTreeView, NodeFactoryView):
+class NodeFactoryTreeView(QtWidgets.QTreeView, NodeFactoryView):
 
     compositeFactoryOpenRequest = QtCore.Signal(CompositeNodeFactory)
 
     def __init__(self, siblings=[], parent=None):
-        QtGui.QTreeView.__init__(self, parent)
+        QtWidgets.QTreeView.__init__(self, parent)
         NodeFactoryView.__init__(self, siblings)
         self.setDragEnabled(True)
-        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.setIconSize(QtCore.QSize(25,25))
         self.setHeaderHidden(True)
 
@@ -790,7 +790,7 @@ class NodeFactoryTreeView(QtGui.QTreeView, NodeFactoryView):
 
 
 
-class SearchListView(NodeFactoryView, QtGui.QTreeView):
+class SearchListView(NodeFactoryView, QtWidgets.QTreeView):
     """ Specialized QListView to display search results with Drag and Drop support """
 
     def __init__(self, main_win, parent=None):
@@ -799,19 +799,19 @@ class SearchListView(NodeFactoryView, QtGui.QTreeView):
         @param parent : parent widget
         """
 
-        QtGui.QListView.__init__(self, parent)
+        QtWidgets.QListView.__init__(self, parent)
         NodeFactoryView.__init__(self, main_win, parent)
         self.setRootIsDecorated(False)
 
 
     def reset(self):
-        QtGui.QTreeView.reset(self)
+        QtWidgets.QTreeView.reset(self)
         for i in range(self.model().columnCount(None)):
             self.resizeColumnToContents(i)
 
 
 
-class DataPoolListView(QtGui.QListView, SignalSlotListener):
+class DataPoolListView(QtWidgets.QListView, SignalSlotListener):
     """ Specialized QListView to display data pool contents """
 
     def __init__(self, datapool, parent=None):
@@ -820,7 +820,7 @@ class DataPoolListView(QtGui.QListView, SignalSlotListener):
         @param parent : parent widget
         """
 
-        QtGui.QListView.__init__(self, parent)
+        QtWidgets.QListView.__init__(self, parent)
         SignalSlotListener.__init__(self)
 
         self.setDragEnabled(True)
@@ -886,7 +886,7 @@ class DataPoolListView(QtGui.QListView, SignalSlotListener):
         """ Context menu event : Display the menu"""
 
 
-        menu = QtGui.QMenu(self)
+        menu = QtWidgets.QMenu(self)
         action = menu.addAction("Remove")
         self.connect(action, QtCore.SIGNAL("triggered()"), self.remove_element)
 
@@ -909,10 +909,3 @@ class DataPoolListView(QtGui.QListView, SignalSlotListener):
         name = l[item.row()]
 
         del(datapool[name])
-
-
-
-
-
-
-

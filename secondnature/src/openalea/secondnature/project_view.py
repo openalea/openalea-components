@@ -1,4 +1,3 @@
-
 #
 #       OpenAlea.SecondNature
 #
@@ -17,8 +16,8 @@
 __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
+from Qt import QtCore, QtGui, QtWidgets
 
-from openalea.vpltk.qt import QtCore, QtGui
 from openalea.vpltk.qt.compat import to_qvariant
 from openalea.secondnature.project import ProjectManager
 from openalea.secondnature.qtutils import try_to_disconnect
@@ -171,9 +170,9 @@ class ProjectManagerTreeModel(QtGui.QStandardItemModel):
 
 
 
-class ProjectView(QtGui.QTreeView):
+class ProjectView(QtWidgets.QTreeView):
     def __init__(self, model, parent=None):
-        QtGui.QTreeView.__init__(self, parent)
+        QtWidgets.QTreeView.__init__(self, parent)
 
         self.setModel(model)
         self.expandAll()
@@ -186,5 +185,3 @@ class ProjectView(QtGui.QTreeView):
     def onContextMenuRequest(self, pos):
         menu = get_datafactory_menu()
         menu.popup(self.viewport().mapToGlobal(pos))
-
-

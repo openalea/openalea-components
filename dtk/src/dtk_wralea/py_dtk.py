@@ -2,14 +2,14 @@
 #
 #       dtk function implementation
 #
-#       2010 INRIA - CIRAD - INRA  
+#       2010 INRIA - CIRAD - INRA
 #
 #       File author(s): Eric Moscardi <eric.moscardi@sophia.inria.fr>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
 #           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
-# 
+#
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 
@@ -24,7 +24,8 @@ try:
     del core
 except: pass
 
-from openalea.vpltk.qt import QtCore, QtGui
+from Qt import QtCore, QtWidgets
+
 import core
 import sip
 
@@ -38,20 +39,20 @@ class DtkNode(Node):
         super(DtkNode,self).__init__(inputs, outputs)
         self.dtk_factory = None
         self._data = None
-    
+
     def data(self, name='dtkData'):
         factory = self.dtk_factory
 
         if factory is None:
             self._data = self.get_input(name)
             factory.setData(self._data)
-            
+
         data = self.get_input(name)
         if data != self._data:
             self._data = data
             factory.setData(self._data)
 
-    def setProperty(self):        
+    def setProperty(self):
         for p in self.dtk_factory.properties():
             self.dtk_factory.setProperty(p, self.get_input(p))
 
@@ -68,7 +69,7 @@ class dtkProcess(DtkNode):
 
         if self.dtk_factory is None:
             self.dtk_factory = core.dtkAbstractProcessFactory.instance().create(self.name())
-            
+
         self.data('dtkData')
         self.setProperty()
 
@@ -100,9 +101,9 @@ class dtkView(DtkNode):
         self.setProperty()
 
         d = dict(zip(("dtkViewInteractor","dtkViewNavigator","dtkViewAnimator"),
-                     (self.interact, self.navigate, self.animate)))        
+                     (self.interact, self.navigate, self.animate)))
         for dtkview, method in d.items():
-            
+
             input = self.get_input(dtkview)
             if input:
                 name = input['name']
@@ -111,12 +112,12 @@ class dtkView(DtkNode):
 
                 for p, k in properties.iteritems():
                     interactor.setProperty(p, k)
-                
+
         self.dtk_factory.update()
         self.dtk_factory.reset()
 
         widget = self.dtk_factory.widget()
-        widget = sip.wrapinstance(widget.__long__(), QtGui.QWidget)
+        widget = sip.wrapinstance(widget.__long__(), QtWidgets.QWidget)
         widget.show()
 
 
@@ -168,7 +169,7 @@ class dtkData(DtkNode):
     """
 
     def __call__(self, inputs):
-        
+
         if self.dtk_factory is None:
             self.dtk_factory = core.dtkAbstractDataFactory.instance().create(self.name())
 
@@ -183,7 +184,7 @@ class dtkInteractor(DtkNode):
     """
 
     def __call__(self, inputs):
-        
+
         output = {}
         properties = {}
         output['name'] = self.name()
@@ -193,7 +194,3 @@ class dtkInteractor(DtkNode):
             properties[input_name] = inputs[p]
         output['properties'] = properties
         return output,
-
-
-
-

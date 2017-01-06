@@ -20,12 +20,14 @@ Test frame manipulator
 __license__= "Cecill-C"
 __revision__ = " $Id: __init__.py 2245 2010-02-08 17:11:34Z cokelaer $ "
 
-from openalea.vpltk.qt import QtGui
-from openalea.image.all import imread, to_pix,ScalableLabel
 from numpy import zeros,uint32
 
+from Qt import QtWidgets
 
-qapp = QtGui.QApplication.instance()
+from openalea.image.all import imread, to_pix,ScalableLabel
+
+
+qapp = QtWidgets.QApplication.instance()
 
 if qapp:
     try:
@@ -42,5 +44,3 @@ if qapp:
     w.setPixmap(pix)
 
     w.show()
-
-

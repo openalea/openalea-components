@@ -17,8 +17,8 @@
 __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
+from Qt import QtCore
 
-from openalea.vpltk.qt import QtCore
 from openalea.core.metaclass import make_metaclass
 from openalea.core.singleton import ProxySingleton
 from openalea.core.logger import get_logger
@@ -272,8 +272,3 @@ def make_manager(name, entry_point=None, builtin=None, to_derive=False, key="nam
 #############################################################
 # End of base classes and function for manager declarations #
 #############################################################
-
-
-
-
-

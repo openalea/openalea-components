@@ -14,12 +14,13 @@
 #
 
 import numpy as np
-from openalea.vpltk.qt import QtGui
 import matplotlib.pyplot as plt
+
+from Qt import QtWidgets
 
 from openalea.image.all import component_labeling
 
-qapp = QtGui.QApplication.instance()
+qapp = QtWidgets.QApplication.instance()
 
 def test_component_labeling_with_threshold_image():
     """

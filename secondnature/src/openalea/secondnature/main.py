@@ -28,12 +28,12 @@ def level_one(args=None):
     # Restore default signal handler for CTRL+C
     import signal
 
-    from openalea.vpltk.qt import QtGui, QtCore
+    from Qt import QtCore, QtWidgets
 
     from openalea.core import logger
     from openalea.secondnature import mainwindow
 
-    class SecondNature(QtGui.QApplication):
+    class SecondNature(QtWidgets.QApplication):
         """Materialisation of the Openalea application.
         Does the basic inits. The session is initialised
         in a thread. It is safe to use once the sessionStarted
@@ -41,7 +41,7 @@ def level_one(args=None):
 
 
         def __init__(self, argv):
-            QtGui.QApplication.__init__(self, argv)
+            QtWidgets.QApplication.__init__(self, argv)
             # -- reconfigure LoggerOffice to use Qt log handler and a file handler --
             logger.default_init(level=logger.DEBUG, handlers=["stream", "qt"]) #TODO get level from settings
             logger.connect_loggers_to_handlers(logger.get_logger_names(), logger.get_handler_names())
@@ -74,16 +74,16 @@ def level_one(args=None):
             self.win.statusBar().clearMessage()
 
         def event(self, e):
-            
-            try: 
+
+            try:
                 win_ext = self.win.extensions_initialised
             except Exception:
                 win_ext = False
-                
+
             if e.type() == QtCore.QEvent.ApplicationActivate and \
-                   not win_ext:  
-                self.win.init_extensions()  
-            return QtGui.QApplication.event(self, e)
+                   not win_ext:
+                self.win.init_extensions()
+            return QtWidgets.QApplication.event(self, e)
 
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -92,8 +92,3 @@ def level_one(args=None):
 
 if( __name__ == "__main__"):
     level_one()
-
-
-
-
-

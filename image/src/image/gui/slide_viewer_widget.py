@@ -21,7 +21,7 @@
 import weakref
 import numpy as np
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtWidgets
 
 from openalea.image.spatial_image import SpatialImage
 
@@ -42,9 +42,9 @@ def to_image(data, axis=2):
     pal = None
     for z in xrange(data.shape[axis]):
         if axis == 0:
-            dat = data[z, :,:] 
+            dat = data[z, :,:]
         elif axis == 1:
-            dat = data[:, z, :] 
+            dat = data[:, z, :]
         else:
             dat = data[:, :, z]
 
@@ -80,25 +80,25 @@ def disconnect(widget, signal, method):
         widget.disconnect(widget, QtCore.SIGNAL(signal), method)
 
 
-class ImageStackViewerPanel(QtGui.QWidget):
+class ImageStackViewerPanel(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
 
-        QtGui.QWidget.__init__(self)
-        layout = QtGui.QHBoxLayout(self)
+        QtWidgets.QWidget.__init__(self)
+        layout = QtWidgets.QHBoxLayout(self)
 
-        self.palette_select = QtGui.QComboBox()
+        self.palette_select = QtWidgets.QComboBox()
         for palname in palette_names:
             self.palette_select.addItem(palname)
 
         #axis
-        self.axis = QtGui.QComboBox()
+        self.axis = QtWidgets.QComboBox()
         self.axis.addItem("Z-axis")
         self.axis.addItem("Y-axis")
         self.axis.addItem("X-axis")
 
         #slider
-        self.img_slider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.img_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.img_slider.setEnabled(False)
 
         layout.addWidget(self.palette_select)
@@ -149,7 +149,7 @@ class ImageStackViewerPanel(QtGui.QWidget):
                 self.palette_select.setCurrentIndex(palette_names.index(palette_name))
 
 
-class ImageStackViewerWidget(QtGui.QWidget):
+class ImageStackViewerWidget(QtWidgets.QWidget):
 
     """
     Widget based on openalea.image.gui.slide_viewer.PixmapStackView
@@ -158,11 +158,11 @@ class ImageStackViewerWidget(QtGui.QWidget):
     stackChanged = QtCore.Signal(object)
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self._im_view = PixmapStackView()
         self._label = ScalableLabel()
 
-        self._layout = QtGui.QVBoxLayout(self)
+        self._layout = QtWidgets.QVBoxLayout(self)
         self._layout.addWidget(self._label)
 
         self._label.setMouseTracking(True)
@@ -317,9 +317,9 @@ if __name__ == '__main__':
     matrix[:10, :10, 90:100] = 3
     img3d = SpatialImage(matrix)
 
-    instance = QtGui.QApplication.instance()
+    instance = QtWidgets.QApplication.instance()
     if instance is None:
-        app = QtGui.QApplication([])
+        app = QtWidgets.QApplication([])
     else:
         app = instance
 

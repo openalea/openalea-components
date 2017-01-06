@@ -21,19 +21,7 @@ __revision__=" $Id$ "
 
 __all__ = ["PointSelection","point_selection"]
 
-def load_local(mod,modules):
-    modules = modules.split()
-    modules = ''.join(modules).split(',')
-
-    for m in modules:
-        globals()[m] = mod.__getattribute__(m)
-
-from openalea.vpltk.qt import QtGui, QtCore
-load_local(QtCore,'Qt,QObject,SIGNAL,QRectF,QPointF, QPoint')
-load_local(QtGui,"""QApplication,QMainWindow,QGraphicsScene,QGraphicsPixmapItem,
-                         QToolBar,QSlider,QLabel,QComboBox,QIcon,QActionGroup,
-                         QColor,QPen,QBrush,QGraphicsSimpleTextItem,QTransform,
-                         QFileDialog,QMessageBox """)
+from Qt import QtCore, QtGui, QtWidgets
 
 import numpy as np
 from openalea.image.gui import icons_rc
@@ -49,10 +37,10 @@ except ImportError:
     from id_generator import IdSetGenerator
 
 
-class PointSelection (QMainWindow) :
+class PointSelection (QtWidgets.QMainWindow) :
 
     def __init__ (self) :
-        QMainWindow.__init__(self)
+        QtWidgets.QMainWindow.__init__(self)
 
         # points
         self._points = []
@@ -61,12 +49,12 @@ class PointSelection (QMainWindow) :
 
         self._view = PixmapStackView()
 
-        #QGraphicsScene
-        self._scene = QGraphicsScene()
+        #QtWidgets.QGraphicsScene
+        self._scene = QtWidgets.QGraphicsScene()
 
-        #QGraphicsPixmapItem
-        self._item = QGraphicsPixmapItem()
-        self._item.setTransformationMode(Qt.SmoothTransformation)
+        #QtWidgets.QGraphicsPixmapItem
+        self._item = QtWidgets.QGraphicsPixmapItem()
+        self._item.setTransformationMode(QtCore.Qt.SmoothTransformation)
         self._item.setFlag(self._item.ItemIsSelectable,False)
         self._scene.addItem(self._item)
 
@@ -80,17 +68,17 @@ class PointSelection (QMainWindow) :
         self._last_mouse_y = 0
         self._last_slice = 0
 
-        QObject.connect(self._widget,
-                    SIGNAL("mouse_press"),
-                    self.mouse_pressed)
+        QtCore.QObject.connect(self._widget,
+                               QtCore.SIGNAL("mouse_press"),
+                               self.mouse_pressed)
 
-        QObject.connect(self._widget,
-                    SIGNAL("mouse_move"),
-                    self.mouse_moved)
+        QtCore.QObject.connect(self._widget,
+                               QtCore.SIGNAL("mouse_move"),
+                               self.mouse_moved)
 
-        QObject.connect(self,
-                    SIGNAL("mouse_moved"),
-                    self.coordinates)
+        QtCore.QObject.connect(self,
+                               QtCore.SIGNAL("mouse_moved"),
+                               self.coordinates)
 
         ################### menubar ###################
         self.menu = self.menuBar()
@@ -98,74 +86,74 @@ class PointSelection (QMainWindow) :
 
         # Import Points
         self._load_points = self.menu_file.addAction('Import Points')
-        QObject.connect(self._load_points,
-                        SIGNAL("triggered(bool)"),
-                        self.load_points)
+        QtCore.QObject.connect(self._load_points,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.load_points)
 
         # Save points
         self._save_points = self.menu_file.addAction('Save Points')
-        QObject.connect(self._save_points,
-                        SIGNAL("triggered(bool)"),
-                        self.save_points)
+        QtCore.QObject.connect(self._save_points,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.save_points)
 
         ################### toolbar ###################
         self._toolbar = self.addToolBar("tools")
-        self._toolgroup = QActionGroup(self)
+        self._toolgroup = QtWidgets.QActionGroup(self)
 
         # QWidgetAction : "Rotation Left"
         self._action_left = self._toolbar.addAction("left rotation")
-        self._action_left.setIcon(QIcon(":/image/rotate_left.png") )
-        QObject.connect(self._action_left,
-                        SIGNAL("triggered(bool)"),
-                        self.rotate_left)
+        self._action_left.setIcon(QtGui.QIcon(":/image/rotate_left.png") )
+        QtCore.QObject.connect(self._action_left,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.rotate_left)
 
         # QWidgetAction : "Rotation Right"
         self._action_right = self._toolbar.addAction("right rotation")
-        self._action_right.setIcon(QIcon(":/image/rotate_right.png") )
-        QObject.connect(self._action_right,
-                        SIGNAL("triggered(bool)"),
-                        self.rotate_right)
+        self._action_right.setIcon(QtGui.QIcon(":/image/rotate_right.png") )
+        QtCore.QObject.connect(self._action_right,
+                               QtCore.SIGNAL("triggered(bool)"),
+                               self.rotate_right)
 
         # QWidgetAction : "Add point"
         self._action_add = self._toolbar.addAction("Add point")
         self._action_add.setCheckable(True)
         self._toolgroup.addAction(self._action_add)
-        self._action_add.setIcon(QIcon(":/image/add.png") )
+        self._action_add.setIcon(QtGui.QIcon(":/image/add.png") )
 
         # QWidgetAction : "Delete point"
         self._action_delete = self._toolbar.addAction("Delete point")
         self._action_delete.setCheckable(True)
         self._toolgroup.addAction(self._action_delete)
-        self._action_delete.setIcon(QIcon(":/image/delete.png") )
+        self._action_delete.setIcon(QtGui.QIcon(":/image/delete.png") )
 
         ################### palette ###################
-        self._palette_select = QComboBox()
+        self._palette_select = QtWidgets.QComboBox()
         self._toolbar.addWidget(self._palette_select)
         for palname in palette_names :
             self._palette_select.addItem(palname)
 
-        QObject.connect(self._palette_select,
-                    SIGNAL("currentIndexChanged(int)"),
-                    self.palette_name_changed)
+        QtCore.QObject.connect(self._palette_select,
+                               QtCore.SIGNAL("currentIndexChanged(int)"),
+                               self.palette_name_changed)
 
         ################### slider ###################
-        self._bot_toolbar = QToolBar("slider")
-        self._img_slider = QSlider(Qt.Horizontal)
+        self._bot_toolbar = QtWidgets.QToolBar("slider")
+        self._img_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self._img_slider.setRange(0,self._view.nb_slices() - 1)
 
-        QObject.connect(self._img_slider,
-                        SIGNAL("valueChanged(int)"),
-                        self.slice_changed)
+        QtCore.QObject.connect(self._img_slider,
+                               QtCore.SIGNAL("valueChanged(int)"),
+                               self.slice_changed)
 
         self._bot_toolbar.addWidget(self._img_slider)
-        self.addToolBar(Qt.BottomToolBarArea,self._bot_toolbar)
+        self.addToolBar(QtCore.Qt.BottomToolBarArea,self._bot_toolbar)
 
         ################### statusbar ###################
-        self._lab_coord = QLabel("coords:")
-        self._lab_xcoord = QLabel("% 4d" % 0)
-        self._lab_ycoord = QLabel("% 4d" % 0)
-        self._lab_zcoord = QLabel("% 4d" % 0)
-        self._lab_intens = QLabel("intens: None")
+        self._lab_coord = QtWidgets.QLabel("coords:")
+        self._lab_xcoord = QtWidgets.QLabel("% 4d" % 0)
+        self._lab_ycoord = QtWidgets.QLabel("% 4d" % 0)
+        self._lab_zcoord = QtWidgets.QLabel("% 4d" % 0)
+        self._lab_intens = QtWidgets.QLabel("intens: None")
 
         self.statusbar = self.statusBar()
         self.statusbar.addPermanentWidget(self._lab_coord)
@@ -195,22 +183,22 @@ class PointSelection (QMainWindow) :
                 pid,item, x,y,z,textid = point
                 visible = abs(z - ind) < 5
                 item.setVisible(visible)
-                col = QColor.fromHsv( (pid * 10) % 360,255,255)
+                col = QtGui.QColor.fromHsv( (pid * 10) % 360,255,255)
                 if visible :
                     sca = max(0.,(5 - abs(z - ind) ) / 5.)
                     if z == ind :
-                        pen = QPen(QColor(255,255,255) )
+                        pen = QtGui.QPen(QtGui.QColor(255,255,255) )
                         pen.setWidthF(2.)
                         item.setPen(pen)
                         textid.setVisible(True)
                     else :
-                        pen = QPen(QColor(0,0,0) )
+                        pen = QtGui.QPen(QtGui.QColor(0,0,0) )
                         pen.setWidthF(2.)
                         item.setPen(pen)
                         textid.setVisible(False)
                 else :
                     sca = 1.
-                tr = QTransform()
+                tr = QtGui.QTransform()
                 tr.scale(sca,sca)
                 item.setTransform(tr)
                 item.update()
@@ -279,19 +267,19 @@ class PointSelection (QMainWindow) :
 
     def load_points (self) :
         # load file
-        filename = QFileDialog.getOpenFileName(self, 'Open File',
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File',
                     '/home')
         if filename :
             loading = True
             pts = self.get_points()
             if pts:
-                msgBox = QMessageBox()
+                msgBox = QtWidgets.QMessageBox()
                 msgBox.setText("You are about to load a new file.")
                 msgBox.setInformativeText("Do you want to load the file : %s ?" %filename)
-                msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-                msgBox.setDefaultButton(QMessageBox.Yes)
+                msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                msgBox.setDefaultButton(QtWidgets.QMessageBox.Yes)
                 ret = msgBox.exec_()
-                if ret == QMessageBox.No:
+                if ret == QtWidgets.QMessageBox.No:
                     loading = False
             if loading == True:
 #X                 f = open(str(filename))
@@ -299,7 +287,7 @@ class PointSelection (QMainWindow) :
 #X                 f.close()
 #X                 if 'version' not in l:
 #X                     self.version= 1
-#X                 else: 
+#X                 else:
 #X                     self.version = int(l.split('=')[1].strip())
                 new_pts = np.loadtxt(str(filename))
                 self.set_points(new_pts)
@@ -307,7 +295,7 @@ class PointSelection (QMainWindow) :
     def save_points(self):
         pts = self.get_points()
         # load file
-        filename = QFileDialog.getSaveFileName(self, 'Save File',
+        filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',
                             '/home');
 #X         fname = str(filename)
 #X         f = open(fname,'w')
@@ -347,7 +335,7 @@ class PointSelection (QMainWindow) :
         img = self._view.image()
         if img is not None :
             i,j,k = self._view.data_coordinates(item_coords.x(),item_coords.y())
-            self.emit(SIGNAL("mouse_moved"), (i,j,k))
+            self.emit(QtCore.SIGNAL("mouse_moved"), (i,j,k))
 
     def slice_changed (self, ind) :
         self._last_slice = ind
@@ -365,7 +353,7 @@ class PointSelection (QMainWindow) :
         """Add a new point
 
         :Parameters:
-         - `pos` (QPointF) - position of the point on the screen
+         - `pos` (QtCore.QPointF) - position of the point on the screen
         """
         item_coords = self._item.mapFromScene(pos)
         img = self._view.image()
@@ -384,27 +372,27 @@ class PointSelection (QMainWindow) :
                     pid = self._id_gen.get_id(pid)
             else :
                 pid = my_pid
-            col = QColor.fromHsv( (pid * 10) % 360,255,255)
-            item = self._scene.addEllipse(QRectF(-2.5,-2.5,5,5),QPen(col),QBrush(col)  )
+            col = QtGui.QColor.fromHsv( (pid * 10) % 360,255,255)
+            item = self._scene.addEllipse(QtCore.QRectF(-2.5,-2.5,5,5),QtGui.QPen(col),QtGui.QBrush(col)  )
             item.setZValue(10)
             item.setPos(pos.x(),pos.y())
 
-            textid = QGraphicsSimpleTextItem('%s' % pid, item)
+            textid = QtWidgets.QGraphicsSimpleTextItem('%s' % pid, item)
             textid.setPos(8,8)
-            textid.setPen(QPen(col))
+            textid.setPen(QtGui.QPen(col))
             if found_item:
                 self._points[pid] = (pid,item, i,j,k,textid)
             else :
                 self._points.append( (pid,item,i,j,k,textid) )
             self.update_pix()
-            self.emit(SIGNAL("points_changed"),self)
+            self.emit(QtCore.SIGNAL("points_changed"),self)
             return pid,(i,j,k)
 
     def del_point (self, pos, my_pid = None) :
         """Delete a new point
 
         :Parameters:
-         - `pos` (QPointF) - position of the point on the screen
+         - `pos` (QtCore.QPointF) - position of the point on the screen
         """
         ind = None
         point = self._scene.itemAt(pos)
@@ -424,14 +412,14 @@ class PointSelection (QMainWindow) :
                         self._scene.removeItem(item)
                         self._points[pid] = None
         self.update_pix()
-        self.emit(SIGNAL("points_changed"),self)
+        self.emit(QtCore.SIGNAL("points_changed"),self)
         return ind
 
     def set_points (self, points) :
         """Set a point to a new ID
 
         :Parameters:
-         - `pos` (QPointF) - position of the point on the screen
+         - `pos` (QtCore.QPointF) - position of the point on the screen
         """
 #X         version = self.version
         if self._points :
@@ -447,22 +435,22 @@ class PointSelection (QMainWindow) :
                 pid = i
 #X                 if version >= 2:
 #X                     x,y,z = points[i,0],points[i,1],points[i,2]
-#X                 else: 
+#X                 else:
                 x,y,z = points[i,0],points[i,1],points[i,2]
-                col = QColor.fromHsv( (pid * 10) % 360,255,255)
-                item = self._scene.addEllipse(QRectF(-10,-10,20,20),QPen(col),QBrush(col)  )
+                col = QtGui.QColor.fromHsv( (pid * 10) % 360,255,255)
+                item = self._scene.addEllipse(QtCore.QRectF(-10,-10,20,20),QtGui.QPen(col),QtGui.QBrush(col)  )
                 item.setZValue(10)
                 i,j,k = self._view.data_coordinates(x,y)
                 item.setPos(i,j)
-                textid = QGraphicsSimpleTextItem('%s' % pid, item)
+                textid = QtWidgets.QGraphicsSimpleTextItem('%s' % pid, item)
                 textid.setPos(8,8)
-                textid.setPen(QPen(col))
+                textid.setPen(QtGui.QPen(col))
                 self._points.append( (pid,item,x,y,z,textid) )
             self.update_pix()
-            self.emit(SIGNAL("points_changed"),self)
+            self.emit(QtCore.SIGNAL("points_changed"),self)
 
 def point_selection (image, palette_name = "grayscale", color_index_max = None) :
-    
+
     if not isinstance(image,SpatialImage):
         image = SpatialImage(image)
 

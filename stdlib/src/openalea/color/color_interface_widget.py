@@ -17,13 +17,14 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id: interface.py 2245 2010-02-08 17:11:34Z cokelaer $"
 
-from openalea.vpltk.qt import QtCore, QtGui
+from Qt import QtCore, QtGui, QtWidgets
+
 from openalea.core.observer import lock_notify
 from openalea.core.interface import IInterfaceWidget, make_metaclass
 from color_interface import IColor
 
 
-class IColorWidget (IInterfaceWidget, QtGui.QPushButton):
+class IColorWidget (IInterfaceWidget, QtWidgets.QPushButton):
 
     """Interface for colors expressed as triplet of values
     """
@@ -39,7 +40,7 @@ class IColorWidget (IInterfaceWidget, QtGui.QPushButton):
          - `parameter_str` (str) - the parameter key the widget is associated to
          - `interface` (Ismth) - instance of interface object
         """
-        QtGui.QPushButton.__init__(self, parent)
+        QtWidgets.QPushButton.__init__(self, parent)
         IInterfaceWidget.__init__(self, node, parent, parameter_str, interface)
         self.setMinimumSize(64, 64)
 
@@ -67,11 +68,11 @@ class IColorWidget (IInterfaceWidget, QtGui.QPushButton):
 
         color = None
         if len(old_color) == 3:
-            col = QtGui.QColorDialog.getColor(QtGui.QColor(*old_color), self)
+            col = QtWidgets.QColorDialog.getColor(QtGui.QColor(*old_color), self)
             if col.isValid():
                 color = (col.red(), col.green(), col.blue())
         elif len(old_color) == 4:
-            col, ok = QtGui.QColorDialog.getRgba(QtGui.qRgba(*old_color), self)
+            col, ok = QtWidgets.QColorDialog.getRgba(QtGui.qRgba(*old_color), self)
             if ok:
                 col = QtGui.QColor.fromRgba(col)
                 color = (col.red(), col.green(), col.blue(), col.alpha())
