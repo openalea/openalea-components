@@ -26,7 +26,7 @@ from openalea.core.singleton           import Singleton
 
 from openalea.core.logger import get_logger
 
-from openalea.vpltk.qt.compat import to_qvariant
+# from openalea.vpltk.qt.compat import to_qvariant
 
 mod_logger = get_logger(__name__)
 

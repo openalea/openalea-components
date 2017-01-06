@@ -18,7 +18,7 @@ __revision__ = " $Id$ "
 
 from Qt import QtCore, QtGui, QtWidgets
 
-from openalea.vpltk.qt.compat import to_qvariant
+# from openalea.vpltk.qt.compat import to_qvariant
 from openalea.secondnature.project import ProjectManager
 from openalea.secondnature.qtutils import try_to_disconnect
 from openalea.secondnature.api     import get_datafactory_menu
