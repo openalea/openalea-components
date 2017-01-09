@@ -22,11 +22,11 @@ from openalea.secondnature.base_mixins import HasName
 from openalea.secondnature.base_mixins import CanBeStarted
 from openalea.secondnature.data        import DataFactory
 from openalea.secondnature.layouts     import SpaceContent
-from openalea.core.singleton           import Singleton
 
+from openalea.core.singleton import Singleton
 from openalea.core.logger import get_logger
 
-# from openalea.vpltk.qt.compat import to_qvariant
+from openalea.qt.compat import to_qvariant
 
 mod_logger = get_logger(__name__)
 

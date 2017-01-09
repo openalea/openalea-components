@@ -14,7 +14,9 @@
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 ################################################################################
-"""Tree Item model for package manager.
+
+"""
+Tree Item model for package manager.
 
 Only Package and Category objects are view as a tree item.
 Others are view as leaves.
@@ -24,6 +26,7 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 import os
+
 from weakref import ref
 
 from Qt import QtCore, QtGui, QtWidgets
@@ -36,7 +39,8 @@ from openalea.core.compositenode import CompositeNodeFactory
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.pkgmanager import PseudoGroup, PseudoPackage
 from openalea.core import cli
-# from openalea.vpltk.qt.compat import to_qvariant
+
+from openalea.qt.compat import to_qvariant
 
 from openalea.visualea.dialogs import EditPackage, NewGraph, NewPackage, NewData
 from openalea.visualea.util import open_dialog, exception_display, busy_cursor
@@ -45,6 +49,7 @@ from openalea.visualea.code_editor import get_editor
 from openalea.visualea.util import grab_icon
 
 from openalea.visualea import images_rc
+
 import urllib
 
 # Utilities function
