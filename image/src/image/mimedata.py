@@ -19,7 +19,9 @@
 ###############################################################################
 import mimetypes
 from openalea.core.path import path
-from openalea.oalab.mimedata import (MimeConversionError, QMimeCodec)
+
+from openalea.oalab.mimedata.qcodec import QMimeCodec
+from openalea.oalab.mimedata.exception import MimeConversionError
 from openalea.core.service.project import project_item
 from openalea.image.serial.basics import imread
 from openalea.oalab.mimedata.builtin import BuiltinDataCodec
@@ -46,7 +48,9 @@ def is_image_path(path):
     mime, encoding = mimetypes.guess_type(path)
     if mime and mime.startswith('image'):
         return True
-    elif path.ext in ('.lsm', '.inr', '.inr.gz'):
+    elif path.ext in ('.lsm', '.inr'):
+        return True
+    elif path.ext == '.gz' and path.stripext().ext == '.inr':
         return True
     else:
         return False
