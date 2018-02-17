@@ -33,26 +33,16 @@ found in this directory.
 """
 import os, sys
 
-try:
-    from openalea.misc.multisetup import Multisetup
-except ImportError:
-    print 'Install OpenAlea.Deploy first'
-    try:
-        sys.path.insert(0, os.path.join('misc', 'src', 'openalea', 'misc'))
-        from multisetup import Multisetup
-    except ImportError,e:
-        print e
-
+from openalea.misc.multisetup import Multisetup
 
 
 dirs = """
-scheduler
 stdlib
 pkg_builder
+scheduler
 image
 numpy
 pylab
-container
 svgdraw
 """.split()
 #openalea_meta

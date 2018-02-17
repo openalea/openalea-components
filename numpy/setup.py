@@ -5,7 +5,7 @@ __revision__ = "$Id: $"
 import os
 from setuptools import setup, find_packages
 
-__license__ = 'Cecill-C' 
+__license__ = 'Cecill-C'
 __revision__ = "$Id: $"
 
 pj = os.path.join
@@ -15,7 +15,7 @@ metadata = read_metainfo('metainfo.ini', verbose=True)
 for key,value in metadata.iteritems():
     exec("%s = '%s'" % (key, value))
 
-pkgs = [ pkg for pkg in find_packages('src') if namespace not in pkg] 
+pkgs = [ pkg for pkg in find_packages('src') if namespace not in pkg]
 top_pkgs = [pkg for pkg in pkgs if  len(pkg.split('.')) < 2]
 packages = [ namespace + "." + pkg for pkg in pkgs]
 package_dir = dict( [('','src')] + [(namespace + "." + pkg,  "src/" + pkg) for pkg in top_pkgs] )
@@ -24,7 +24,7 @@ package_dir = dict( [('','src')] + [(namespace + "." + pkg,  "src/" + pkg) for p
 setup(
     name=name,
     version=version,
-    description=description, 
+    description=description,
     long_description = '',
     author = authors,
     author_email = authors_email,
@@ -45,14 +45,14 @@ setup(
 
     # Dependencies
     setup_requires = ['openalea.deploy'],
-    install_requires = ['openalea.core'],
+    install_requires = [],
     dependency_links = ['http://openalea.gforge.inria.fr/pi'],
 
     # entry_points
     entry_points = {
-        "wralea": ['openalea.numpy = openalea.numpy_wralea', 
-                   'openalea.numpy.demo = openalea.numpy_demo_wralea', 
-                   'openalea.numpy.test = openalea.numpy_test_wralea', 
+        "wralea": ['openalea.numpy = openalea.numpy_wralea',
+                   'openalea.numpy.demo = openalea.numpy_demo_wralea',
+                   'openalea.numpy.test = openalea.numpy_test_wralea',
               ],
         },
 
