@@ -12,7 +12,7 @@ pj = os.path.join
 
 from openalea.deploy.metainfo import read_metainfo
 metadata = read_metainfo('metainfo.ini', verbose=True)
-for key,value in metadata.iteritems():
+for key,value in metadata.items():
     exec("%s = '%s'" % (key, value))
 
 
@@ -20,14 +20,14 @@ setup(
     name=name,
     version=version,
     description=description, 
-    long_description = '',
+    long_description = long_description,
     author = authors,
     author_email = authors_email,
     url = url,
     license = license,
 
-    namespace_packages = ['openalea'],
-    create_namespaces=False,
+    #namespace_packages = ['openalea'],
+    #create_namespaces=False,
     zip_safe=False,
 
     packages=find_packages('src'),
@@ -40,8 +40,8 @@ setup(
 
     # Dependencies
     setup_requires = ['openalea.deploy'],
-    install_requires = ['openalea.core'],
-    dependency_links = ['http://openalea.gforge.inria.fr/pi'],
+    #install_requires = ['openalea.core'],
+    #dependency_links = ['http://openalea.gforge.inria.fr/pi'],
 
     # entry_points
     entry_points = {
@@ -81,9 +81,6 @@ setup(
                    'catalog.string = deprecated',
               ],
         },
-
-#    pylint_packages = [ 'src' + os.sep + x.replace('.',os.sep) for x in find_packages('src')],
-
     )
 
 
