@@ -13,19 +13,19 @@
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 
-dtkCorePath = "/home/pradal/local/inria/modules"
+#dtkCorePath = "/home/pradal/local/inria/modules"
 
 import os
-dtkPath = os.getenv('DTKPYTHONPATH',dtkCorePath)
+#dtkPath = os.getenv('DTKPYTHONPATH',dtkCorePath)
 
-try:
-    sys.path.insert(0, dtkPath)
-    del sys.modules['core']
-    del core
-except: pass
+#try:
+#    sys.path.insert(0, dtkPath)
+#    del sys.modules['core']
+#    del core
+#except: pass
 
-from openalea.vpltk.qt import QtCore, QtGui
-import core
+from openalea.vpltk.qt import QtWidgets
+import dtkcore as core
 import sip
 
 from openalea.core import *
@@ -109,14 +109,14 @@ class dtkView(DtkNode):
                 properties = input['properties']
                 interactor = method(name)
 
-                for p, k in properties.iteritems():
+                for p, k in properties.items():
                     interactor.setProperty(p, k)
                 
         self.dtk_factory.update()
         self.dtk_factory.reset()
 
         widget = self.dtk_factory.widget()
-        widget = sip.wrapinstance(widget.__long__(), QtGui.QWidget)
+        widget = sip.wrapinstance(widget.__long__(), QtWidgets.QWidget)
         widget.show()
 
 
