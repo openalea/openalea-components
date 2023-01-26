@@ -7,37 +7,24 @@ import os
 from setuptools import setup, find_packages
 from openalea.deploy.metainfo import read_metainfo
 
-# Reads the metainfo file
-metadata = read_metainfo('metainfo.ini', verbose=True)
-for key,value in metadata.items():
-    exec("%s = '%s'" % (key, value))
+version = '2.2.0'
+release = '2.2'
+name = 'OpenAlea.Pylab'
+package = 'pylab'
+description= 'Pylab interface'
+long_description= 'Pylab interface provides a set of nodes that provide pylab tools within OpenAlea'
+authors= 'Thomas Cokelaer, Christophe Pradal'
+authors_email = 'christophe.pradal@cirad.fr'
+url = 'https://openalea.rtfd.io'
+license = 'Cecill-C'
 
-
-pkg_root_dir = 'src'
-pkgs = [ pkg for pkg in find_packages(pkg_root_dir)]
-top_pkgs = [pkg for pkg in pkgs if  len(pkg.split('.')) < 2]
+pkgs = find_packages('src')
 packages = pkgs
-package_dir = dict( [('',pkg_root_dir)] + [(namespace + "." + pkg, pkg_root_dir + "/" + pkg) for pkg in top_pkgs] )
+package_dir = {'':'src'}
 
-
-# Define global variables 
-has_scons = False
-
-build_prefix = None
-scons_scripts=None
-lib_dirs = None
-inc_dirs = None
-bin_dirs = None
-
-
+vi
 setup_requires = ['openalea.deploy']
-if("win32" in sys.platform):
-    install_requires = ['openalea.numpy']
-else:
-    install_requires = []
-    
-# web sites where to find eggs
-dependency_links = ['http://openalea.gforge.inria.fr/pi']
+install_requires = []
 
 setup(
     # Meta data (no edition needed if you correctly defined the variables above)
@@ -56,19 +43,13 @@ setup(
     package_dir= package_dir,
 
     # Namespace packages creation by deploy
-    namespace_packages = [namespace],
+    #namespace_packages = [namespace],
     #create_namespaces = True,
     zip_safe= False,
     
     # Dependencies
     setup_requires = setup_requires,
     install_requires = install_requires,
-    dependency_links = dependency_links,
-
-
-    lib_dirs = lib_dirs,
-    inc_dirs = inc_dirs,
-    bin_dirs = bin_dirs,
     
     include_package_data = True,
     
