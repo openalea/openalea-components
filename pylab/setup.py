@@ -22,7 +22,6 @@ pkgs = find_packages('src')
 packages = pkgs
 package_dir = {'':'src'}
 
-vi
 setup_requires = ['openalea.deploy']
 install_requires = []
 
