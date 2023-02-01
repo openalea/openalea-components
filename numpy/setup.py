@@ -59,6 +59,14 @@ setup(
     # entry_points
     entry_points = {
         "wralea": ['openalea.numpy = openalea.numpy_wralea',
+                   'openalea.numpy.random = openalea.numpy_wralea.random',
+                   'openalea.numpy.creation = openalea.numpy_wralea.creation',
+                   'openalea.numpy.infos = openalea.numpy_wralea.infos',
+                   'openalea.numpy.input_output = openalea.numpy_wralea.input_output',
+                   'openalea.numpy.manipulation = openalea.numpy_wralea.manipulation',
+                   'openalea.numpy.math = openalea.numpy_wralea.math',
+                   'openalea.numpy.sorting_searching = openalea.numpy_wralea.sorting_searching',
+                   'openalea.numpy.window = openalea.numpy_wralea.window',
                    'openalea.numpy.demo = openalea.numpy_demo_wralea',
                    'openalea.numpy.test = openalea.numpy_test_wralea',
               ],
