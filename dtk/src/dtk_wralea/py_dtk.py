@@ -24,7 +24,7 @@ import os
 #    del core
 #except: pass
 
-from openalea.vpltk.qt import QtWidgets
+from qtpy import QtWidgets
 import dtkcore as core
 import sip
 

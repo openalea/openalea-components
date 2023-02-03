@@ -26,7 +26,7 @@ __revision__ = " $Id$ "
 import os
 from weakref import ref
 
-from openalea.vpltk.qt import QtCore, QtGui
+from qtpy import QtCore, QtGui, QtWidgets
 
 from openalea.core.observer import AbstractListener
 from openalea.core.node import NodeFactory, AbstractFactory
@@ -372,7 +372,7 @@ class NodeFactoryView(object):
         menu  = None
 
         if(isinstance(obj, AbstractFactory)): # Factory
-            menu = QtGui.QMenu(self)
+            menu = QtWidgets.QMenu(self)
             action = menu.addAction("Open")
             self.connect(action, QtCore.SIGNAL("triggered()"), self.open_node)
 
@@ -392,7 +392,7 @@ class NodeFactoryView(object):
             enabled = True#obj.is_real_package()
             pkg = obj
 
-            menu = QtGui.QMenu(self)
+            menu = QtWidgets.QMenu(self)
 
             action = menu.addAction("Open URL")
             action.setEnabled(enabled)
@@ -718,14 +718,14 @@ class NodeFactoryView(object):
 
 
 
-class PackageManagerView(QtGui.QWidget):
+class PackageManagerView(QtWidgets.QWidget):
     def __init__(self, siblings=[], parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
         statusTip =  """CTRL+F to search for a node"""
         self.setStatusTip(statusTip)
 
-        self.__lay = QtGui.QVBoxLayout()
+        self.__lay = QtWidgets.QVBoxLayout()
         self.__lay.setContentsMargins(2,2,2,2)
         self.__lay.setSpacing(2)
         self.__searchField = QtGui.QLineEdit()
@@ -886,7 +886,7 @@ class DataPoolListView(QtGui.QListView, SignalSlotListener):
         """ Context menu event : Display the menu"""
 
 
-        menu = QtGui.QMenu(self)
+        menu = QtWidgets.QMenu(self)
         action = menu.addAction("Remove")
         self.connect(action, QtCore.SIGNAL("triggered()"), self.remove_element)
 

@@ -20,7 +20,7 @@ from openalea.secondnature.base_mixins import HasName
 from openalea.secondnature.base_mixins import CanBeStarted
 from openalea.secondnature.project     import ProjectManager
 from openalea.core.singleton           import Singleton
-from openalea.vpltk.qt import QtGui, QtCore
+from qtpy import QtGui, QtCore
 
 from openalea.core.logger import get_logger
 

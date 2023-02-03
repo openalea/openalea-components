@@ -18,7 +18,7 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 
-from openalea.vpltk.qt import QtGui, QtCore
+from qtpy import QtGui, QtCore
 
 
 class DataEditorSelector(QtGui.QDialog):
@@ -26,7 +26,7 @@ class DataEditorSelector(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent, QtCore.Qt.WindowOkButtonHint|
                                              QtCore.Qt.WindowCancelButtonHint)
         self.setWindowTitle("Select a tool")
-        self.__l = QtGui.QVBoxLayout()
+        self.__l = QtWidgets.QVBoxLayout()
         self.__itemList = QtGui.QListWidget()
         self.__buttons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok|
                                                 QtGui.QDialogButtonBox.Cancel)
