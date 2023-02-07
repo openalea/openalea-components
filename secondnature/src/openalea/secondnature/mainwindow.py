@@ -24,7 +24,6 @@ import urlparse
 import traceback
 
 from openalea.core.logger import get_logger
-from openalea.vpltk.qt.compat import to_qvariant
 
 from openalea.secondnature.splittable import CustomSplittable
 from openalea.secondnature.managers   import AbstractSourceManager
@@ -257,7 +256,7 @@ class MainWindow(QtGui.QMainWindow):
 
         layoutNames.sort()
         for ln in layoutNames:
-            self._layoutMode.addItem(ln, oldDataMap.get(ln, to_qvariant()))
+            self._layoutMode.addItem(ln, oldDataMap.get(ln, None))
         self._layoutMode.adjustSize()
 
         ind = self._layoutMode.findText(current)
@@ -332,7 +331,7 @@ class MainWindow(QtGui.QMainWindow):
             self.__centralStack.addWidget(newSplit)
 
             self.__centralStack.setCurrentWidget(newSplit)
-            self._layoutMode.setItemData(index, to_qvariant(newSplit))
+            self._layoutMode.setItemData(index, newSplit)
 
     ######################
     # Pane Menu handlers #

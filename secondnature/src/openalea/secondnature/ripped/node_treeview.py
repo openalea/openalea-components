@@ -36,7 +36,6 @@ from openalea.core.compositenode import CompositeNodeFactory
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.pkgmanager import PseudoGroup, PseudoPackage
 from openalea.core import cli
-from openalea.vpltk.qt.compat import to_qvariant
 
 from openalea.visualea.dialogs import EditPackage, NewGraph, NewPackage, NewData
 from openalea.visualea.util import open_dialog, exception_display, busy_cursor
@@ -196,7 +195,7 @@ class PkgModel(QtGui.QStandardItemModel, AbstractListener):
         icon = get_icon2(elt)
         newItem.setIcon(icon)
         newItem.setToolTip(elt.get_tip())
-        newItem.setData(to_qvariant(elt), self.pkgmodelRole)
+        newItem.setData(elt, self.pkgmodelRole)
         if parent:
             parent.appendRow(newItem)
         return newItem
@@ -233,7 +232,7 @@ class PkgModel(QtGui.QStandardItemModel, AbstractListener):
 
 
     def headerData(self, section, orientation, role):
-        return to_qvariant()
+        return None
 
     @classmethod
     def get_item_info(cls, item):
@@ -270,10 +269,10 @@ class DataPoolModel (QtCore.QAbstractListModel) :
     def data(self, index, role):
 
         if (not index.isValid()):
-            return to_qvariant()
+            return None
 
         if (index.row() >= len(self.datapool.keys())):
-            return to_qvariant()
+            return None
 
         if (role == QtCore.Qt.DisplayRole):
             l = self.datapool.keys()
@@ -282,11 +281,11 @@ class DataPoolModel (QtCore.QAbstractListModel) :
             #classname = self.datapool[name].__class__
             value = repr(self.datapool[name])
             if(len(value) > 30) : value = value[:30] + "..."
-            return to_qvariant("%s ( %s )"%(name, value))
+            return "%s ( %s )"%(name, value)
 
         # Icon
         elif( role == QtCore.Qt.DecorationRole ):
-            return to_qvariant(QtGui.QPixmap(":/icons/ccmime.png"))
+            return QtGui.QPixmap(":/icons/ccmime.png")
 
         # Tool Tip
         elif( role == QtCore.Qt.ToolTipRole ):
@@ -312,10 +311,10 @@ class DataPoolModel (QtCore.QAbstractListModel) :
             if(temp) : tips.append(temp)
             tipstr = '\n'.join(tips)
 
-            return to_qvariant(str(tipstr))
+            return str(tipstr)
 
         else:
-            return to_qvariant()
+            return None
 
 
     def flags(self, index):
@@ -328,7 +327,7 @@ class DataPoolModel (QtCore.QAbstractListModel) :
 
 
     def headerData(self, section, orientation, role):
-        return to_qvariant()
+        return None
 
 
     def rowCount(self, parent):

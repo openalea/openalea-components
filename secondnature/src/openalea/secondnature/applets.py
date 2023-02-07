@@ -25,8 +25,6 @@ from openalea.core.singleton           import Singleton
 
 from openalea.core.logger import get_logger
 
-from qtpy import QtCore
-from openalea.vpltk.qt.compat import to_qvariant
 
 mod_logger = get_logger(__name__)
 
@@ -286,8 +284,7 @@ class AppletSpace(QtWidgets.QWidget):
         for dp in data:
             if dp[0].hidden:
                 continue
-            self.__browseDataBut.addItem(dp[0].icon, dp[0].name,
-                                         to_qvariant(dp))
+            self.__browseDataBut.addItem(dp[0].icon, dp[0].name, dp)
 
         self.__browseDataBut.insertSeparator(self.__browseDataBut.count())
 
@@ -298,8 +295,7 @@ class AppletSpace(QtWidgets.QWidget):
         for dp in globalData:
             if dp[0].hidden:
                 continue
-            self.__browseDataBut.addItem(dp[0].icon, dp[0].name,
-                                         to_qvariant(dp))
+            self.__browseDataBut.addItem(dp[0].icon, dp[0].name, dp)
 
         index = self.__browseDataBut.findText(currentText)
         self.__browseDataBut.setCurrentIndex(index)
