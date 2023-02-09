@@ -33,7 +33,7 @@ found in this directory.
 """
 import os, sys
 
-from openalea.misc.multisetup import Multisetup
+from openalea.deploy.multisetup import Multisetup
 
 
 dirs = """
