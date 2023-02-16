@@ -58,6 +58,7 @@ setup(
                         "pylab.plotting = openalea.pylab_plotting_wralea",
                         "pylab.datasets = openalea.pylab_datasets_wralea",
                         "pylab.decorators = openalea.pylab_decorators_wralea",
+                        "pylab.Drawing = openalea.pylab_drawing_wralea",
                         "pylab.test = openalea.pylab_test_wralea",
                         "pylab.patches = openalea.pylab_patches_wralea",
                         "pylab.mplot3d = openalea.pylab_3d_wralea",
