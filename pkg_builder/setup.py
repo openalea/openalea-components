@@ -1,14 +1,17 @@
-import os, sys
+import os
 pj = os.path.join
 
 from setuptools import setup, find_packages
 from openalea.deploy.metainfo import read_metainfo
 
-# Reads the metainfo file
-metadata = read_metainfo('metainfo.ini', verbose=True)
-for key,value in metadata.items():
-    exec("%s = '%s'" % (key, value))
 
+name = "OpenAlea.PkgBuilder"
+description = "Creates a layout for openalea packages based on defined guidelines."
+long_description = description # TODO: Read the README.md
+authors = "Christophe Pradal"
+authors_email = "christophe.pradal at cirad.fr"
+url = "http://openalea.rtfd.io"
+license = "Cecill-C"
 
 setup(
     name=name,
@@ -19,16 +22,13 @@ setup(
     url=url,
     license=license,
 
-    namespace_packages=['openalea'],
+    #namespace_packages=['openalea'],
 
     packages = find_packages('src'),
     package_dir={ '' : 'src' },
     include_package_data = True,
     zip_safe = False,
 
-    # Dependencies
-    install_requires = ['openalea.core'],
-    dependency_links = ['http://openalea.gforge.inria.fr/pi'],
 
     entry_points = {
         "console_scripts": [
