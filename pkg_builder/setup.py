@@ -4,6 +4,11 @@ pj = os.path.join
 from setuptools import setup, find_packages
 from openalea.deploy.metainfo import read_metainfo
 
+# find version number in src/openalea/core/version.py
+_version = {}
+with open("src/openalea/pkg_builder/version.py") as fp:
+    exec(fp.read(), _version)
+    version = _version["__version__"]
 
 name = "OpenAlea.PkgBuilder"
 description = "Creates a layout for openalea packages based on defined guidelines."
