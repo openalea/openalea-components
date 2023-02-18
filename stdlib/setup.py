@@ -1,20 +1,25 @@
 # -*- coding: utf-8 -*-
 """setup file for stdlib package"""
-__revision__ = "$Id$"
 
 import os
 from setuptools import setup, find_packages
 
-__license__ = 'Cecill-C' 
-__revision__ = "$Id$"
 
-pj = os.path.join
+name = 'OpenAlea.StdLib'
+package = 'stdlib'
+description = 'OpenAlea standard logical component library.'
+long_description = 'OpenAlea standard logical component library from Python'
+authors = 'OpenAlea consortium'
+authors_email = 'christophe.pradal@cirad fr'
+url = 'https://github.com/openalea/openalea-components'
+license = 'Cecill-C'
+__license__ = license
 
-from openalea.deploy.metainfo import read_metainfo
-metadata = read_metainfo('metainfo.ini', verbose=True)
-for key,value in metadata.items():
-    exec("%s = '%s'" % (key, value))
-
+# find version number in src/openalea/core/version.py
+_version = {}
+with open("src/openalea/version.py") as fp:
+    exec(fp.read(), _version)
+    version = _version["__version__"]
 
 setup(
     name=name,
@@ -26,13 +31,11 @@ setup(
     url = url,
     license = license,
 
-    #namespace_packages = ['openalea'],
-    #create_namespaces=False,
     zip_safe=False,
 
     packages=find_packages('src'),
 
-    package_dir={"":"src" },
+    package_dir={'':'src' },
 
     # Add package platform libraries if any
     include_package_data=True,
@@ -40,8 +43,6 @@ setup(
 
     # Dependencies
     setup_requires = ['openalea.deploy'],
-    #install_requires = ['openalea.core'],
-    #dependency_links = ['http://openalea.gforge.inria.fr/pi'],
 
     # entry_points
     entry_points = {

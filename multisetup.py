@@ -38,16 +38,14 @@ from openalea.deploy.multisetup import Multisetup
 
 dirs = """
 stdlib
-pkg_builder
-scheduler
 image
 numpy
 pylab
-svgdraw
 """.split()
 #openalea_meta
-
-
+#pkg_builder
+#svgdraw
+#scheduler
 
 def main():
 
