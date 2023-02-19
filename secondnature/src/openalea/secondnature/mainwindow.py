@@ -18,13 +18,12 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 
-from openalea.vpltk.qt import QtGui, QtCore
+from qtpy import QtGui, QtCore
 
 import urlparse
 import traceback
 
 from openalea.core.logger import get_logger
-from openalea.vpltk.qt.compat import to_qvariant
 
 from openalea.secondnature.splittable import CustomSplittable
 from openalea.secondnature.managers   import AbstractSourceManager
@@ -58,7 +57,7 @@ class MainWindow(QtGui.QMainWindow):
         self.__extInitialised = False
 
         # -- main menu bar --
-        self._mainMenuBar = QtGui.QMenuBar(self)
+        self._mainMenuBar = QtWidgets.QMenuBar(self)
         self._projectMenu = self._mainMenuBar.addMenu("&Project")
         self.setMenuBar(self._mainMenuBar)
 
@@ -74,9 +73,9 @@ class MainWindow(QtGui.QMainWindow):
 
         # -- status bar --
         self._statusBar  = QtGui.QStatusBar(self)
-        self._layoutMode = QtGui.QComboBox(self)
+        self._layoutMode = QtWidgets.QComboBox(self)
         self._statusBar.addPermanentWidget(self._layoutMode)
-        self._layoutMode.setSizeAdjustPolicy(QtGui.QComboBox.AdjustToContents)
+        self._layoutMode.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
         self.__currentLayout = None
         self._statusBar.setStyleSheet("QStatusBar{background-color: " +\
                                       "qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, "+\
@@ -119,7 +118,7 @@ class MainWindow(QtGui.QMainWindow):
                         if not f.singleton]
                         # lambda x,y:cmp(x.name, y.name))
 
-        menu = QtGui.QMenu(self)
+        menu = QtWidgets.QMenu(self)
         for dt in datafactories:
             action = menu.addAction(dt.icon, "New "+dt.name)
             action.setIconVisibleInMenu(True)
@@ -257,7 +256,7 @@ class MainWindow(QtGui.QMainWindow):
 
         layoutNames.sort()
         for ln in layoutNames:
-            self._layoutMode.addItem(ln, oldDataMap.get(ln, to_qvariant()))
+            self._layoutMode.addItem(ln, oldDataMap.get(ln, None))
         self._layoutMode.adjustSize()
 
         ind = self._layoutMode.findText(current)
@@ -332,7 +331,7 @@ class MainWindow(QtGui.QMainWindow):
             self.__centralStack.addWidget(newSplit)
 
             self.__centralStack.setCurrentWidget(newSplit)
-            self._layoutMode.setItemData(index, to_qvariant(newSplit))
+            self._layoutMode.setItemData(index, newSplit)
 
     ######################
     # Pane Menu handlers #
@@ -349,7 +348,7 @@ class MainWindow(QtGui.QMainWindow):
         proj = self.__projMan.get_active_project()
 
         pos = splittable.mapToGlobal(pos)
-        menu = QtGui.QMenu(splittable)
+        menu = QtWidgets.QMenu(splittable)
         menu.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         action = menu.addAction("Empty")

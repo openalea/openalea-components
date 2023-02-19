@@ -115,7 +115,7 @@ class DataflowViewFactory(AbstractApplet):
 
     def make_menus_helper(self, node, gwidget):
         from openalea.visualea.graph_operator import GraphOperator
-        from openalea.vpltk.qt import QtGui
+        from qtpy import QtGui
 
         operator = GraphOperator(graph      = node,
                                  graphScene = gwidget.scene(),
@@ -124,7 +124,7 @@ class DataflowViewFactory(AbstractApplet):
                                  )
 
         # -- Construction the Export menu
-        exp_menu = QtGui.QMenu("Export")
+        exp_menu = QtWidgets.QMenu("Export")
         exp_menu.addAction(operator("To Package Manager...", exp_menu,
                                     "graph_export_to_factory"))
 
@@ -147,7 +147,7 @@ class DataflowViewFactory(AbstractApplet):
                                     "graph_export_script"))
 
         # -- Contructing the Dataflow menu --
-        df_menu = QtGui.QMenu("Dataflow")
+        df_menu = QtWidgets.QMenu("Dataflow")
         df_menu.addAction(operator("Reload", df_menu,
                                    "graph_reload_from_factory"))
         df_menu.addSeparator()

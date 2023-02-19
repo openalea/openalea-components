@@ -16,7 +16,7 @@
 __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
-from openalea.vpltk.qt import QtCore, QtGui
+from qtpy import QtCore, QtGui
 
 class EscEventSwallower(QtCore.QObject):
     def eventFilter(self, watched, event):
@@ -26,9 +26,9 @@ class EscEventSwallower(QtCore.QObject):
         return False
 
 
-class ComboBox(QtGui.QComboBox):
+class ComboBox(QtWidgets.QComboBox):
     def setCurrentIndex(self, index):
-        QtGui.QComboBox.setCurrentIndex(self, index)
+        QtWidgets.QComboBox.setCurrentIndex(self, index)
         self.activated[int].emit(self.currentIndex())
 
 

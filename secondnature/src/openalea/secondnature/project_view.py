@@ -18,8 +18,7 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 
-from openalea.vpltk.qt import QtCore, QtGui
-from openalea.vpltk.qt.compat import to_qvariant
+from qtpy import QtCore, QtGui
 from openalea.secondnature.project import ProjectManager
 from openalea.secondnature.qtutils import try_to_disconnect
 from openalea.secondnature.api     import get_datafactory_menu
@@ -63,7 +62,7 @@ class ProjectManagerTreeModel(QtGui.QStandardItemModel):
         if proj:
             self.__activeProj = proj
             self.__activeProjItem = QtGui.QStandardItem(proj.name)
-            self.__activeProjItem.setData(to_qvariant(proj), self.projectRole)
+            self.__activeProjItem.setData(proj, self.projectRole)
             self.appendRow(self.__activeProjItem)
             self.connect_project(proj)
             for k, v in proj:
@@ -136,7 +135,7 @@ class ProjectManagerTreeModel(QtGui.QStandardItemModel):
 
     def __on_data_added(self, proj, doc):
         newItem  = QtGui.QStandardItem(doc.name)
-        newItem.setData(to_qvariant(doc), self.dataRole)
+        newItem.setData(doc, self.dataRole)
         icon = doc.icon
         newItem.setIcon(icon)
         newItem.setDragEnabled(True)
@@ -167,7 +166,7 @@ class ProjectManagerTreeModel(QtGui.QStandardItemModel):
         return data
 
     def headerData(self, section, orientation, role):
-        return to_qvariant()
+        return None
 
 
 
