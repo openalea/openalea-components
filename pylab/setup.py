@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 # find version number in src/openalea/core/version.py
 _version = {}
-with open("src/openalea/pylab/version.py") as fp:
+with open("src/openalea/oapylab/version.py") as fp:
     exec(fp.read(), _version)
     version = _version["__version__"]
 
