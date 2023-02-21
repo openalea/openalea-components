@@ -21,6 +21,7 @@ requirements:
   run:
     - python  <3.11
     - openalea.core
+    - openalea.stdlib
     - numpy
 
 test:
