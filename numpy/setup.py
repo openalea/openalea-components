@@ -10,8 +10,12 @@ __revision__ = "$Id: $"
 
 pj = os.path.join
 
-version = '2.0.0'
-release = '2.0'
+# find version number in src/openalea/core/version.py
+_version = {}
+with open("src/openalea/numpy_wralea/version.py") as fp:
+    exec(fp.read(), _version)
+    version = _version["__version__"]
+
 project = 'openalea'
 name = 'OpenAlea.Numpy'
 namespace = 'openalea'
