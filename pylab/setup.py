@@ -5,10 +5,13 @@ import sys
 import os
 
 from setuptools import setup, find_packages
-from openalea.deploy.metainfo import read_metainfo
 
-version = '2.2.0'
-release = '2.2'
+# find version number in src/openalea/core/version.py
+_version = {}
+with open("src/openalea/pylab/version.py") as fp:
+    exec(fp.read(), _version)
+    version = _version["__version__"]
+
 name = 'OpenAlea.Pylab'
 package = 'pylab'
 description= 'Pylab interface'
