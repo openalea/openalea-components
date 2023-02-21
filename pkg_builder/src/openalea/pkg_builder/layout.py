@@ -19,7 +19,7 @@ import sys, re
 import getopt
 from string import Template
 
-from openalea.core.path import path
+from path import Path
 from optparse import OptionParser
 
 
@@ -62,7 +62,7 @@ class PackageBuilder(object):
         self.name = name # e.g. name = PlantGL
         self.package = name.lower() # e.g. name = plantgl
         self.dir = dir
-        self.pkg_dir = path(dir) / self.package
+        self.pkg_dir = Path(dir) / self.package
         self.languages = ['python']
         self.project = project.lower()
         self.release = release
@@ -236,7 +236,7 @@ class PackageBuilder(object):
 
         wralea_py = f
 
-        tpl_wralea = path(__file__).dirname()/'template_wralea.txt'
+        tpl_wralea = Path(__file__).dirname()/'template_wralea.txt'
 
         print(tpl_wralea)
 
@@ -253,7 +253,7 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
@@ -274,7 +274,7 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
@@ -295,7 +295,7 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
@@ -315,7 +315,7 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
@@ -335,9 +335,9 @@ class PackageBuilder(object):
         for f in files:
             if not f.exists() or f.size == 0:
                 if 'wrapper' in f:
-                    tpl_file = path(__file__).dirname()/'template_SConscript_wrapper.txt'
+                    tpl_file = Path(__file__).dirname()/'template_SConscript_wrapper.txt'
                 else:
-                    tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                    tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
