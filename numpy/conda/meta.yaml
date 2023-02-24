@@ -1,0 +1,44 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: openalea.numpy
+  version: {{ data.get('version') }}
+
+source:
+  path: ..
+
+build:
+  noarch: python
+  preserve_egg_dir: True
+  number: 0
+  script: {{PYTHON}} setup.py install 
+
+requirements:
+  build:
+    - python {{PY_VER}}
+    - setuptools
+    - openalea.deploy
+  run:
+    - python  <3.11
+    - openalea.core
+    - openalea.stdlib
+    - numpy
+
+test:
+  imports:
+    - openalea.numpy_wralea
+  requires:
+    - pytest
+  source_files:
+    - test/
+    - test/*.py
+
+  commands:
+    - cd test
+    - pytest -v test_*.py
+
+about:
+  home: {{ data.get('url') }}
+  license: Cecill-c License
+  summary: {{ data.get('description') }}
+
