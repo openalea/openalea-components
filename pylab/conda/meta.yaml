@@ -20,6 +20,7 @@ requirements:
     - openalea.deploy
   run:
     - python  <3.11
+    - openalea.deploy
     - openalea.core
     - openalea.numpy
     - matplotlib
