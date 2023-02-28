@@ -30,6 +30,7 @@ test:
     - openalea.oapylab
   requires:
     - pytest
+    - scipy
   source_files:
     - test/
     - test/*.py
