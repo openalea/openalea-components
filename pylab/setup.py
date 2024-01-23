@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-__revision__ = "$Id: setup.py 2249 2010-02-08 17:27:37Z cokelaer $"
 
 import sys
 import os
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 # find version number in src/openalea/core/version.py
 _version = {}
@@ -21,8 +20,7 @@ authors_email = 'christophe.pradal@cirad.fr'
 url = 'https://openalea.rtfd.io'
 license = 'Cecill-C'
 
-pkgs = find_packages('src')
-packages = pkgs
+packages = find_namespace_packages(where='src', include=['openalea.*'])
 package_dir = {'':'src'}
 
 setup_requires = ['openalea.deploy']

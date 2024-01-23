@@ -1,55 +1,40 @@
 # -*- coding: utf-8 -*-
 """setup file for pandas package"""
-__revision__ = "$Id$"
 
 import os
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
+# find version number in src/openalea/core/version.py
+_version = {}
+with open("src/openalea/pandas_wralea/version.py") as fp:
+    exec(fp.read(), _version)
+    version = _version["__version__"]
 
-__license__ = 'Cecill-C' 
-__revision__ = "$Id$"
+name = "OpenAlea.Pandas"
+description = "Pandas modules for Visualea."
+long_description = "Interfaces some of the `Pandas <http://pandas.pydata.org/>`_ functionalities as nodes in VisuAlea." 
+authors = "Christophe Pradal"
+authors_email = "christophe.pradal at cirad.fr"
+url = "http://openalea.rtfd.io"
+license = "Cecill-C"
 
-pj = os.path.join
-
-from openalea.deploy.metainfo import read_metainfo
-metadata = read_metainfo('metainfo.ini', verbose=True)
-for key,value in metadata.iteritems():
-    exec("%s = '%s'" % (key, value))
-
-pkgs = [ pkg for pkg in find_packages('src') if namespace not in pkg] 
-top_pkgs = [pkg for pkg in pkgs if  len(pkg.split('.')) < 2]
-packages = [ namespace + "." + pkg for pkg in pkgs]
-package_dir = dict( [('','src')] + [(namespace + "." + pkg,  "src/" + pkg) for pkg in top_pkgs] )
+packages = find_namespace_packages(where='src', include=['openalea.*'])
 
 setup(
     name=name,
     version=version,
-    description=description, 
-    long_description = '',
-    author = authors,
-    author_email = authors_email,
-    url = url,
-    license = license,
+    description=description,
+    author=authors,
+    author_email=authors_email,
+    url=url,
+    license=license,
 
-    namespace_packages = ['openalea'],
-    create_namespaces=True,
-    zip_safe=False,
-
-    packages=packages,
-
-    package_dir=package_dir,
-
-    # Add package platform libraries if any
-    include_package_data=True,
+    packages = packages,
+    package_dir={ '' : 'src' },
+    include_package_data = True,
+    zip_safe = False,
     package_data = {'' : ['*.csv'],},
 
-    # Dependencies
-    setup_requires = ['openalea.deploy'],
-    install_requires = ['openalea.core', 'pandas'],
-    dependency_links = ['http://openalea.gforge.inria.fr/pi'],
-
-    # entry_points
     entry_points = {
         "wralea": ['openalea.pandas = openalea.pandas_wralea'],
-        },
-
-    )
+    }
+)

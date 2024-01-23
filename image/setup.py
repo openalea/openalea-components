@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 #from openalea.deploy.metainfo import read_metainfo
 
 #metadata = read_metainfo('metainfo.ini', verbose=True)
@@ -6,7 +6,6 @@ from setuptools import setup, find_packages
 #    exec("%s = '%s'" % (key, value))
 
 name = 'openalea.image'
-version = '2.2.0' # TODO: replace by a version.py
 description = 'Image manipulation'
 long_description = description+ ' for VisuAlea from the OpenAlea platform.'
 authors = 'Jerome Chopard, Eric Moscardi and Christophe Pradal'
@@ -15,7 +14,7 @@ url = 'https://openalea.rtfd.io'
 license = 'Cecill-C'
 
 pkg_root_dir = 'src'
-packages = find_packages('src')
+packages = find_namespace_packages(where='src', include=['openalea.*'])
 package_dir = dict([('', 'src')])
 
 # Meta information
@@ -23,6 +22,11 @@ long_description = '''
 Image contains algorithms to play with data images
 and visualea nodes to wrap numpy algorithms
 '''
+# find version number in src/openalea/image/version.py
+_version = {}
+with open("src/openalea/image/version.py") as fp:
+    exec(fp.read(), _version)
+    version = _version["__version__"]
 
 ###########
 #

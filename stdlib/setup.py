@@ -2,7 +2,7 @@
 """setup file for stdlib package"""
 
 import os
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 
 name = 'OpenAlea.StdLib'
@@ -17,9 +17,11 @@ __license__ = license
 
 # find version number in src/openalea/core/version.py
 _version = {}
-with open("src/openalea/version.py") as fp:
+with open("src/openalea/stdlib/version.py") as fp:
     exec(fp.read(), _version)
     version = _version["__version__"]
+
+packages = find_namespace_packages(where='src', include=['openalea.*'])
 
 setup(
     name=name,
@@ -33,7 +35,7 @@ setup(
 
     zip_safe=False,
 
-    packages=find_packages('src'),
+    packages=packages,
 
     package_dir={'':'src' },
 

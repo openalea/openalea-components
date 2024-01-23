@@ -1,8 +1,7 @@
 import os
 pj = os.path.join
 
-from setuptools import setup, find_packages
-from openalea.deploy.metainfo import read_metainfo
+from setuptools import setup, find_namespace_packages
 
 # find version number in src/openalea/core/version.py
 _version = {}
@@ -18,6 +17,8 @@ authors_email = "christophe.pradal at cirad.fr"
 url = "http://openalea.rtfd.io"
 license = "Cecill-C"
 
+packages = find_namespace_packages(where='src', include=['openalea.*'])
+
 setup(
     name=name,
     version=version,
@@ -27,9 +28,8 @@ setup(
     url=url,
     license=license,
 
-    #namespace_packages=['openalea'],
 
-    packages = find_packages('src'),
+    packages = packages,
     package_dir={ '' : 'src' },
     include_package_data = True,
     zip_safe = False,

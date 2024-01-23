@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 """setup file for stdlib package"""
-__revision__ = "$Id: $"
 
 import os
-from setuptools import setup, find_packages
-
-__license__ = 'Cecill-C'
-__revision__ = "$Id: $"
+from setuptools import setup, find_namespace_packages
 
 pj = os.path.join
 
-# find version number in src/openalea/core/version.py
+# find version number in src/openalea/numpy_wralea/version.py
 _version = {}
 with open("src/openalea/numpy_wralea/version.py") as fp:
     exec(fp.read(), _version)
@@ -27,8 +23,7 @@ authors_email = 'christophe pradal at cirad fr, Eric Moscardi at sophia inria fr
 url = 'https://github.com/openalea/openalea-components'
 license = 'Cecill-C'
 
-pkgs = find_packages('src')
-packages = pkgs
+packages = find_namespace_packages(where='src', include=['openalea.*'])
 package_dir = {'':'src'}
 
 setup_requires = ['openalea.deploy']
