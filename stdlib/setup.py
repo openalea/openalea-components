@@ -21,6 +21,8 @@ with open("src/openalea/version.py") as fp:
     exec(fp.read(), _version)
     version = _version["__version__"]
 
+packages = find_namespace_packages(where='src', include=['openalea.*'])
+
 setup(
     name=name,
     version=version,
@@ -33,7 +35,7 @@ setup(
 
     zip_safe=False,
 
-    packages=find_packages('src'),
+    packages=packages,
 
     package_dir={'':'src' },
 
