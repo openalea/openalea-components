@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 #from openalea.deploy.metainfo import read_metainfo
 
 #metadata = read_metainfo('metainfo.ini', verbose=True)
