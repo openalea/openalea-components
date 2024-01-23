@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """setup file for pandas package"""
-__revision__ = "$Id$"
 
 import os
 from setuptools import setup, find_namespace_packages
