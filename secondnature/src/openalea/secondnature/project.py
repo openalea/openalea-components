@@ -17,7 +17,7 @@ __license__ = "CeCILL v2"
 __revision__ = " $Id$ "
 
 
-from openalea.vpltk.qt import QtCore, QtGui
+from qtpy import QtCore, QtGui
 from openalea.core.singleton import ProxySingleton
 from openalea.core.metaclass import make_metaclass
 import cPickle
@@ -295,22 +295,22 @@ class QActiveProjectManager(QtCore.QObject):
     # Methods that return prebound QActions #
     #########################################
     def get_action_new(self):
-        action = QtGui.QAction("&New project...", self)
+        action = QtWidgets.QAction("&New project...", self)
         action.triggered.connect(self.new_active_project)
         return action
 
     def get_action_open(self):
-        action = QtGui.QAction("&Open project...", self)
+        action = QtWidgets.QAction("&Open project...", self)
         action.triggered.connect(self.open_project)
         return action
 
     def get_action_save(self):
-        action = QtGui.QAction("&Save project...", self)
+        action = QtWidgets.QAction("&Save project...", self)
         action.triggered.connect(self.save_active_project)
         return action
 
     def get_action_close(self):
-        action = QtGui.QAction("&Close project...", self)
+        action = QtWidgets.QAction("&Close project...", self)
         action.triggered.connect(self.close_active_project)
         return action
 

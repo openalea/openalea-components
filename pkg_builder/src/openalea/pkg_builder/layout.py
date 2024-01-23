@@ -19,7 +19,7 @@ import sys, re
 import getopt
 from string import Template
 
-from openalea.core.path import path
+from path import Path
 from optparse import OptionParser
 
 
@@ -62,7 +62,7 @@ class PackageBuilder(object):
         self.name = name # e.g. name = PlantGL
         self.package = name.lower() # e.g. name = plantgl
         self.dir = dir
-        self.pkg_dir = path(dir) / self.package
+        self.pkg_dir = Path(dir) / self.package
         self.languages = ['python']
         self.project = project.lower()
         self.release = release
@@ -86,7 +86,7 @@ class PackageBuilder(object):
     def check_name(self):
         """ Check correctness of pkg name. """
         if not self.good_name.match( self.package):
-            print "Error, package name %s is invalid" % ( self.package, )
+            print("Error, package name %s is invalid" % ( self.package, ))
             return False
         return True
 
@@ -98,13 +98,13 @@ class PackageBuilder(object):
 
         for d in dirs:
             if d.exists():
-                print " WARNING: Directory %s already exists ..." % (d,)
+                print(" WARNING: Directory %s already exists ..." % (d,))
                 continue
 
-            print "Creating %s ..." % ( d, )
+            print("Creating %s ..." % ( d, ))
             try:
                 d.makedirs()
-            except OSError, e:
+            except OSError as e:
                 if e.args[ 0 ] != 17:
                     raise
 
@@ -115,7 +115,7 @@ class PackageBuilder(object):
             files = self.files
 
         for f in files:
-            print "Creating %s ..." % ( f, )
+            print("Creating %s ..." % ( f, ))
             f.touch()
 
     def set_languages(self, cpp = False, c = False, fortran = False):
@@ -236,14 +236,14 @@ class PackageBuilder(object):
 
         wralea_py = f
 
-        tpl_wralea = path(__file__).dirname()/'template_wralea.txt'
+        tpl_wralea = Path(__file__).dirname()/'template_wralea.txt'
 
-        print tpl_wralea
+        print(tpl_wralea)
 
         wralea_txt = Template(open(tpl_wralea).read())
         wralea_txt = wralea_txt.substitute(self.metainfo)
 
-        print "Creating a template version for %s ..." % ( wralea_py, )
+        print("Creating a template version for %s ..." % ( wralea_py, ))
         f = open(wralea_py, "w")
         f.write(wralea_txt)
         f.close()
@@ -253,13 +253,13 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
             txt = Template(open(tpl).read())
             txt = txt.substitute(self.metainfo)
-            print "Creating a template version for %s ..." % ( f, )
+            print("Creating a template version for %s ..." % ( f, ))
             py_file = open(f, "w")
             py_file.write(txt)
             py_file.close()
@@ -274,14 +274,14 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
             txt = Template(open(tpl).read())
             txt = txt.substitute(self.metainfo)
 
-            print "Creating a template version for %s ..." % ( f, )
+            print("Creating a template version for %s ..." % ( f, ))
             py_file = open(f, "w")
             py_file.write(txt)
             py_file.close()
@@ -295,14 +295,14 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
             txt = Template(open(tpl).read())
             txt = txt.substitute(self.metainfo)
 
-            print "Creating a template version for %s ..." % ( f, )
+            print("Creating a template version for %s ..." % ( f, ))
             py_file = open(f, "w")
             py_file.write(txt)
             py_file.close()
@@ -315,14 +315,14 @@ class PackageBuilder(object):
         tpl_files = []
         for f in files:
             if not f.exists() or f.size == 0:
-                tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
             txt = Template(open(tpl).read())
             txt = txt.substitute(HAS_SCONS='cpp' in self.languages, **self.metainfo)
 
-            print "Creating a template version for %s ..." % ( f, )
+            print("Creating a template version for %s ..." % ( f, ))
             py_file = open(f, "w")
             py_file.write(txt)
             py_file.close()
@@ -335,16 +335,16 @@ class PackageBuilder(object):
         for f in files:
             if not f.exists() or f.size == 0:
                 if 'wrapper' in f:
-                    tpl_file = path(__file__).dirname()/'template_SConscript_wrapper.txt'
+                    tpl_file = Path(__file__).dirname()/'template_SConscript_wrapper.txt'
                 else:
-                    tpl_file = path(__file__).dirname()/'template_'+f.namebase+'.txt'
+                    tpl_file = Path(__file__).dirname()/'template_'+f.namebase+'.txt'
                 tpl_files.append((f, tpl_file))
 
         for f, tpl in tpl_files:
             txt = Template(open(tpl).read())
             txt = txt.substitute(**self.metainfo)
 
-            print "Creating a template version for %s ..." % ( f, )
+            print("Creating a template version for %s ..." % ( f, ))
             py_file = open(f, "w")
             py_file.write(txt)
             py_file.close()
@@ -383,7 +383,7 @@ def main():
 
     (opts, args)= parser.parse_args()
 
-    print "Running create_layout version %s" % __revision__.split()[-1]
+    print("Running create_layout version %s" % __revision__.split()[-1])
 
     if opts.name==None:
         raise ValueError("""--name must be provided. See help (--help)""")
@@ -395,7 +395,7 @@ def main():
             pkg.set_languages({language:True})
 
     if not pkg.check_name():
-        print "Error, package name %s is invalid" % ( opts.name, )
+        print("Error, package name %s is invalid" % ( opts.name, ))
         return 1
 
     pkg.mkdirs()

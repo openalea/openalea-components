@@ -1,8 +1,8 @@
-from openalea.vpltk.qt import QtGui
+from qtpy import QtGui, QtWidgets
 from openalea.core.alea import *
 from openalea.visualea.dataflowview import GraphicalGraph
 
-app = QtGui.QApplication([])
+app = QtWidgets.QApplication([])
 
 pm = PackageManager()
 pm.init()

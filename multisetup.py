@@ -33,21 +33,19 @@ found in this directory.
 """
 import os, sys
 
-from openalea.misc.multisetup import Multisetup
+from openalea.deploy.multisetup import Multisetup
 
 
 dirs = """
 stdlib
-pkg_builder
-scheduler
 image
 numpy
 pylab
-svgdraw
 """.split()
 #openalea_meta
-
-
+#pkg_builder
+#svgdraw
+#scheduler
 
 def main():
 

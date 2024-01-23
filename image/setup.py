@@ -1,15 +1,22 @@
 from setuptools import setup, find_packages
-from openalea.deploy.metainfo import read_metainfo
+#from openalea.deploy.metainfo import read_metainfo
 
-metadata = read_metainfo('metainfo.ini', verbose=True)
-for key, value in zip(metadata.keys(), metadata.values()):
-    exec("%s = '%s'" % (key, value))
+#metadata = read_metainfo('metainfo.ini', verbose=True)
+#for key, value in zip(metadata.keys(), metadata.values()):
+#    exec("%s = '%s'" % (key, value))
+
+name = 'openalea.image'
+version = '2.2.0' # TODO: replace by a version.py
+description = 'Image manipulation'
+long_description = description+ ' for VisuAlea from the OpenAlea platform.'
+authors = 'Jerome Chopard, Eric Moscardi and Christophe Pradal'
+authors_email = 'christophe pradal at cirad fr'
+url = 'https://openalea.rtfd.io'
+license = 'Cecill-C'
 
 pkg_root_dir = 'src'
-pkgs = [pkg for pkg in find_packages(pkg_root_dir) if namespace not in pkg]
-top_pkgs = [pkg for pkg in pkgs if len(pkg.split('.')) < 2]
-packages = [namespace + "." + pkg for pkg in pkgs]
-package_dir = dict([('', pkg_root_dir)] + [(namespace + "." + pkg, pkg_root_dir + "/" + pkg) for pkg in top_pkgs])
+packages = find_packages('src')
+package_dir = dict([('', 'src')])
 
 # Meta information
 long_description = '''
@@ -40,19 +47,19 @@ setup(
     author_email=authors_email,
     url=url,
     license=license,
-    keywords='',
+    keywords='openalea, image',
     # package installation
     packages=packages,
     package_dir=package_dir,
     # Namespace packages creation by deploy
-    namespace_packages=[namespace],
-    create_namespaces=True,
+    #namespace_packages=[namespace],
+    #create_namespaces=True,
     # tell setup not to create a zip file but install the egg as a directory (recomended to be set to False)
     zip_safe=False,
     # Dependencies
     setup_requires=['openalea.deploy'],
-    install_requires=[],
-    dependency_links=['http://openalea.gforge.inria.fr/pi'],
+    #install_requires=[],
+    #dependency_links=['http://openalea.gforge.inria.fr/pi'],
 
     # Eventually include data in your package
     # (flowing is to include all versioned files other than .py)
