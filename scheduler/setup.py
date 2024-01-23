@@ -9,7 +9,7 @@ with open("src/openalea/scheduler/version.py") as fp:
     exec(fp.read(), _version)
     version = _version["__version__"]
 
-name = "OpenAlea.Pandas"
+name = "OpenAlea.Scheduler"
 description = "scheduler package for OpenAlea."
 long_description = "The scheduler package implement the management of tasks. Used for simulations purpose." 
 authors = "Jerome Chopard, Christophe Pradal"
