@@ -61,7 +61,7 @@ setup(
     # tell setup not to create a zip file but install the egg as a directory (recomended to be set to False)
     zip_safe=False,
     # Dependencies
-    setup_requires=['openalea.deploy'],
+    #setup_requires=['openalea.deploy'],
     #install_requires=[],
     #dependency_links=['http://openalea.gforge.inria.fr/pi'],
 
