@@ -18,6 +18,7 @@ source:
 
 build:
   noarch: python
+  string: py{{ PY_VER }}
   preserve_egg_dir: True
   # pip install options mainly ensure that dependencies are handled by conda (and not pip)
   # --no-deps ensure pip will not install deps not declared in meta.yaml (but declared in pyproject.toml)
