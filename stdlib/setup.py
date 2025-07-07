@@ -81,7 +81,6 @@ setup(
                    'catalog.model = deprecated',
                    'catalog.pickling = deprecated', 
                    'catalog.python = deprecated',
-                   'catalog.string = deprecated',
               ],
         },
     )
