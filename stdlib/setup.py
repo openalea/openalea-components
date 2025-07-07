@@ -44,7 +44,7 @@ setup(
     package_data = {'' : ['*.csv'],},
 
     # Dependencies
-    setup_requires = ['openalea.deploy'],
+    #setup_requires = ['openalea.deploy'],
 
     # entry_points
     entry_points = {
