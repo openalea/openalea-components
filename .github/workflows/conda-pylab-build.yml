@@ -1,19 +1,13 @@
-name: OpenAlea CI numpy
+name: OpenAlea CI
 
 on:
   push:
-    paths:
-      - 'numpy/**'
-      - '!stdlib/**'
     branches:
       - main
       - master
     tags:
       - 'v*'
   pull_request:
-    paths:
-      - 'numpy/**'
-      - '!stdlib/**'
     types:
       - opened
       - synchronize
@@ -29,6 +23,6 @@ jobs:
       anaconda_token: ${{ secrets.ANACONDA_TOKEN }}
 
     with:
-      conda-directory: numpy/conda
+      conda-directory: pylab/conda
       python-minor-version: "[10, 11, 12]"
       operating-system: '[ "ubuntu-latest" , "macos-13" , "windows-latest"]'
