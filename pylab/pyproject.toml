@@ -1,0 +1,83 @@
+# FB 2025-04-14: based on ADEL and hydroshoot, sphinx pkg in environment.yml
+[build-system]
+requires = [
+    "setuptools",
+    "setuptools_scm",
+  ]
+build-backend = "setuptools.build_meta"
+
+# allow openalea to be a namespace package
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# enable dynamic versioning based on git tags
+[tool.setuptools_scm]
+# can be empty if no extra settings are needed, presence enables setuptools-scm
+
+[project]
+name = "openalea.pylab"
+authors = [
+  { name = "Christophe Pradal" },
+]
+description = "Numpy modules for Visualea."
+readme = "README.rst"
+license = "CECILL-C"
+license-files = ["LICEN[CS]E*"]
+requires-python = ">=3.0"
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+]
+dynamic = ["version"]
+
+dependencies = [
+    "matplotlib",
+]
+
+
+# section specific to conda-only distributed package (not used by pip yet)
+[tool.conda.environment]
+channels = [
+  "openalea3",
+  "conda-forge"
+]
+dependencies = [
+    "openalea.core"
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+notebook = ["jupyter"]
+doc = [
+  "sphinx-favicon",
+  "sphinx-rtd-theme",
+  "pydata-sphinx-theme",
+  "myst-parser",
+  "nbsphinx",
+  "sphinx-copybutton",
+]
+
+[project.urls]
+Homepage = "https://openalea.rtfd.io"
+"Bug Tracker" = "https://github.com/openalea/openalea-components/issues"
+Discussions = "https://github.com/openalea/openalea-components/discussions"
+Changelog = "https://github.com/openalea/openalea-components/releases"
+
+[tool.setuptools.package-data]
+"numpy" = ["*.csv"]
+
+[project.entry-points."wralea"]
+"pylab" = "openalea.pylab_main_wralea"
+"pylab.demo" = "openalea.pylab_demo_wralea"
+"pylab.plotting" = "openalea.pylab_plotting_wralea"
+"pylab.datasets" = "openalea.pylab_datasets_wralea"
+"pylab.decorators" = "openalea.pylab_decorators_wralea"
+"pylab.Drawing" = "openalea.pylab_drawing_wralea"
+"pylab.test" = "openalea.pylab_test_wralea"
+"pylab.patches" = "openalea.pylab_patches_wralea"
+"pylab.mplot3d" = "openalea.pylab_3d_wralea"
