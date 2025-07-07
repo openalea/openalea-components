@@ -2,20 +2,20 @@ name: OpenAlea CI
 
 on:
   push:
+    paths:
+      - 'numpy/**'
     branches:
       - main
       - master
     tags:
       - 'v*'
+  pull_request:
     paths:
       - 'numpy/**'
-  pull_request:
     types:
       - opened
       - synchronize
       - reopened
-    paths:
-      - 'numpy/**'
   release:
     types:
       - published
