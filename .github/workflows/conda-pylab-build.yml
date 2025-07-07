@@ -23,6 +23,6 @@ jobs:
       anaconda_token: ${{ secrets.ANACONDA_TOKEN }}
 
     with:
-      conda-directory: stdlib/conda
+      conda-directory: pylab/conda
       python-minor-version: "[10, 11, 12]"
       operating-system: '[ "ubuntu-latest" , "macos-13" , "windows-latest"]'
