@@ -7,14 +7,14 @@ on:
       - master
     tags:
       - 'v*'
-    path:
+    paths:
       - 'numpy/**'
   pull_request:
     types:
       - opened
       - synchronize
       - reopened
-    path:
+    paths:
       - 'numpy/**'
   release:
     types:
